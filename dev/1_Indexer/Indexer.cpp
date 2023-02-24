@@ -9,6 +9,11 @@
 #include "bstring.h"
 #include "libhpxml.h"
 #include "FileStorage.h"
+#include "Lex.h"
+
+#include "..\common\osm_idx.h"
+#include "..\common\osm_types.h"
+
 
 #define OSM_TYPE_PREV     ( (int)(g_xml_ctx[g_xml_ctx_cnt-2]) )
 #define OSM_TYPE_CURR     ( (int)(g_xml_ctx[g_xml_ctx_cnt-1]) )
@@ -27,20 +32,6 @@ typedef enum tag_osm_node {
     XML_NODE_SKIP,
 }   osm_node_t;
 
-typedef char alloc_str_t[2048];
-
-typedef struct tag_osm_tag {
-    alloc_str_t     k;
-    alloc_str_t     v;
-}   osm_tag_t;
-
-typedef osm_tag_t osm_tags_list_t [1024];
-
-typedef struct tag_osm_tag_ctx {
-    osm_tags_list_t list;
-    int             pos;
-}   osm_tag_ctx_t;
-
 // XML call stack
 static osm_node_t           g_xml_ctx[4];
 static int                  g_xml_ctx_cnt = 0;
@@ -58,33 +49,15 @@ static idx_t                g_way_idx;
 static osm_rel_info_t       g_rel_info;
 static idx_t                g_rel_idx;
 
-// static int                  g_file_node_info;
-// static int                  g_file_node_idx;
-// static int                  g_file_way_info;
-// static int                  g_file_way_idx;
-// static int                  g_file_rel_info;
-// static int                  g_file_rel_idx;
-// static int                  g_file_name_info;
-// static int                  g_file_name_idx;
-
+Lex                         g_lexer;
 FileStorage                 g_nodes;
 FileStorage                 g_ways;
+FileStorage                 g_names;
 
 static void _cp_val ( const hpx_attr_t& src, alloc_str_t& dst ) {
 
     strncpy ( dst, src.value.buf, src.value.len );
     dst[src.value.len] = 0;
-}
-
-static void _clean_ctx ( void ) {
-
-    assert ( g_xml_tags.pos < 1024 );
-
-    while (g_xml_tags.pos > 0) {
-        g_xml_tags.pos--;
-        g_xml_tags.list[g_xml_tags.pos].k[0] = 0;
-        g_xml_tags.list[g_xml_tags.pos].v[0] = 0;
-    }
 }
 
 static void _process_root_node ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -110,8 +83,10 @@ static void _process_root_node ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
 static void _process_node_tag ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
-    int s = g_xml_tags.pos;
-    g_xml_tags.pos++;
+    int s = g_xml_tags.pos_1;
+    g_xml_tags.pos_1++;
+
+    assert (g_xml_tags.pos_1 < OSM_MAX_TAGS_CNT );
 
     for (int i = 0; i < attr_cnt; i++) {
         if (bs_cmp(attr_list[i].name, "k") == 0) {
@@ -170,31 +145,22 @@ static void _osm_pop ( osm_node_t osm_node ) {
     g_xml_ctx_cnt--;
 
     if ( g_xml_ctx[g_xml_ctx_cnt] == XML_NODE_NODE ) {
-
         _resolve_node_type();
-
         g_node_info.len = sizeof(g_node_info);
         g_nodes.Store( g_node_info.id, &g_node_info, sizeof(g_node_info) );
-
-        _clean_ctx();
+        _clean_ctx(g_xml_tags);
         memset ( &g_node_info, 0, sizeof(g_node_info) );
 
     } else
     if ( g_xml_ctx[g_xml_ctx_cnt] == XML_NODE_WAY ) {
-
         _resolve_way_type();
-
-        _clean_ctx();
+        _clean_ctx(g_xml_tags);
         memset ( &g_way_info, 0, sizeof(g_way_info) );
 
     } else
     if ( g_xml_ctx[g_xml_ctx_cnt] == XML_NODE_REL ) {
-
         _resolve_rel_type();
-        _clean_ctx();
-        // Store Rel
-        // Store Rel_IDX
-        // Clear Rel
+        _clean_ctx(g_xml_tags);
         memset ( &g_rel_info, 0, sizeof(g_rel_info) );
 
     }
@@ -320,8 +286,9 @@ int main ( int argc, char* argv[] ) {
     int             fd;
     int             io_res;
 
-    fd = open ( "D:\\OSM_Extract\\prague.osm", O_RDONLY);
+    fd = open ( "D:\\OSM\\ohrada.osm", O_RDONLY);
 
+    g_lexer.Load ("tag.config");
     g_nodes.Create ( "node" );
     g_ways.Create  ( "ways" );
 
@@ -351,7 +318,6 @@ int main ( int argc, char* argv[] ) {
             break;
         }
 
-        // printf("[%ld] type=%d, name=%.*s, attr cnt=%d\n", lno, xml_obj->type, xml_obj->tag.len, xml_obj->tag.buf, xml_obj->nattr);
         _process_item(xml_obj->type, xml_obj->tag, xml_obj->nattr, xml_obj->attr);
     }
 
@@ -359,6 +325,9 @@ int main ( int argc, char* argv[] ) {
         assert ( false );
         return -3;
     }
+
+    g_nodes.Close();
+    g_ways.Close();
 
     hpx_tm_free(xml_obj);
     hpx_free(ctrl);

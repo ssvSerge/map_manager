@@ -5,11 +5,14 @@
     <ClCompile Include="bstring.c" />
     <ClCompile Include="libhpxml.c" />
     <ClCompile Include="FileStorage.cpp" />
+    <ClCompile Include="Lex.cpp" />
+    <ClCompile Include="osm_str_tools.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bstring.h" />
     <ClInclude Include="libhpxml.h" />
     <ClInclude Include="osm_idx.h" />
     <ClInclude Include="FileStorage.h" />
+    <ClInclude Include="Lex.h" />
   </ItemGroup>
 </Project>

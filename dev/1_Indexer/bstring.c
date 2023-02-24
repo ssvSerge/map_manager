@@ -85,12 +85,14 @@ int bs_ncmp(bstring_t b, const char *s, int n)
  */
 int bs_cmp(bstring_t b, const char *s)
 {
-   char c;
+   char c = 0;
 
    // compare characters and return difference if they are not equal
-   for (; b.len && *s; (void) bs_advance(&b), s++)
-      if ((c = *b.buf - *s))
-         return c;
+   for (; b.len && *s; (void) bs_advance(&b), s++) {
+      c = *b.buf - *s;
+      if (c)
+          return c;
+   }
 
    // strings are equal and of equal length
    if (!b.len && !*s)
