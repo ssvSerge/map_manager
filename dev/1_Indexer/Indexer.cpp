@@ -316,7 +316,7 @@ int main ( int argc, char* argv[] ) {
 
     // cfg_parser.LoadConfig("C:\\GitHub\\map_manager\\dev\\1_Indexer\\map.ost");
 
-    fd = open ( "D:\\OSM_Extract\\prague_short.osm", O_RDONLY);
+    fd = open ( "D:\\OSM\\prague_way.osm", O_RDONLY);
 
     g_nodes.Create ( "node" );
     g_ways.Create  ( "ways" );

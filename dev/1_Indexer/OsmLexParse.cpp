@@ -1,10 +1,26 @@
 #include "OsmLex.h"
 #include <cassert>
 #include <cstdarg>
+#include <iostream>
 
 #define ITEMS_CNT(x)         ( ( sizeof(x) ) / ( sizeof (x[0]) ) )
 
 static int   g_err_cnt = 0;
+
+void _log_area ( const osm_tag_ctx_t& node_info ) {
+
+
+    std::cout << "<way>" <<  std::endl;
+
+    for ( int i = 0; i < node_info.cnt; i++ ) {
+        std::cout << "  <tag ";
+        std::cout << "k=\"" << node_info.list[i].k << "\" ";
+        std::cout << "v=\"" << node_info.list[i].v << "\" ";
+        std::cout << "/>" << std::endl;
+    }
+
+    std::cout << "</way>" << std::endl;
+}
 
 namespace cfg {
 
@@ -75,10 +91,30 @@ namespace cfg {
 
         bool  res;
 
+        // <tag k="leisure" v="track" />
+        // <tag k="waterway" v="dam" />
+        // <tag k="landuse" v="parking" />
+        // <tag k="landuse" v="village_green" />
+        // <tag k="railway" v="platform" />
+        // <tag k="amenity" v="parking" />
+        // <tag k="leisure" v="playground" />
+        // <tag k="building" v="yes" />
+        // <tag k="footway" v="traffic_island" />
+        // <tag k="water" v="reservoir" />
+        // <tag k="natural" v="scrub" />
+        // <tag k="landuse" v="industrial" />
+        // <tag k="landuse" v="brownfield" />
+        // <tag k="leisure" v="pitch" />
+
+
         res = find_key(node_info, "area", "yes", "1");
         if (!res) {
             return false;
         }
+
+        static const osm_mapper_t all_area[] = {
+            {   "*",                           DRAW_SKIP        },
+        };
 
         static const osm_mapper_t highway_area[] = {
             {   "pedestrian",                  DRAW_ASPHALT      },
@@ -102,6 +138,12 @@ namespace cfg {
             {   "platform",                    DRAW_ASPHALT      },
         };
 
+        res = map_type(node_info, "aeroway", highway_area, ITEMS_CNT(highway_area), draw_type);
+        if (res) {
+            draw_type = DRAW_SKIP;
+            return true;
+        }
+
         res = map_type ( node_info, "highway", highway_area, ITEMS_CNT(highway_area), draw_type );
         if (res) {
             if (draw_type == DRAW_UNKNOWN) {
@@ -121,6 +163,9 @@ namespace cfg {
             g_err_cnt++;
             return true;
         }
+
+
+        _log_area (node_info);
 
         return true;
     }
