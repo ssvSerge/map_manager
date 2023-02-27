@@ -1,3 +1,5 @@
+#define PY_SSIZE_T_CLEAN
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -5,32 +7,21 @@
 #include <stdint.h>
 #include <string.h>
 #include <cassert>
-
-#include "bstring.h"
-#include "libhpxml.h"
-#include "FileStorage.h"
-#include "Lex.h"
+#include <vector>
 
 #include "..\common\osm_idx.h"
 #include "..\common\osm_types.h"
 
+#include "bstring.h"
+#include "libhpxml.h"
+#include "FileStorage.h"
+#include "OsmLex.h"
 
 #define OSM_TYPE_PREV     ( (int)(g_xml_ctx[g_xml_ctx_cnt-2]) )
 #define OSM_TYPE_CURR     ( (int)(g_xml_ctx[g_xml_ctx_cnt-1]) )
 #define MAP_TYPE(p,c)     ( ((int)(p)<<16) + ((int)(c)) )
 #define GEO_SCALE         ( 10000000 )
-
-typedef enum tag_osm_node {
-    XML_NODE_UNDEF,
-    XML_NODE_ROOT,
-    XML_NODE_NODE,
-    XML_NODE_WAY,
-    XML_NODE_REL,
-    XML_NODE_TAG,
-    XML_NODE_ND,
-    XML_NODE_MEMBER,
-    XML_NODE_SKIP,
-}   osm_node_t;
+#define LINK_CLUSTER      ( 1024 * 1024 )
 
 // XML call stack
 static osm_node_t           g_xml_ctx[4];
@@ -49,15 +40,44 @@ static idx_t                g_way_idx;
 static osm_rel_info_t       g_rel_info;
 static idx_t                g_rel_idx;
 
-Lex                         g_lexer;
 FileStorage                 g_nodes;
 FileStorage                 g_ways;
 FileStorage                 g_names;
 
-static void _cp_val ( const hpx_attr_t& src, alloc_str_t& dst ) {
+std::vector<link_info_t>    g_ref_list;
+cfg::OsmCfgParser           g_cfg_parser;
 
-    strncpy ( dst, src.value.buf, src.value.len );
+static void _cp_val(const hpx_attr_t& src, alloc_str_t& dst) {
+
+    strncpy(dst, src.value.buf, src.value.len);
     dst[src.value.len] = 0;
+}
+
+static void _store_attr ( int attr_cnt, const hpx_attr_t* attr_list ) {
+
+    int s = g_xml_tags.cnt;
+    g_xml_tags.cnt++;
+
+    assert (g_xml_tags.cnt < OSM_MAX_TAGS_CNT );
+
+    for (int i = 0; i < attr_cnt; i++) {
+        if (bs_cmp(attr_list[i].name, "k") == 0) {
+            _cp_val( attr_list[i], g_xml_tags.list[s].k );
+        } else
+        if (bs_cmp(attr_list[i].name, "v") == 0) {
+            _cp_val ( attr_list[i], g_xml_tags.list[s].v );
+        }
+    }
+}
+
+static void _store_ref ( const bstring_t& value, ref_type_t ref_type ) {
+
+    link_info_t next_item;
+
+    next_item.id  = bs_tol(value);
+    next_item.ref = ref_type;
+
+    g_ref_list.push_back ( next_item );
 }
 
 static void _process_root_node ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -83,19 +103,7 @@ static void _process_root_node ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
 static void _process_node_tag ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
-    int s = g_xml_tags.pos_1;
-    g_xml_tags.pos_1++;
-
-    assert (g_xml_tags.pos_1 < OSM_MAX_TAGS_CNT );
-
-    for (int i = 0; i < attr_cnt; i++) {
-        if (bs_cmp(attr_list[i].name, "k") == 0) {
-            _cp_val( attr_list[i], g_xml_tags.list[s].k );
-        } else
-        if (bs_cmp(attr_list[i].name, "v") == 0) {
-            _cp_val ( attr_list[i], g_xml_tags.list[s].v );
-        }
-    }
+    _store_attr (attr_cnt, attr_list );
 }
 
 static void _resolve_node_type ( void ) {
@@ -104,18 +112,33 @@ static void _resolve_node_type ( void ) {
 
 static void _process_root_way ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
+    for (int i = 0; i < attr_cnt; i++) {
+        if (bs_cmp(attr_list[i].name, "id") == 0) {
+            g_node_info.id = bs_tol(attr_list[i].value );
+            break;
+        }
+    }
 }
 
 static void _process_way_nd ( int attr_cnt, const hpx_attr_t* attr_list ) {
+
+    for (int i = 0; i < attr_cnt; i++) {
+        if (bs_cmp(attr_list[i].name, "ref") == 0) {
+            _store_ref ( attr_list[i].value, REF_NODE );
+            break;
+        }
+    }
 
 }
 
 static void _process_way_tag ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
+    _store_attr ( attr_cnt, attr_list );
 }
 
 static void _resolve_way_type ( void ) {
 
+    g_cfg_parser.ParseWay( g_xml_tags );
 }
 
 static void _process_root_rel ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -148,18 +171,21 @@ static void _osm_pop ( osm_node_t osm_node ) {
         _resolve_node_type();
         g_node_info.len = sizeof(g_node_info);
         g_nodes.Store( g_node_info.id, &g_node_info, sizeof(g_node_info) );
+        g_ref_list.clear();
         _clean_ctx(g_xml_tags);
         memset ( &g_node_info, 0, sizeof(g_node_info) );
 
     } else
     if ( g_xml_ctx[g_xml_ctx_cnt] == XML_NODE_WAY ) {
         _resolve_way_type();
+        g_ref_list.clear();
         _clean_ctx(g_xml_tags);
         memset ( &g_way_info, 0, sizeof(g_way_info) );
 
     } else
     if ( g_xml_ctx[g_xml_ctx_cnt] == XML_NODE_REL ) {
         _resolve_rel_type();
+        g_ref_list.clear();
         _clean_ctx(g_xml_tags);
         memset ( &g_rel_info, 0, sizeof(g_rel_info) );
 
@@ -286,9 +312,12 @@ int main ( int argc, char* argv[] ) {
     int             fd;
     int             io_res;
 
-    fd = open ( "D:\\OSM\\ohrada.osm", O_RDONLY);
+    g_ref_list.reserve ( LINK_CLUSTER );
 
-    g_lexer.Load ("tag.config");
+    // cfg_parser.LoadConfig("C:\\GitHub\\map_manager\\dev\\1_Indexer\\map.ost");
+
+    fd = open ( "D:\\OSM_Extract\\prague_short.osm", O_RDONLY);
+
     g_nodes.Create ( "node" );
     g_ways.Create  ( "ways" );
 

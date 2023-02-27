@@ -92,7 +92,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <DisableSpecificWarnings>4200; 4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4200; 4996; 4100</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -110,7 +110,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <DisableSpecificWarnings>4200; 4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4200; 4996; 4100</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -128,7 +128,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <DisableSpecificWarnings>4200; 4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4200; 4996; 4100</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -146,7 +146,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <DisableSpecificWarnings>4200; 4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4200; 4996; 4100</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -162,15 +162,16 @@
     <ClCompile Include="bstring.c" />
     <ClCompile Include="FileStorage.cpp" />
     <ClCompile Include="Indexer.cpp" />
-    <ClCompile Include="Lex.cpp" />
     <ClCompile Include="libhpxml.c" />
+    <ClCompile Include="OsmLex.cpp" />
+    <ClCompile Include="OsmLexParse.cpp" />
     <ClCompile Include="osm_str_tools.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bstring.h" />
     <ClInclude Include="FileStorage.h" />
-    <ClInclude Include="Lex.h" />
     <ClInclude Include="libhpxml.h" />
+    <ClInclude Include="OsmLex.h" />
     <ClInclude Include="osm_idx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
