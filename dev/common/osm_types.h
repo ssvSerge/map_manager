@@ -3,6 +3,9 @@
 
 #include "osm_idx.h"
 
+#include <string>
+#include <vector>
+
 #define OSM_STR_MAX_LEN             (2048)
 #define OSM_MAX_TAGS_CNT            (1024)
 
@@ -60,7 +63,8 @@ typedef struct tag_link_info {
     osm_id_t        id;
 }   link_info_t;
 
-void _clean_ctx ( osm_tag_ctx_t& ctx );
-
+typedef std::vector<std::string>     osm_param_t;
+typedef std::vector<std::string>     osm_tokens_t;
+typedef std::vector<link_info_t>     ref_list_t;
 
 #endif

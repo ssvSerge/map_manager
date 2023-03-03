@@ -17,11 +17,16 @@
 #include "FileStorage.h"
 #include "OsmLex.h"
 
+#define ITEMS_CNT(x)         ( ( sizeof(x) ) / ( sizeof (x[0]) ) )
+
+
 #define OSM_TYPE_PREV     ( (int)(g_xml_ctx[g_xml_ctx_cnt-2]) )
 #define OSM_TYPE_CURR     ( (int)(g_xml_ctx[g_xml_ctx_cnt-1]) )
 #define MAP_TYPE(p,c)     ( ((int)(p)<<16) + ((int)(c)) )
 #define GEO_SCALE         ( 10000000 )
 #define LINK_CLUSTER      ( 1024 * 1024 )
+
+typedef std::vector<link_info_t>  ref_list_t;
 
 // XML call stack
 static osm_node_t           g_xml_ctx[4];
@@ -44,8 +49,10 @@ FileStorage                 g_nodes;
 FileStorage                 g_ways;
 FileStorage                 g_names;
 
-std::vector<link_info_t>    g_ref_list;
+ref_list_t                  g_ref_list;
 cfg::OsmCfgParser           g_cfg_parser;
+
+extern void _clean_ctx(osm_tag_ctx_t& ctx);
 
 static void _cp_val(const hpx_attr_t& src, alloc_str_t& dst) {
 
@@ -53,7 +60,56 @@ static void _cp_val(const hpx_attr_t& src, alloc_str_t& dst) {
     dst[src.value.len] = 0;
 }
 
-static void _store_attr ( int attr_cnt, const hpx_attr_t* attr_list ) {
+static bool find_in_skip_list ( const hpx_attr_t* new_item ) {
+
+    const char* skip_list[] = {
+        "source",
+        "barrier",
+        "ref",
+        "heading",
+        "wikipedia",
+        "wikidata",
+        "surface",
+        "name",
+        "phone",
+        "sport",
+        "old_name",
+        "website",
+        "note",
+        "access",
+        "created_by",
+        "place",
+        "bench",
+        "lit",
+        "height",
+        "historic",
+        "min_height",
+        "roof:colour",
+        "roof:height",
+        "roof:shape",
+        "roof:material",
+        "roof:levels",
+        "count",
+        "usage",
+        "fence_type",
+        "material",
+        "covered"
+    };
+
+    for (size_t i = 0; i < ITEMS_CNT(skip_list); i++) {
+        if (strncmp(skip_list[i], new_item->value.buf, new_item->value.len) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void _store_attr ( int attr_cnt, const hpx_attr_t* new_item ) {
+
+    if ( find_in_skip_list(new_item) ) {
+        return;
+    }
 
     int s = g_xml_tags.cnt;
     g_xml_tags.cnt++;
@@ -61,11 +117,11 @@ static void _store_attr ( int attr_cnt, const hpx_attr_t* attr_list ) {
     assert (g_xml_tags.cnt < OSM_MAX_TAGS_CNT );
 
     for (int i = 0; i < attr_cnt; i++) {
-        if (bs_cmp(attr_list[i].name, "k") == 0) {
-            _cp_val( attr_list[i], g_xml_tags.list[s].k );
+        if (bs_cmp(new_item[i].name, "k") == 0) {
+            _cp_val(new_item[i], g_xml_tags.list[s].k );
         } else
-        if (bs_cmp(attr_list[i].name, "v") == 0) {
-            _cp_val ( attr_list[i], g_xml_tags.list[s].v );
+        if (bs_cmp(new_item[i].name, "v") == 0) {
+            _cp_val (new_item[i], g_xml_tags.list[s].v );
         }
     }
 }
@@ -78,6 +134,10 @@ static void _store_ref ( const bstring_t& value, ref_type_t ref_type ) {
     next_item.ref = ref_type;
 
     g_ref_list.push_back ( next_item );
+}
+
+static void _store_way ( const osm_draw_type_t draw_type ) {
+
 }
 
 static void _process_root_node ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -138,7 +198,16 @@ static void _process_way_tag ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
 static void _resolve_way_type ( void ) {
 
-    g_cfg_parser.ParseWay( g_xml_tags );
+    bool io_res;
+
+    osm_draw_type_t draw_type;
+    
+    io_res = g_cfg_parser.ParseWay ( g_xml_tags, g_node_info.id, g_ref_list, draw_type );
+    if ( !io_res ) {
+        return;
+    }
+
+    _store_way(draw_type);
 }
 
 static void _process_root_rel ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -316,7 +385,7 @@ int main ( int argc, char* argv[] ) {
 
     // cfg_parser.LoadConfig("C:\\GitHub\\map_manager\\dev\\1_Indexer\\map.ost");
 
-    fd = open ( "D:\\OSM\\prague_way.osm", O_RDONLY);
+    fd = open ( "D:\\OSM_Extract\\prague_short.osm", O_RDONLY);
 
     g_nodes.Create ( "node" );
     g_ways.Create  ( "ways" );

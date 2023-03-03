@@ -2,7 +2,6 @@
 
 #include "..\common\osm_types.h"
 
-
 void _clean_ctx ( osm_tag_ctx_t& ctx ) {
 
     assert(ctx.cnt < OSM_MAX_TAGS_CNT);

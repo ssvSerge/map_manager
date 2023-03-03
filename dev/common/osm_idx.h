@@ -51,20 +51,34 @@ typedef struct tag_idx {
 }   idx_t;
 
 typedef enum tag_osm_draw_type {
+
     DRAW_UNKNOWN,
 
     DRAW_SKIP,
 
-    DRAW_MOTORWAY,
-    DRAW_TRUNK,
-    DRAW_PRIMARY,
-    DRAW_SECONDARY,
-    DRAW_TERTIARY,
-    DRAW_ROAD,
-    DRAW_FOOTWAY,
-    DRAW_PATH,
+    DRAW_PENDING,
 
-    DRAW_ASPHALT,
+    DRAW_RIVER,
+
+    DRAW_PATH_MOTORWAY,
+    DRAW_PATH_TRUNK,
+    DRAW_PATH_PRIMARY,
+    DRAW_PATH_SECONDARY,
+    DRAW_PATH_TERTIARY,
+    DRAW_PATH_ROAD,
+    DRAW_PATH_FOOTWAY,
+
+    DRAW_PATH_RAILWAY,
+     
+    DRAW_BUILDING,
+    DRAW_BUILDING_OUTER,
+    DRAW_BUILDING_INNER,
+     
+    DRAW_AREA_WATER,
+    DRAW_AREA_ASPHALT,
+    DRAW_AREA_GRASS,
+    DRAW_AREA_FORSET,
+    DRAW_AREA_MOUNTAIN,
 
     DRAW_LAST_ID
 }   osm_draw_type_t;
