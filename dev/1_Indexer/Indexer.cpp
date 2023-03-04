@@ -50,7 +50,6 @@ FileStorage                 g_ways;
 FileStorage                 g_names;
 
 ref_list_t                  g_ref_list;
-cfg::OsmCfgParser           g_cfg_parser;
 
 extern void _clean_ctx(osm_tag_ctx_t& ctx);
 
@@ -196,18 +195,76 @@ static void _process_way_tag ( int attr_cnt, const hpx_attr_t* attr_list ) {
     _store_attr ( attr_cnt, attr_list );
 }
 
-static void _resolve_way_type ( void ) {
+static void _key_cmp(const char* const key, const char* const val, bool& r1, bool& r2) {
 
-    bool io_res;
+    size_t i = 0;
 
-    osm_draw_type_t draw_type;
-    
-    io_res = g_cfg_parser.ParseWay ( g_xml_tags, g_node_info.id, g_ref_list, draw_type );
-    if ( !io_res ) {
+    for ( i = 0; i < OSM_STR_MAX_LEN-1; i++ ) {
+        if ( key[i] == 0 ) {
+            break;
+        }
+        if ( key[i] != val[i] ) {
+            return;
+        }
+    }
+
+    if ( val[i] == 0 ) {
+        r1 = true;
+    }
+
+    if (val[i] == ':') {
+        r2 = true;
+    }
+}
+
+static void _test_and_add ( const char* const key ) {
+
+    int  i;
+    bool key_defined = false;
+    bool ns_defined  = false;
+
+    for ( i = 0; i < g_xml_tags.cnt; i++ ) {
+        _key_cmp ( key, g_xml_tags.list[i].k, key_defined, ns_defined);
+    }
+
+    if ( key_defined ) {
+        // Key exists.
         return;
     }
 
-    _store_way(draw_type);
+    if ( ! ns_defined ) {
+        // namespese doesn't exists
+        return;
+    }
+
+    int s = g_xml_tags.cnt;
+    g_xml_tags.cnt++;
+
+    strncpy ( g_xml_tags.list[s].k, key,    OSM_STR_MAX_LEN-1 );
+    strncpy ( g_xml_tags.list[s].v, "auto", OSM_STR_MAX_LEN-1 );
+}
+
+static void _preprocess_tag_ways() {
+
+    _test_and_add ( "disused"   );
+    _test_and_add ( "bridge"    );
+    _test_and_add ( "building"  );
+    _test_and_add ( "abandoned" );
+    _test_and_add ( "area"      );
+    _test_and_add ( "proposed"  );
+    _test_and_add ( "construction" );
+    _test_and_add ( "cycleway" );
+}
+
+static void _resolve_way_type ( cfg::OsmCfgParser& cfg ) {
+
+    osm_draw_type_t draw_type;
+
+    _preprocess_tag_ways();
+    
+    cfg.ParseWay ( g_xml_tags, g_node_info.id, g_ref_list, draw_type );
+
+    // _store_way(draw_type);
 }
 
 static void _process_root_rel ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -232,7 +289,7 @@ static void _osm_push ( osm_node_t next_node ) {
     g_xml_ctx_cnt++;
 }
 
-static void _osm_pop ( osm_node_t osm_node ) {
+static void _osm_pop (cfg::OsmCfgParser& cfg, osm_node_t osm_node ) {
 
     g_xml_ctx_cnt--;
 
@@ -246,7 +303,7 @@ static void _osm_pop ( osm_node_t osm_node ) {
 
     } else
     if ( g_xml_ctx[g_xml_ctx_cnt] == XML_NODE_WAY ) {
-        _resolve_way_type();
+        _resolve_way_type( cfg );
         g_ref_list.clear();
         _clean_ctx(g_xml_tags);
         memset ( &g_way_info, 0, sizeof(g_way_info) );
@@ -304,7 +361,7 @@ static void _process_open ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
 }
 
-static void _process_item ( int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list ) {
+static void _process_item (cfg::OsmCfgParser& cfg, int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list ) {
 
     osm_node_t osm_node = XML_NODE_UNDEF;
 
@@ -352,11 +409,11 @@ static void _process_item ( int xml_type, const bstring_t& name, int attr_cnt, c
         case HPX_SINGLE: // open tag + close tag
             _osm_push(osm_node);
             _process_open(attr_cnt, attr_list);
-            _osm_pop(osm_node);
+            _osm_pop(cfg, osm_node);
             break;
 
         case HPX_CLOSE:
-            _osm_pop(osm_node);
+            _osm_pop(cfg, osm_node);
             break;
 
         case HPX_INSTR:
@@ -382,6 +439,8 @@ int main ( int argc, char* argv[] ) {
     int             io_res;
 
     g_ref_list.reserve ( LINK_CLUSTER );
+
+    cfg::OsmCfgParser           cfg_parser;
 
     // cfg_parser.LoadConfig("C:\\GitHub\\map_manager\\dev\\1_Indexer\\map.ost");
 
@@ -416,7 +475,7 @@ int main ( int argc, char* argv[] ) {
             break;
         }
 
-        _process_item(xml_obj->type, xml_obj->tag, xml_obj->nattr, xml_obj->attr);
+        _process_item(cfg_parser, xml_obj->type, xml_obj->tag, xml_obj->nattr, xml_obj->attr);
     }
 
     if ( ! ctrl->eof ) {

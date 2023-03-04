@@ -25,11 +25,6 @@ osm_tokens_t split ( const std::string src ) {
     return res;
 }
 
-OsmCfgParser::OsmCfgParser() {
-    m_cfg_text   = "";
-    m_cfg_offset = 0;
-}
-
 bool OsmCfgParser::LoadConfig ( const char* const name ) {
 
     // std::ifstream   file ( name, std::ios::binary | std::ios::ate );

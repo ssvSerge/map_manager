@@ -8,6 +8,7 @@
     <ClCompile Include="osm_str_tools.cpp" />
     <ClCompile Include="OsmLex.cpp" />
     <ClCompile Include="OsmLexParse.cpp" />
+    <ClCompile Include="ssearch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bstring.h" />
@@ -15,5 +16,6 @@
     <ClInclude Include="osm_idx.h" />
     <ClInclude Include="FileStorage.h" />
     <ClInclude Include="OsmLex.h" />
+    <ClInclude Include="ssearch.h" />
   </ItemGroup>
 </Project>

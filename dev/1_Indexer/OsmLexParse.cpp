@@ -14,13 +14,30 @@
 // wayWidth           =  8m;
 // stepWidth          =  3m;
 
+static const cfg::osm_mapper_t map_path_power[] = {
 
-static const cfg::osm_mapper_t railway_map[] = {
-    {   "rail",                        DRAW_PATH_RAILWAY     },
-    {   "disused",                     DRAW_SKIP             },
+    {   "power",                       DRAW_UNKNOWN          },
+
+    {   "line",                        DRAW_SKIP             },
+    {   "substation",                  DRAW_SKIP             },
+    {   "minor_line",                  DRAW_SKIP             },
 };
 
-static const cfg::osm_mapper_t highway_map[] = {
+static const cfg::osm_mapper_t map_path_railway[] = {
+
+    {   "railway",                     DRAW_UNKNOWN          },
+
+    {   "rail",                        DRAW_PATH_RAILWAY     },
+    {   "disused",                     DRAW_SKIP             },
+    {   "abandoned",                   DRAW_SKIP             },
+    {   "razed",                       DRAW_SKIP             },
+    {   "tram",                        DRAW_SKIP             },
+};
+
+static const cfg::osm_mapper_t map_path_highway[] = {
+
+    {   "highway",                     DRAW_UNKNOWN           },
+
     {   "motorway",                    DRAW_PATH_MOTORWAY     }, // Автомагистрали 
     {   "motorway_link",               DRAW_PATH_MOTORWAY     }, // 
     {   "trunk",                       DRAW_PATH_TRUNK        }, // Важные дороги
@@ -60,12 +77,35 @@ static const cfg::osm_mapper_t highway_map[] = {
     {   "emergency_bay",               DRAW_SKIP              }
 };
 
-static const cfg::osm_mapper_t waterway_map[] = {
-    {   "stream",                      DRAW_RIVER     },
-    {   "ditch",                       DRAW_RIVER     },
+static const cfg::osm_mapper_t map_path_waterway[] = {
+
+    {   "waterway",                    DRAW_UNKNOWN           },
+
+    {   "drain",                       DRAW_PATH_RIVER        },
+    {   "stream",                      DRAW_PATH_RIVER        },
+    {   "ditch",                       DRAW_PATH_RIVER        },
+    {   "river",                       DRAW_PATH_RIVER        },
+    {   "canal",                       DRAW_PATH_RIVER        },
+    {   "weir",                        DRAW_PATH_RIVER        },
 };
 
-static const cfg::osm_mapper_t highway_area[] = {
+static const cfg::osm_mapper_t map_path_natural[] = {
+
+    {   "natural",                     DRAW_UNKNOWN           },
+    {   "tree_row",                    DRAW_PATH_FOOTWAY       },
+};
+
+static const cfg::osm_mapper_t map_path_transport[] = {
+
+    {   "public_transport",            DRAW_UNKNOWN           },
+    {   "platform",                    DRAW_SKIP              },
+    {   "station",                     DRAW_SKIP              },
+};
+
+static const cfg::osm_mapper_t map_area_highway[] = {
+
+    {   "highway",                     DRAW_UNKNOWN           },
+
     {   "pedestrian",                  DRAW_AREA_ASPHALT      },
     {   "living_street",               DRAW_AREA_ASPHALT      },
     {   "platform",                    DRAW_AREA_ASPHALT      },
@@ -79,7 +119,10 @@ static const cfg::osm_mapper_t highway_area[] = {
     {   "elevator",                    DRAW_SKIP              },
 };
 
-static const cfg::osm_mapper_t landuse_area[] = {
+static const cfg::osm_mapper_t map_area_landuse[] = {
+
+    {   "landuse",                     DRAW_UNKNOWN           },
+
     {   "aerodrome",                   DRAW_AREA_ASPHALT      },
     {   "basin",                       DRAW_AREA_ASPHALT      },
     {   "cemetery",                    DRAW_AREA_ASPHALT      },
@@ -118,48 +161,115 @@ static const cfg::osm_mapper_t landuse_area[] = {
 
 };
 
-static const cfg::osm_mapper_t transport_area[] = {
+static const cfg::osm_mapper_t map_area_transport[] = {
+
+    {   "transport",                   DRAW_UNKNOWN           },
+
     {   "platform",                    DRAW_AREA_ASPHALT      },
 };
 
-static const cfg::osm_mapper_t manmade_area[] = {
+static const cfg::osm_mapper_t map_area_manmade[] = {
+
+    {   "manmade",                     DRAW_UNKNOWN           },
+
     {   "platform",                    DRAW_AREA_ASPHALT      },
 };
 
-static const cfg::osm_mapper_t waterway_area[] = {
+static const cfg::osm_mapper_t map_area_waterway[] = {
+
+    {   "waterway",                    DRAW_UNKNOWN           },
+
     {   "dam",                         DRAW_AREA_WATER        },
 };
 
-static const cfg::osm_mapper_t water_area[] = {
+static const cfg::osm_mapper_t map_area_water[] = {
+
+    {   "water",                       DRAW_UNKNOWN           },
+
     {   "reservoir",                   DRAW_AREA_WATER        },
 };
 
-static const cfg::osm_mapper_t leisure_area[] = {
+static const cfg::osm_mapper_t map_area_leisure[] = {
+
+    {   "leisure",                     DRAW_UNKNOWN           },
+
     {   "track",                       DRAW_SKIP              },
     {   "pitch",                       DRAW_SKIP              },
     {   "garden",                      DRAW_AREA_GRASS        },
     {   "playground",                  DRAW_AREA_GRASS        },
+    {   "stadium",                     DRAW_AREA_GRASS        },
+    {   "park",                        DRAW_AREA_GRASS        },
+    {   "dog_park",                    DRAW_AREA_GRASS        },
+    {   "ice_rink",                    DRAW_SKIP              },
+    {   "swimming_pool",               DRAW_SKIP              },
+    {   "hospital",                    DRAW_SKIP              },
 };
 
-static const cfg::osm_mapper_t natural_area[] = {
+static const cfg::osm_mapper_t map_area_natural[] = {
+
+    {   "natural",                     DRAW_UNKNOWN           },
+
     {   "scrub",                       DRAW_AREA_FORSET      },
     {   "water",                       DRAW_AREA_WATER       },
+    {   "grassland",                   DRAW_AREA_WATER       },
+    {   "cliff",                       DRAW_SKIP             },
+    {   "mud",                         DRAW_SKIP             },
+    {   "wetland",                     DRAW_SKIP             },
+    {   "wood",                        DRAW_SKIP             },
+    {   "sand",                        DRAW_SKIP             },
 };
 
-static const cfg::osm_mapper_t amenity_area[] = {
+static const cfg::osm_mapper_t map_area_amenity[] = {
+
+    {   "amenity",                     DRAW_UNKNOWN           },
+
     {   "parking",                     DRAW_AREA_ASPHALT      },
     {   "parking_space",               DRAW_AREA_ASPHALT      },
+    {   "bicycle_parking",             DRAW_SKIP              },
+    {   "kindergarten",                DRAW_SKIP              },
+    {   "school",                      DRAW_SKIP              },
+    {   "college",                     DRAW_SKIP              },
+    {   "clinic",                      DRAW_SKIP              },
+    {   "fountain",                    DRAW_SKIP              },
 };
 
-static const cfg::osm_mapper_t railway_area[] = {
+static const cfg::osm_mapper_t map_area_railway[] = {
+
+    {   "railway",                     DRAW_UNKNOWN           },
+
     {   "platform",                    DRAW_AREA_ASPHALT      },
 };
+
+static const cfg::osm_mapper_t map_area_boundary[] = {
+
+    {   "boundary",                    DRAW_UNKNOWN           },
+
+    {   "administrative",              DRAW_SKIP              },
+};
+
 
 static const cfg::osm_mapper_t all_area[] = {
     {   "*",                           DRAW_SKIP         },
 };
 
-static int   g_err_cnt = 0;
+static ssearcher        g_area_landuse;
+static ssearcher        g_area_leisure;
+static ssearcher        g_area_natural;
+static ssearcher        g_area_amenity;
+static ssearcher        g_area_waterway;
+static ssearcher        g_area_manmade;
+static ssearcher        g_area_highway;
+static ssearcher        g_area_transport;
+static ssearcher        g_area_water;
+static ssearcher        g_area_railway;
+static ssearcher        g_area_boundary;
+static ssearcher        g_path_highway;
+static ssearcher        g_path_railway;
+static ssearcher        g_path_waterway;
+static ssearcher        g_path_natural;
+static ssearcher        g_path_transport;
+static ssearcher        g_path_power;
+
 
 void _log_node (osm_id_t id, const osm_tag_ctx_t& node_info ) {
 
@@ -177,6 +287,75 @@ void _log_node (osm_id_t id, const osm_tag_ctx_t& node_info ) {
 }
 
 namespace cfg {
+
+    OsmCfgParser::OsmCfgParser() {
+
+        _bor_init ( map_area_landuse,   ITEMS_CNT(map_area_landuse),    g_area_landuse   );
+        _bor_init ( map_area_leisure,   ITEMS_CNT(map_area_leisure),    g_area_leisure   );
+        _bor_init ( map_area_natural,   ITEMS_CNT(map_area_natural),    g_area_natural   );
+        _bor_init ( map_area_amenity,   ITEMS_CNT(map_area_amenity),    g_area_amenity   );
+        _bor_init ( map_area_waterway,  ITEMS_CNT(map_area_waterway),   g_area_waterway  );
+        _bor_init ( map_area_manmade,   ITEMS_CNT(map_area_manmade),    g_area_manmade   );
+        _bor_init ( map_area_highway,   ITEMS_CNT(map_area_highway),    g_area_highway   );
+        _bor_init ( map_area_transport, ITEMS_CNT(map_area_transport),  g_area_transport );
+        _bor_init ( map_area_water,     ITEMS_CNT(map_area_water),      g_area_water     );
+        _bor_init ( map_area_railway,   ITEMS_CNT(map_area_railway),    g_area_railway   );
+        _bor_init ( map_area_boundary,  ITEMS_CNT(map_area_boundary),   g_area_boundary  );
+
+        _bor_init ( map_path_highway,   ITEMS_CNT(map_path_highway),    g_path_highway   );
+        _bor_init ( map_path_railway,   ITEMS_CNT(map_path_railway),    g_path_railway   );
+        _bor_init ( map_path_waterway,  ITEMS_CNT(map_path_waterway),   g_path_waterway  );
+        _bor_init ( map_path_natural,   ITEMS_CNT(map_path_natural),    g_path_natural   );
+        _bor_init ( map_path_transport, ITEMS_CNT(map_path_transport),  g_path_transport );
+        _bor_init ( map_path_power,     ITEMS_CNT(map_path_power),      g_path_power     );
+    }
+
+    void OsmCfgParser::_bor_init ( const osm_mapper_t* const lex_list, size_t cnt, ssearcher& bor ) {
+
+        if (lex_list == nullptr) {
+            return;
+        }
+
+        if (lex_list[0].v != DRAW_UNKNOWN) {
+            return;
+        }
+
+        bor.init ( lex_list[0].k );
+
+        for ( size_t i = 1; i < cnt; i++ ) {
+            bor.add(lex_list[i].k, lex_list[i].v);
+        }
+
+        return;
+    }
+
+    void  OsmCfgParser::map_type ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor ) {
+
+        int     type;
+        bool    find_res;
+        size_t  pos = 0;
+
+        if (draw_type != DRAW_UNKNOWN) {
+            return;
+        }
+
+        for (pos = 0; pos < node_info.cnt; pos++) {
+            if (strcmp(node_info.list[pos].k, bor.m_key_name.c_str() ) == 0) {
+                break;
+            }
+        }
+
+        if ( pos == node_info.cnt ) {
+            return;
+        }
+
+        find_res = bor.find ( node_info.list[pos].v, type );
+        if ( !find_res ) {
+            return;
+        }
+
+        draw_type = static_cast<osm_draw_type_t> (type);
+    }
 
     void OsmCfgParser::map_type (osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, osm_str_t k, const osm_mapper_t* const v_map, size_t cnt, osm_draw_type_t& type ) {
 
@@ -212,7 +391,7 @@ namespace cfg {
         size_t pos = 0;
 
         for ( pos = 0; pos < node_info.cnt; pos++ ) {
-            if ( strcmp(node_info.list[pos].k, k) == 0 ) {
+            if (strcmp(node_info.list[pos].k, k) == 0 ) {
                 break;
             }
         }
@@ -246,53 +425,6 @@ namespace cfg {
         return false;
     }
 
-    void OsmCfgParser::_process_area ( const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type) {
-
-        bool find_res;
-
-        if ( draw_type != DRAW_UNKNOWN ) {
-            return;
-        }
-
-        find_res = find_key ( node_info, "area", "yes", "true", "1" );
-        if ( !find_res ) {
-            return;
-        }
-
-        _process_building ( node_info, id, draw_type );
-
-        map_type ( draw_type, node_info, "highway",          highway_area,   ITEMS_CNT(highway_area),   draw_type );
-        map_type ( draw_type, node_info, "landuse",          landuse_area,   ITEMS_CNT(landuse_area),   draw_type );
-        map_type ( draw_type, node_info, "public_transport", transport_area, ITEMS_CNT(transport_area), draw_type );
-        map_type ( draw_type, node_info, "man_made",         manmade_area,   ITEMS_CNT(manmade_area),   draw_type );
-        map_type ( draw_type, node_info, "waterway",         waterway_area,  ITEMS_CNT(waterway_area),  draw_type );
-        map_type ( draw_type, node_info, "water",            water_area,     ITEMS_CNT(water_area),     draw_type );
-        map_type ( draw_type, node_info, "leisure",          leisure_area,   ITEMS_CNT(leisure_area),   draw_type );
-        map_type ( draw_type, node_info, "natural",          natural_area,   ITEMS_CNT(natural_area),   draw_type );
-        map_type ( draw_type, node_info, "amenity",          amenity_area,   ITEMS_CNT(amenity_area),   draw_type );
-        map_type ( draw_type, node_info, "railway",          railway_area,   ITEMS_CNT(railway_area),   draw_type );
-        map_type ( draw_type, node_info, "aeroway",          all_area,       ITEMS_CNT(all_area),       draw_type );
-
-        // _log_node (id, node_info);
-    }
-
-    void OsmCfgParser::_process_highway ( const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type ) {
-
-        if ( draw_type != DRAW_UNKNOWN ) {
-            return;
-        }
-        map_type ( draw_type, node_info, "highway",  highway_map, ITEMS_CNT(highway_map), draw_type);
-        map_type ( draw_type, node_info, "railway",  railway_map, ITEMS_CNT(railway_map), draw_type);
-    }
-
-    void OsmCfgParser::_process_waterway ( const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type ) {
-
-        if ( draw_type != DRAW_UNKNOWN ) {
-            return;
-        }
-        map_type(draw_type, node_info, "waterway", waterway_map, ITEMS_CNT(waterway_map), draw_type);
-    }
-        
     void OsmCfgParser::_process_building ( const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type ) {
 
         bool find_res;
@@ -320,22 +452,6 @@ namespace cfg {
         }
 
         draw_type = DRAW_BUILDING;
-    }
-
-    void OsmCfgParser::_process_landuse(const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type) {
-
-        if (draw_type != DRAW_UNKNOWN) {
-            return;
-        }
-        map_type(draw_type, node_info, "landuse", landuse_area, ITEMS_CNT(landuse_area), draw_type);
-    }
-
-    void OsmCfgParser::_process_amenity(const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type) {
-
-        if (draw_type != DRAW_UNKNOWN) {
-            return;
-        }
-        map_type(draw_type, node_info, "amenity", amenity_area, ITEMS_CNT(amenity_area), draw_type);
     }
 
     void OsmCfgParser::_process_unused ( const osm_tag_ctx_t& node_info, osm_id_t id, osm_draw_type_t& draw_type ) {
@@ -384,9 +500,9 @@ namespace cfg {
 
     }
 
-    static int val = 0;
+    void OsmCfgParser::ParseWay ( const osm_tag_ctx_t& node_info, osm_id_t id, ref_list_t& ref_list, osm_draw_type_t& draw_type ) {
 
-    bool OsmCfgParser::ParseWay ( const osm_tag_ctx_t& node_info, osm_id_t id, ref_list_t& ref_list, osm_draw_type_t& draw_type ) {
+        bool find_res;
 
         draw_type = DRAW_UNKNOWN;
 
@@ -394,44 +510,60 @@ namespace cfg {
             draw_type = DRAW_PENDING;
         }
 
-        if (id == 4019771) {
-            val++;
+        find_res = find_key(node_info, "disused", nullptr );
+        if (find_res) {
+            draw_type = DRAW_SKIP;
+        }
+        find_res = find_key(node_info, "construction", nullptr );
+        if (find_res) {
+            draw_type = DRAW_SKIP;
+        }
+        find_res = find_key(node_info, "proposed", nullptr);
+        if (find_res) {
+            draw_type = DRAW_SKIP;
         }
 
-        _process_highway  ( node_info, id, draw_type );
-        _process_waterway ( node_info, id, draw_type );
-        _process_area     ( node_info, id, draw_type );
         _process_building ( node_info, id, draw_type );
 
-        map_type ( draw_type, node_info, "highway",          highway_area,   ITEMS_CNT(highway_area),   draw_type );
-        map_type ( draw_type, node_info, "landuse",          landuse_area,   ITEMS_CNT(landuse_area),   draw_type );
-        map_type ( draw_type, node_info, "amenity",          amenity_area,   ITEMS_CNT(amenity_area),   draw_type );
-        map_type ( draw_type, node_info, "natural",          natural_area,   ITEMS_CNT(natural_area),   draw_type );
-        map_type ( draw_type, node_info, "leisure",          leisure_area,   ITEMS_CNT(leisure_area),   draw_type );
-        map_type ( draw_type, node_info, "public_transport", transport_area, ITEMS_CNT(transport_area), draw_type );
+        map_type ( draw_type, node_info, g_area_highway   );
+        map_type ( draw_type, node_info, g_area_transport );
+        map_type ( draw_type, node_info, g_area_landuse   );
+        map_type ( draw_type, node_info, g_area_leisure   );
+        map_type ( draw_type, node_info, g_area_natural   );
+        map_type ( draw_type, node_info, g_area_amenity   );
+        map_type ( draw_type, node_info, g_area_waterway  );
+        map_type ( draw_type, node_info, g_area_manmade   );
+        map_type ( draw_type, node_info, g_area_water     );
+        map_type ( draw_type, node_info, g_area_railway   );
+        map_type ( draw_type, node_info, g_area_boundary  );
+
+        find_res = find_key(node_info, "area", "yes", "true", "auto");
+        if ( find_res ) {
+            if ( draw_type == DRAW_UNKNOWN ) {
+                draw_type = DRAW_AREA_UNKNOWN;
+            }
+        }
+
+        if ( (draw_type > DRAW_AREA_BEGIN) && (draw_type < DRAW_AREA_END) ) {
+            size_t   first_id = 0;
+            size_t   last_id  = ref_list.size() - 1;
+            if ( ref_list[first_id].id != ref_list[last_id].id ) {
+                ref_list.push_back( ref_list[0] );
+            }
+        }
+
+        map_type ( draw_type, node_info, g_path_highway   );
+        map_type ( draw_type, node_info, g_path_railway   );
+        map_type ( draw_type, node_info, g_path_waterway  );
+        map_type ( draw_type, node_info, g_path_natural   );
+        map_type ( draw_type, node_info, g_path_transport );
+        map_type ( draw_type, node_info, g_path_power     );
 
         _process_unused ( node_info, id, draw_type );
-
-            // if ( ref_list.size() < 3 ) {
-            // 
-            //      draw_type = DRAW_SKIP;
-            // 
-            // } else {
-            // 
-            //     size_t   first_id = 0;
-            //     size_t   last_id  = ref_list.size() - 1;
-            // 
-            //     if ( ref_list[first_id].id != ref_list[last_id].id ) {
-            //         ref_list.push_back( ref_list[0] );
-            //     }
-            // 
-            // }
 
         if ( draw_type == DRAW_UNKNOWN ) {
             _log_node(id, node_info);
         }
-
-        return false;
     }
 
 }
