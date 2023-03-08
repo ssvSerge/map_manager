@@ -27,6 +27,7 @@ void ssearcher::add ( const std::string& var, int type ) {
 
         num = m_bor[num].to[ ch ];
     }
+
     m_bor[num].flag_stop = true;
     m_bor[num].pat_num   = type;
 }
@@ -44,9 +45,10 @@ bool ssearcher::find ( const std::string& var, int& type ) const {
 
         ch = var[i];
 
-        if (m_bor[num].to[ ch ] == -1) {
+        if ( m_bor[num].to[ ch ] == -1 ) {
             return false;
         }
+
         num = m_bor[num].to[ ch ];
     }
 
@@ -55,3 +57,36 @@ bool ssearcher::find ( const std::string& var, int& type ) const {
     return true;
 }
 
+
+bool ssearcher::find ( const bstring_t& var, int& type ) const {
+
+    int     num = 0;
+    uint8_t ch  = 0;
+
+    if ( m_bor.size() == 0 ) {
+        return false;
+    }
+
+    for ( int i = 0; i < var.len; i++ ) {
+
+        ch = var.buf[i];
+
+        if (m_bor[num].to[ch] != -1) {
+            num = m_bor[num].to[ch];
+            continue;
+        }
+
+        if ( m_bor[num].to[ '*' ] != -1 ) {
+            num = m_bor[num].to[ '*' ];
+            break;
+        }
+
+        return false;
+    }
+
+    if ( !m_bor[num].flag_stop ) {
+        return false;
+    }
+
+    return true;
+}

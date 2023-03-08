@@ -567,7 +567,7 @@ long hpx_get_eleml(hpx_ctrl_t *ctl, bstringl_t *b, int *in_tag, long *lno)
             // read new data from file (but not the mem buffer, i.e. fd == -1)
             for (s = 0; ctl->fd != -1;)
             {
-               if ((s = read(ctl->fd, ctl->buf.buf + ctl->buf.len, ctl->len - ctl->buf.len)) != -1)
+               if ((s = _read(ctl->fd, ctl->buf.buf + ctl->buf.len, ctl->len - ctl->buf.len)) != -1)
                   break;
 
                if (errno != EINTR)
