@@ -34,6 +34,7 @@ typedef enum tag_osm_draw_type {
         DRAW_PATH_FOOTWAY,
         DRAW_PATH_RAILWAY,
         DRAW_PATH_BRIDGE,
+        DRAW_PATH_TUNNEL,
     DRAW_PATH_END,
 
     DRAW_BUILDING_BEGIN,
@@ -47,9 +48,13 @@ typedef enum tag_osm_draw_type {
         DRAW_AREA_ASPHALT,
         DRAW_AREA_GRASS,
         DRAW_AREA_FORSET,
+        DRAW_AREA_SAND,
         DRAW_AREA_MOUNTAIN,
         DRAW_AREA_UNKNOWN,
+        DRAW_AREA_STONE,
     DRAW_AREA_END,
+
+    DRAW_WATER,
 
     DRAW_LAST_ID
 }   osm_draw_type_t;

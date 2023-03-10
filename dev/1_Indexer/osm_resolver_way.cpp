@@ -8,6 +8,7 @@
 
 #define ITEMS_CNT(x)         ( ( sizeof(x) ) / ( sizeof (x[0]) ) )
 
+
 static ssearcher        g_area_landuse;
 static ssearcher        g_area_leisure;
 static ssearcher        g_area_natural;
@@ -83,6 +84,7 @@ static const osm_mapper_t map_path_highway[] = {
 static const osm_mapper_t map_path_railway[] = {
 
     {   "railway",                     DRAW_UNKNOWN          },
+    {   "proposed",                    DRAW_SKIP             },
 
     {   "rail",                        DRAW_PATH_RAILWAY     },
     {   "disused",                     DRAW_SKIP             },
@@ -91,6 +93,13 @@ static const osm_mapper_t map_path_railway[] = {
     {   "tram",                        DRAW_SKIP             },
     {   "funicular",                   DRAW_SKIP             },
     {   "platform_edge",               DRAW_SKIP             },
+    {   "turntable",                   DRAW_SKIP             },
+    {   "subway",                      DRAW_SKIP             },
+    {   "dismantled",                  DRAW_SKIP             },
+    {   "miniature" ,                  DRAW_SKIP             },
+    {   "loading_ramp" ,               DRAW_SKIP             },
+    {   "narrow_gauge" ,               DRAW_SKIP             },
+    {   "preserved" ,                  DRAW_SKIP             },
 };
 
 static const osm_mapper_t map_path_bridge[] = {
@@ -111,6 +120,11 @@ static const osm_mapper_t map_path_waterway[] = {
     {   "river",                       DRAW_PATH_RIVER        },
     {   "canal",                       DRAW_PATH_RIVER        },
     {   "weir",                        DRAW_PATH_RIVER        },
+    {   "fish_pass",                   DRAW_SKIP              },
+    {   "lock_gate",                   DRAW_SKIP              },
+    {   "boatyard",                    DRAW_SKIP              },
+    {   "dock",                        DRAW_SKIP              },
+
 };
 
 static const osm_mapper_t map_path_natural[] = {
@@ -124,6 +138,13 @@ static const osm_mapper_t map_path_transport[] = {
     {   "public_transport",            DRAW_UNKNOWN           },
     {   "platform",                    DRAW_SKIP              },
     {   "station",                     DRAW_SKIP              },
+    {   "service_point",               DRAW_SKIP              },
+    {   "storage_tank",                DRAW_SKIP              },
+    {   "embanmkment",                 DRAW_SKIP              },
+    {   "bunker_silo",                 DRAW_SKIP              },
+    {   "works",                       DRAW_SKIP              },
+    {   "ventilation_shaft",           DRAW_SKIP              },
+    {   "service_center",              DRAW_SKIP              },
 };
 
 static const osm_mapper_t map_area_landuse[] = {
@@ -131,15 +152,15 @@ static const osm_mapper_t map_area_landuse[] = {
     {   "landuse",                     DRAW_UNKNOWN           },
 
     {   "aerodrome",                   DRAW_AREA_ASPHALT      },
-    {   "basin",                       DRAW_AREA_ASPHALT      },
-    {   "cemetery",                    DRAW_AREA_ASPHALT      },
+    {   "commercial",                  DRAW_AREA_ASPHALT      },
+    {   "construction",                DRAW_AREA_ASPHALT      },
     {   "parking",                     DRAW_AREA_ASPHALT      },
     {   "industrial",                  DRAW_AREA_ASPHALT      },
     {   "retail",                      DRAW_AREA_ASPHALT      },
     {   "military",                    DRAW_AREA_ASPHALT      },
-    {   "construction",                DRAW_AREA_ASPHALT      },
     {   "residential",                 DRAW_AREA_ASPHALT      },
-    {   "commercial",                  DRAW_AREA_ASPHALT      },
+    {   "garages",                     DRAW_AREA_ASPHALT      },
+    {   "railway",                     DRAW_AREA_ASPHALT      },
 
     {   "brownfield",                  DRAW_AREA_GRASS        },
     {   "village_green",               DRAW_AREA_GRASS        },
@@ -151,19 +172,37 @@ static const osm_mapper_t map_area_landuse[] = {
     {   "vineyard",                    DRAW_AREA_GRASS        },
     {   "orchard",                     DRAW_AREA_GRASS        },
     {   "greenfield",                  DRAW_AREA_GRASS        },
+    {   "plant_nursery",               DRAW_AREA_GRASS        },
+    {   "landfill",                    DRAW_AREA_GRASS        },
+    {   "religious",                   DRAW_AREA_GRASS        },
+    {   "allotments",                  DRAW_AREA_GRASS        },
+    {   "greenhouse_horticulture",     DRAW_AREA_GRASS        },
+    {   "cemetery",                    DRAW_AREA_GRASS        },
 
-    {   "quarry",                      DRAW_AREA_MOUNTAIN     },
     {   "forest",                      DRAW_AREA_FORSET       },
 
-    {   "railway",                     DRAW_AREA_ASPHALT      },
+    {   "quarry",                      DRAW_AREA_MOUNTAIN     },
+
+    {   "basin",                       DRAW_WATER             },
+    {   "reservoir",                   DRAW_WATER             },
+    {   "salt_pond",                   DRAW_WATER             },
 
     {   "allotments",                  DRAW_SKIP              },
     {   "flowerbed",                   DRAW_SKIP              },
-    {   "garages",                     DRAW_SKIP              },
-    {   "plant_nursery",               DRAW_SKIP              },
-    {   "landfill",                    DRAW_SKIP              },
-    {   "religious",                   DRAW_SKIP              },
     {   "depot",                       DRAW_SKIP              },
+    {   "education",                   DRAW_SKIP              },
+    {   "fairground",                  DRAW_SKIP              },
+    {   "institutional",               DRAW_SKIP              },
+    {   "aquaculture",                 DRAW_SKIP              },
+    {   "conservation",                DRAW_SKIP              },
+    {   "port",                        DRAW_SKIP              },
+    {   "winter_sports",               DRAW_SKIP              },
+
+    {   "animal_keeping",              DRAW_SKIP              },
+    {   "churchyard",                  DRAW_SKIP              },
+    {   "exposition",                  DRAW_SKIP              },
+    {   "radio",                       DRAW_SKIP              },
+
     {   "yes",                         DRAW_SKIP              },
 
 };
@@ -180,27 +219,70 @@ static const osm_mapper_t map_area_leisure[] = {
     {   "park",                        DRAW_AREA_GRASS        },
     {   "dog_park",                    DRAW_AREA_GRASS        },
     {   "miniature_golf",              DRAW_AREA_GRASS        },
+    {   "meadow",                      DRAW_AREA_GRASS        },
 
     {   "ice_rink",                    DRAW_SKIP              },
     {   "swimming_pool",               DRAW_SKIP              },
     {   "hospital",                    DRAW_SKIP              },
     {   "sports_centre",               DRAW_SKIP              },
+    {   "nature_reserve",              DRAW_SKIP              },
+    {   "golf_course",                 DRAW_SKIP              },
+    {   "fitness_station",             DRAW_SKIP              },
+    {   "horse_riding",                DRAW_SKIP              },
+    {   "bandstand",                   DRAW_SKIP              },
+    {   "beach_resort",                DRAW_SKIP              },
+    {   "outdoor_seating",             DRAW_SKIP              },
+    {   "long_jump",                   DRAW_SKIP              },
+    {   "marina",                      DRAW_SKIP              },
+    {   "fitness_centre",              DRAW_SKIP              },
+    {   "bleachers",                   DRAW_SKIP              },
+    {   "firepit",                     DRAW_SKIP              },
+    {   "water_park",                  DRAW_SKIP              },
+    {   "maze",                        DRAW_SKIP              },
+    {   "racetrack",                   DRAW_SKIP              },
+    {   "trampoline_park",             DRAW_SKIP              },
+    {   "drawing_surface",             DRAW_SKIP              },
+    {   "practice_pitch",              DRAW_SKIP              },
+    {   "pitch;track",                 DRAW_SKIP              },
+    {   "soccer_golf",                 DRAW_SKIP              },
+    {   "yes",                         DRAW_SKIP              },
 };
 
 static const osm_mapper_t map_area_natural[] = {
 
-    {   "natural",                     DRAW_UNKNOWN           },
+    {   "natural",                     DRAW_UNKNOWN          },
 
-    {   "scrub",                       DRAW_AREA_FORSET      },
+    {   "stone",                       DRAW_AREA_STONE       },
+    {   "scree",                       DRAW_AREA_STONE       },
+    {   "grassland",                   DRAW_AREA_GRASS       },
+    {   "heath",                       DRAW_AREA_GRASS       },
+    {   "scrub",                       DRAW_AREA_GRASS       },
+    {   "wood",                        DRAW_AREA_FORSET      },
+    {   "bay",                         DRAW_AREA_WATER       },
     {   "water",                       DRAW_AREA_WATER       },
-    {   "grassland",                   DRAW_AREA_WATER       },
-    {   "cliff",                       DRAW_SKIP             },
+    {   "beach",                       DRAW_AREA_SAND        },
+    {   "sand",                        DRAW_AREA_SAND        },
+    {   "tree",                        DRAW_SKIP             },
+    {   "tree_row",                    DRAW_SKIP             },
+    {   "coastline",                   DRAW_SKIP             },
+    {   "glacier",                     DRAW_SKIP             },
     {   "mud",                         DRAW_SKIP             },
+    {   "shingle",                     DRAW_SKIP             },
+    {   "shoal",                       DRAW_SKIP             },
     {   "wetland",                     DRAW_SKIP             },
-    {   "wood",                        DRAW_SKIP             },
-    {   "sand",                        DRAW_SKIP             },
+    {   "arete",                       DRAW_SKIP             },
     {   "bare_rock",                   DRAW_SKIP             },
+    {   "cave_entrance",               DRAW_SKIP             },
+    {   "cliff",                       DRAW_SKIP             },
+    {   "ridge",                       DRAW_SKIP             },
+    {   "wetland",                     DRAW_SKIP             },
     {   "heath",                       DRAW_SKIP             },
+    {   "rock",                        DRAW_SKIP             },
+    {   "bedrock",                     DRAW_SKIP             },
+    {   "sinkhole",                    DRAW_SKIP             },
+    {   "earth_bank",                  DRAW_SKIP             },
+    {   "valley",                      DRAW_SKIP             },
+    {   "shrubbery",                   DRAW_SKIP             },
 };
 
 static const osm_mapper_t map_area_amenity[] = {
@@ -221,6 +303,14 @@ static const osm_mapper_t map_area_amenity[] = {
     {   "university",                  DRAW_SKIP              },
     {   "recycling",                   DRAW_SKIP              },
     {   "motorcycle_parking",          DRAW_SKIP              },
+    {   "waste_disposal",              DRAW_SKIP              },
+    {   "bench",                       DRAW_SKIP              },
+    {   "toilets",                     DRAW_SKIP              },
+    {   "trolley_bay",                 DRAW_SKIP              },
+    {   "prison",                      DRAW_SKIP              },
+    {   "police",                      DRAW_SKIP              },
+    {   "marketplace",                 DRAW_SKIP              },
+    {   "community_centre",            DRAW_SKIP              },
 };
 
 static const osm_mapper_t map_area_railway[] = {
@@ -242,6 +332,7 @@ static const osm_mapper_t map_area_water[] = {
     {   "water",                       DRAW_UNKNOWN           },
 
     {   "reservoir",                   DRAW_AREA_WATER        },
+    {   "basin",                       DRAW_SKIP              },
 };
 
 static const osm_mapper_t map_area_manmade[] = {
@@ -249,9 +340,39 @@ static const osm_mapper_t map_area_manmade[] = {
     {   "man_made",                    DRAW_UNKNOWN           },
 
     {   "platform",                    DRAW_AREA_ASPHALT      },
+    {   "bridge",                      DRAW_PATH_BRIDGE       },
+    {   "tunnel",                      DRAW_PATH_TUNNEL       },
+
     {   "pipeline",                    DRAW_SKIP              },
     {   "embankment",                  DRAW_SKIP              },
-
+    {   "pier",                        DRAW_SKIP              },
+    {   "water_works",                 DRAW_SKIP              },
+    {   "reservoir_covered",           DRAW_SKIP              },
+    {   "courtyard",                   DRAW_SKIP              },
+    {   "street_cabinet",              DRAW_SKIP              },
+    {   "silo",                        DRAW_SKIP              },
+    {   "wastewater_plant",            DRAW_SKIP              },
+    {   "pillar",                      DRAW_SKIP              },
+    {   "tower",                       DRAW_SKIP              },
+    {   "monitoring_station",          DRAW_SKIP              },
+    {   "water_well",                  DRAW_SKIP              },
+    {   "water_tower",                 DRAW_SKIP              },
+    {   "chimney",                     DRAW_SKIP              },
+    {   "antenna",                     DRAW_SKIP              },
+    {   "gasometer",                   DRAW_SKIP              },
+    {   "storage_tank",                DRAW_SKIP              },
+    {   "embanmkment",                 DRAW_SKIP              },
+    {   "ventilation_shaft",           DRAW_SKIP              },
+    {   "bunker_silo",                 DRAW_SKIP              },
+    {   "spoil_heap",                  DRAW_SKIP              },
+    {   "mineshaft",                   DRAW_SKIP              },
+    {   "works",                       DRAW_SKIP              },
+    {   "dyke",                        DRAW_SKIP              },
+    {   "beehive",                     DRAW_SKIP              },
+    {   "groyne",                      DRAW_SKIP              },
+    {   "breakwater",                  DRAW_SKIP              },
+    {   "crane",                       DRAW_SKIP              },
+    {   "yes",                         DRAW_SKIP              },
 };
 
 static const osm_mapper_t map_area_highway[] = {
