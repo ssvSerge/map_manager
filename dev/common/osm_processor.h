@@ -5,12 +5,15 @@
 #include "..\common\ssearch.h"
 #include "..\common\libhpxml.h"
 
+typedef void (*osm_object_t) ( const osm_obj_info_t& info );
+
 class osm_processor_t {
 
     public:
         osm_processor_t();
 
     public:
+        void configure ( osm_object_t add_node, osm_object_t add_way, osm_object_t add_rel );
         bool process_file(const char* const file_name);
 
     private:
@@ -22,6 +25,11 @@ class osm_processor_t {
         void osm_push(osm_node_t next_node);
         void osm_pop(osm_node_t osm_node);
         void process_open(int attr_cnt, const hpx_attr_t* attr_list);
+        void test_and_add(const char* const key);
+        void key_cmp(const char* const key, const char* const val, bool& r1, bool& r2);
+        bool find_key(const osm_tag_ctx_t& node_info, osm_str_t k, osm_str_t v1 = nullptr, osm_str_t v2 = nullptr, osm_str_t v3 = nullptr);
+        void map_type(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor);
+        bool is_area(const osm_tag_ctx_t& xml_tags);
 
     private:
         void process_root_node(int attr_cnt, const hpx_attr_t* attr_list);
@@ -37,20 +45,15 @@ class osm_processor_t {
         void process_rel_member(int attr_cnt, const hpx_attr_t* attr_list);
         void process_rel_tag(int attr_cnt, const hpx_attr_t* attr_list);
 
-        void test_and_add(const char* const key);
-        void key_cmp(const char* const key, const char* const val, bool& r1, bool& r2);
         void process_osm_param(osm_draw_type_t& draw_type, osm_draw_type_t new_type, const char* const name);
-        bool find_key(const osm_tag_ctx_t& node_info, osm_str_t k, osm_str_t v1 = nullptr, osm_str_t v2 = nullptr, osm_str_t v3 = nullptr);
-        void map_type(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor);
         void process_building(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info);
-        bool is_area(const osm_tag_ctx_t& xml_tags);
         void process_unused(osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor);
         void log_node(osm_id_t id, const osm_tag_ctx_t& node_info);
 
-        void expand_node_tags(void);
-        void resolve_node_type(void);
-        void store_node_info(void);
-        void clean_node_info(void);
+        void node_expand_tags(void);
+        void node_resolve_type(void);
+        void node_store_info(void);
+        void node_clean_info(void);
 
         void ways_init(void);
         void ways_expand_tags(void);
@@ -58,12 +61,17 @@ class osm_processor_t {
         void ways_store_info(void);
         void ways_clean_info(void);
 
-        void expand_rel_tags(void);
-        void resolve_rel_type(void);
-        void store_rel_info(void);
-        void clean_rel_info(void);
+        void rel_expand_tags(void);
+        void rel_resolve_type(void);
+        void rel_store_info(void);
+        void rel_clean_info(void);
 
         void process_item(int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list);
+
+    private:
+        osm_object_t     m_callback_node;
+        osm_object_t     m_callback_way;
+        osm_object_t     m_callback_rel;
 
     private:
         ssearcher        area_landuse;
@@ -99,8 +107,8 @@ class osm_processor_t {
         ssearcher        skiplist_rels;
 
     private:
-        osm_node_t       g_xml_ctx[4];
-        int              g_xml_ctx_cnt;
+        osm_node_t       xml_ctx[4];
+        int              xml_ctx_cnt;
 
     private:
         osm_obj_info_t   osm_info;

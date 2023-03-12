@@ -9,23 +9,24 @@
 
 #include "..\common\osm_processor.h"
 
-// ssearcher     g_skiplist_nodes;
-// ssearcher     g_skiplist_ways;
-// ssearcher     g_skiplist_rels;
+osm_processor_t processor;
+
+void add_node (const osm_obj_info_t& info) {
+
+}
+
+void add_way (const osm_obj_info_t& info) {
+
+}
+
+void add_rel(const osm_obj_info_t& info) {
+
+}
 
 int main() {
 
-    // int         fd      = 0;
-    // hpx_ctrl_t* ctrl    = nullptr;
-    // hpx_tag_t*  xml_obj = nullptr;
-    // bstring_t   xml_str;
-    // long        lno;
-    // int         io_res;
-
-    osm_processor_t processor;
-
+    processor.configure ( add_node, add_way, add_rel );
     processor.process_file("D:\\OSM_Extract\\prague_short.osm");
-
 
     return 0;
 }

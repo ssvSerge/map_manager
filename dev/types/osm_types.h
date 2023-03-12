@@ -116,8 +116,6 @@ typedef struct tag_osm_mapper {
 
 typedef struct tag_osm_obj_info {
     ref_list_t          ref_list;
-    osm_node_t          xml_ctx[4];
-    int                 xml_ctx_cnt;
     osm_tag_ctx_t       xml_tags;
     osm_node_info_t     node_info;
 }   osm_obj_info_t;

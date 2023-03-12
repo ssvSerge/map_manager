@@ -13,8 +13,8 @@
 
 #define ITEMS_CNT(x)         ( ( sizeof(x) ) / ( sizeof (x[0]) ) )
 #define MAP_TYPE(p,c)        ( ((int)(p)<<16) + ((int)(c)) )
-#define OSM_TYPE_PREV        ( (int)(osm_info.xml_ctx[osm_info.xml_ctx_cnt-2]) )
-#define OSM_TYPE_CURR        ( (int)(osm_info.xml_ctx[osm_info.xml_ctx_cnt-1]) )
+#define OSM_TYPE_PREV        ( (int)(xml_ctx[xml_ctx_cnt-2]) )
+#define OSM_TYPE_CURR        ( (int)(xml_ctx[xml_ctx_cnt-1]) )
 #define GEO_SCALE            ( 10000000 )
 
 //---------------------------------------------------------------------------//
@@ -521,8 +521,12 @@ static const osm_mapper_t map_ways_unused[] = {
 
 osm_processor_t::osm_processor_t() {
 
-    memset(&g_xml_ctx, 0, sizeof(g_xml_ctx));
-    g_xml_ctx_cnt = 0;
+    m_callback_node = nullptr;
+    m_callback_way  = nullptr;
+    m_callback_rel  = nullptr;
+
+    memset(&xml_ctx, 0, sizeof(xml_ctx));
+    xml_ctx_cnt = 0;
 
     load_skiplist("skip.nodes", skiplist_nodes);
     load_skiplist("skip.ways",  skiplist_ways );
@@ -613,33 +617,34 @@ void osm_processor_t::ways_init(void) {
 
 void osm_processor_t::osm_push(osm_node_t next_node) {
 
-    osm_info.xml_ctx[osm_info.xml_ctx_cnt] = next_node;
-    osm_info.xml_ctx_cnt++;
+    xml_ctx[xml_ctx_cnt] = next_node;
+    xml_ctx_cnt++;
 }
 
 void osm_processor_t::osm_pop (osm_node_t osm_node ) {
 
-    osm_info.xml_ctx_cnt--;
+    xml_ctx_cnt--;
 
-    if (osm_info.xml_ctx[osm_info.xml_ctx_cnt] == XML_NODE_NODE ) {
-        expand_node_tags();    // 
-        resolve_node_type();   // 
-        store_node_info();     // 
-        clean_node_info();     // 
+    if (xml_ctx[xml_ctx_cnt] == XML_NODE_NODE ) {
+        node_expand_tags();    // 
+        node_resolve_type();   // 
+        node_store_info();     // 
+        node_clean_info();     // 
     } else
-    if (osm_info.xml_ctx[osm_info.xml_ctx_cnt] == XML_NODE_WAY ) {
+    if (xml_ctx[xml_ctx_cnt] == XML_NODE_WAY ) {
         ways_expand_tags();
         ways_resolve_type();
         ways_store_info();
         ways_clean_info();
     } else
-    if (osm_info.xml_ctx[osm_info.xml_ctx_cnt] == XML_NODE_REL ) {
-        expand_rel_tags();
-        resolve_rel_type();
-        store_rel_info();
+    if (xml_ctx[xml_ctx_cnt] == XML_NODE_REL ) {
+        rel_expand_tags();
+        rel_resolve_type();
+        rel_store_info();
+        rel_clean_info();
     }
 
-    osm_info.xml_ctx[osm_info.xml_ctx_cnt] = XML_NODE_UNDEF;
+    xml_ctx[xml_ctx_cnt] = XML_NODE_UNDEF;
 }
 
 void osm_processor_t::cp_val(const hpx_attr_t& src, alloc_str_t& dst) {
@@ -930,16 +935,16 @@ void osm_processor_t::ways_expand_tags(void) {
     test_and_add("toilets");
 }
 
-void osm_processor_t::expand_node_tags(void) {
+void osm_processor_t::node_expand_tags(void) {
 
 }
 
-void osm_processor_t::resolve_node_type(void) {
+void osm_processor_t::node_resolve_type(void) {
 
     osm_info.node_info.type = static_cast<osm_obj_type_t> (0);
 }
 
-void osm_processor_t::clean_node_info ( void ) {
+void osm_processor_t::node_clean_info( void ) {
 
     assert(osm_info.xml_tags.cnt < OSM_MAX_TAGS_CNT);
 
@@ -953,12 +958,18 @@ void osm_processor_t::clean_node_info ( void ) {
     osm_info.ref_list.clear();
 }
 
-void osm_processor_t::store_node_info(void) {
+void osm_processor_t::node_store_info(void) {
 
+    if (m_callback_node != nullptr) {
+        m_callback_node(osm_info);
+    }
 }
 
 void osm_processor_t::ways_store_info(void) {
 
+    if (m_callback_way != nullptr) {
+        m_callback_way(osm_info);
+    }
 }
 
 void osm_processor_t::ways_clean_info(void) {
@@ -975,19 +986,22 @@ void osm_processor_t::ways_clean_info(void) {
     osm_info.ref_list.clear();
 }
 
-void osm_processor_t::expand_rel_tags(void) {
+void osm_processor_t::rel_expand_tags(void) {
 
 }
 
-void osm_processor_t::resolve_rel_type(void) {
+void osm_processor_t::rel_resolve_type(void) {
 
 }
 
-void osm_processor_t::store_rel_info(void) {
+void osm_processor_t::rel_store_info(void) {
 
+    if (m_callback_rel != nullptr) {
+        m_callback_rel(osm_info);
+    }
 }
 
-void osm_processor_t::clean_rel_info(void) {
+void osm_processor_t::rel_clean_info(void) {
 
 }
 
@@ -1201,6 +1215,13 @@ void osm_processor_t::ways_resolve_type(void) {
 
 //---------------------------------------------------------------------------//
 
+void osm_processor_t::configure(osm_object_t add_node, osm_object_t add_way, osm_object_t add_rel) {
+
+    m_callback_node = add_node;
+    m_callback_way  = add_way;
+    m_callback_rel  = add_rel;
+}
+
 bool osm_processor_t::process_file ( const char* const file_name ) {
 
     int         fd = 0;
@@ -1210,7 +1231,7 @@ bool osm_processor_t::process_file ( const char* const file_name ) {
     long        lno;
     int         io_res;
 
-    _sopen_s(&fd, "D:\\OSM_Extract\\prague_short.osm", _O_BINARY | _O_RDONLY, _SH_DENYWR, _S_IREAD);
+    _sopen_s(&fd, file_name, _O_BINARY | _O_RDONLY, _SH_DENYWR, _S_IREAD);
     if (fd == -1) {
         return false;
     }
@@ -1227,8 +1248,8 @@ bool osm_processor_t::process_file ( const char* const file_name ) {
 
     ways_init();
 
-    g_xml_ctx[0] = XML_NODE_ROOT;
-    g_xml_ctx_cnt++;
+    xml_ctx[0] = XML_NODE_ROOT;
+    xml_ctx_cnt++;
 
     for ( ; ; ) {
 
