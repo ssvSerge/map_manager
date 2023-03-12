@@ -20,6 +20,7 @@ static ssearcher        g_area_transport;
 static ssearcher        g_area_water;
 static ssearcher        g_area_railway;
 static ssearcher        g_area_boundary;
+static ssearcher        g_area_place;
 static ssearcher        g_path_highway;
 static ssearcher        g_path_railway;
 static ssearcher        g_path_waterway;
@@ -27,13 +28,103 @@ static ssearcher        g_path_natural;
 static ssearcher        g_path_transport;
 static ssearcher        g_path_power;
 static ssearcher        g_path_bridge;
+static ssearcher        g_path_stairwell;
+static ssearcher        g_path_barrier;
+static ssearcher        g_path_golf;
+static ssearcher        g_path_shop;
 static ssearcher        g_ways_ignored;
 
+static const osm_mapper_t map_path_stairwell[] = {
+    {   "stairwell",                   DRAW_UNKNOWN          },
+    {   "flight_of_stairs",            DRAW_SKIP             },
+    {   "stair_landing",               DRAW_SKIP             },
+    {   "yes",                         DRAW_SKIP             },
+};
+
+static const osm_mapper_t map_path_golf[] = {
+    {   "golf",                        DRAW_UNKNOWN          },
+    {   "fairway",                     DRAW_SKIP             },
+    {   "hole",                        DRAW_SKIP             },
+    {   "tee",                         DRAW_SKIP             },
+    {   "green",                       DRAW_SKIP             },
+    {   "bunker",                      DRAW_SKIP             },
+};
+
+static const osm_mapper_t map_path_shop[] = {
+    {   "shop",                        DRAW_UNKNOWN          },
+    {   "stationery",                  DRAW_SKIP             },
+    {   "car",                         DRAW_SKIP             },
+    {   "garden_centre",               DRAW_SKIP             },
+    {   "convenience",                 DRAW_SKIP             },
+    {   "kiosk",                       DRAW_SKIP             },
+    {   "vacant",                      DRAW_SKIP             },
+    {   "supermarket",                 DRAW_SKIP             },
+    {   "newsagent",                   DRAW_SKIP             },
+    {   "optician",                    DRAW_SKIP             },
+    {   "clothes",                     DRAW_SKIP             },
+    {   "florist",                     DRAW_SKIP             },
+    {   "car_repair",                  DRAW_SKIP             },
+    {   "furniture",                   DRAW_SKIP             },
+    {   "ticket",                      DRAW_SKIP             },
+    {   "gift",                        DRAW_SKIP             },
+    {   "storage_rental",              DRAW_SKIP             },
+    {   "toys",                        DRAW_SKIP             },
+    {   "chemist",                     DRAW_SKIP             },
+    {   "books",                       DRAW_SKIP             },
+    {   "variety_store",               DRAW_SKIP             },
+    {   "fashion_accessories",         DRAW_SKIP             },
+    {   "tea",                         DRAW_SKIP             },
+    {   "pawnbroker",                  DRAW_SKIP             },
+    {   "butcher",                     DRAW_SKIP             },
+    {   "bakery",                      DRAW_SKIP             },
+    {   "travel_agency",               DRAW_SKIP             },
+    {   "cosmetics",                   DRAW_SKIP             },
+    {   "bag",                         DRAW_SKIP             },
+    {   "beauty",                      DRAW_SKIP             },
+    {   "shoes",                       DRAW_SKIP             },
+    {   "nutrition_supplements",       DRAW_SKIP             },
+    {   "beverages",                   DRAW_SKIP             },
+    {   "watches",                     DRAW_SKIP             },
+    {   "model",                       DRAW_SKIP             },
+};
+
+static const osm_mapper_t map_path_barrier[] = {
+    {   "barrier",                     DRAW_UNKNOWN          },
+    {   "wall",                        DRAW_SKIP             },
+    {   "fence",                       DRAW_SKIP             },
+    {   "city_wall",                   DRAW_SKIP             },
+    {   "retaining_wall",              DRAW_SKIP             },
+    {   "gate",                        DRAW_SKIP             },
+    {   "hedge",                       DRAW_SKIP             },
+    {   "jersey_barrier",              DRAW_SKIP             },
+    {   "bollard",                     DRAW_SKIP             },
+    {   "handrail",                    DRAW_SKIP             },
+    {   "kerb",                        DRAW_SKIP             },
+    {   "lift_gate",                   DRAW_SKIP             },
+    {   "guard_rail",                  DRAW_SKIP             },
+    {   "block",                       DRAW_SKIP             },
+    {   "entrance",                    DRAW_SKIP             },
+    {   "banister",                    DRAW_SKIP             },
+    {   "glass",                       DRAW_SKIP             },
+    {   "chain",                       DRAW_SKIP             },
+    {   "ditch",                       DRAW_SKIP             },
+    {   "cable_barrier",               DRAW_SKIP             },
+    {   "flood_wall",                  DRAW_SKIP             },
+    {   "block_row",                   DRAW_SKIP             },
+    {   "flowerpot",                   DRAW_SKIP             },
+    {   "wicket_gate",                 DRAW_SKIP             },
+    {   "rope",                        DRAW_SKIP             },
+    {   "yes",                         DRAW_SKIP             },
+};
 
 static const osm_mapper_t map_path_power[] = {
     {   "power",                       DRAW_UNKNOWN          },
 
     {   "line",                        DRAW_SKIP             },
+    {   "generator",                   DRAW_SKIP             },
+    {   "cable",                       DRAW_SKIP             },
+    {   "portal",                      DRAW_SKIP             },
+    {   "plant",                       DRAW_SKIP             },
     {   "substation",                  DRAW_SKIP             },
     {   "minor_line",                  DRAW_SKIP             },
 };
@@ -145,6 +236,19 @@ static const osm_mapper_t map_path_transport[] = {
     {   "works",                       DRAW_SKIP              },
     {   "ventilation_shaft",           DRAW_SKIP              },
     {   "service_center",              DRAW_SKIP              },
+};
+
+static const osm_mapper_t map_area_place[] = {
+
+    {   "place",                      DRAW_UNKNOWN           },
+
+    {   "square",                     DRAW_AREA_ASPHALT      },
+    {   "islet",                      DRAW_AREA_ASPHALT      },
+    {   "locality",                   DRAW_AREA_ASPHALT      },
+    {   "farm",                       DRAW_AREA_GRASS        },
+    {   "island",                     DRAW_AREA_GRASS        },
+    {   "plot",                       DRAW_SKIP              },
+    {   "city_block",                 DRAW_SKIP              },
 };
 
 static const osm_mapper_t map_area_landuse[] = {
@@ -419,6 +523,13 @@ static const osm_mapper_t map_ways_unused[] = {
     {   "boundary",                    DRAW_SKIP              },
     {   "route",                       DRAW_SKIP              },
     {   "cycleway",                    DRAW_SKIP              },
+    {   "shop",                        DRAW_SKIP              },
+    {   "indoor",                      DRAW_SKIP              },
+    {   "was",                         DRAW_SKIP              },
+    {   "historic",                    DRAW_SKIP              },
+    {   "playground",                  DRAW_SKIP              },
+    {   "removed",                     DRAW_SKIP              },
+    {   "toilets",                     DRAW_SKIP              },
 };
 
 
@@ -561,7 +672,7 @@ static bool _is_area ( const osm_tag_ctx_t& xml_tags ) {
     return true;
 }
 
-static void _process_unused (osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor ) {
+static void _process_unused ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor ) {
 
     bool find_res;
     int  type;
@@ -609,6 +720,7 @@ void ways_init (void) {
     bor_init ( map_area_water,     ITEMS_CNT(map_area_water),     g_area_water );
     bor_init ( map_area_railway,   ITEMS_CNT(map_area_railway),   g_area_railway );
     bor_init ( map_area_boundary,  ITEMS_CNT(map_area_boundary),  g_area_boundary );
+    bor_init ( map_area_place,     ITEMS_CNT(map_area_place),     g_area_place );
 
     bor_init ( map_path_highway,   ITEMS_CNT(map_path_highway),   g_path_highway );
     bor_init ( map_path_railway,   ITEMS_CNT(map_path_railway),   g_path_railway );
@@ -617,6 +729,10 @@ void ways_init (void) {
     bor_init ( map_path_transport, ITEMS_CNT(map_path_transport), g_path_transport );
     bor_init ( map_path_power,     ITEMS_CNT(map_path_power),     g_path_power );
     bor_init ( map_path_bridge,    ITEMS_CNT(map_path_bridge),    g_path_bridge );
+    bor_init ( map_path_stairwell, ITEMS_CNT(map_path_stairwell), g_path_stairwell );
+    bor_init ( map_path_barrier,   ITEMS_CNT(map_path_barrier),   g_path_barrier );
+    bor_init ( map_path_golf,      ITEMS_CNT(map_path_golf),      g_path_golf );
+    bor_init ( map_path_shop,      ITEMS_CNT(map_path_shop),      g_path_shop );
 }
 
 void ways_expand_tags ( void ) {
@@ -630,6 +746,9 @@ void ways_expand_tags ( void ) {
     test_and_add ( "construction" );
     test_and_add ( "cycleway" );
     test_and_add ( "demolished" );
+    test_and_add ( "was" );
+    test_and_add ( "removed" );
+    test_and_add ( "toilets" );
 }
 
 void ways_resolve_type ( void ) {
@@ -676,6 +795,10 @@ void ways_resolve_type ( void ) {
         map_type ( draw_type, g_xml_tags, g_path_transport );
         map_type ( draw_type, g_xml_tags, g_path_power );
         map_type ( draw_type, g_xml_tags, g_path_bridge );
+        map_type ( draw_type, g_xml_tags, g_path_stairwell );
+        map_type ( draw_type, g_xml_tags, g_path_barrier );
+        map_type ( draw_type, g_xml_tags, g_path_golf );
+        map_type ( draw_type, g_xml_tags, g_path_shop );
 
         map_type ( draw_type, g_xml_tags, g_area_amenity );
         map_type ( draw_type, g_xml_tags, g_area_water );
@@ -684,7 +807,7 @@ void ways_resolve_type ( void ) {
         map_type ( draw_type, g_xml_tags, g_area_natural );
         map_type ( draw_type, g_xml_tags, g_area_landuse );
         map_type ( draw_type, g_xml_tags, g_area_manmade );
-
+        map_type ( draw_type, g_xml_tags, g_area_place );
     }
 
     _process_unused ( draw_type, g_xml_tags, g_ways_ignored );
