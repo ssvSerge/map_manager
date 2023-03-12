@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="tools">
       <UniqueIdentifier>{b18d3804-c299-4848-aaa4-07e442740522}</UniqueIdentifier>
     </Filter>
@@ -14,14 +10,11 @@
     <Filter Include="tools\xml">
       <UniqueIdentifier>{d6c4c88d-9b85-46c5-911c-07073d54369e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\resolver">
-      <UniqueIdentifier>{985a3c09-df76-4ead-b463-b19c6db502b7}</UniqueIdentifier>
+    <Filter Include="tools\processor">
+      <UniqueIdentifier>{cf12492e-e4f2-4a5e-bd96-5bf49a7468af}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="1_Indexer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\ssearch.cpp">
       <Filter>tools\ssearch</Filter>
     </ClCompile>
@@ -31,34 +24,26 @@
     <ClCompile Include="..\common\libhpxml.c">
       <Filter>tools\xml</Filter>
     </ClCompile>
-    <ClCompile Include="xml_parser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="osm_resolver_node.cpp">
-      <Filter>Source Files\resolver</Filter>
-    </ClCompile>
-    <ClCompile Include="osm_resolver_rels.cpp">
-      <Filter>Source Files\resolver</Filter>
-    </ClCompile>
-    <ClCompile Include="osm_resolver_way.cpp">
-      <Filter>Source Files\resolver</Filter>
-    </ClCompile>
-    <ClCompile Include="osm_tools.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="1_Indexer.cpp" />
+    <ClCompile Include="..\common\osm_processor.cpp">
+      <Filter>tools\processor</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\ssearch.h">
       <Filter>tools\ssearch</Filter>
     </ClInclude>
-    <ClInclude Include="xml_parser.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="..\common\bstring.h">
+      <Filter>tools\processor</Filter>
     </ClInclude>
-    <ClInclude Include="osm_resolver.h">
-      <Filter>Source Files\resolver</Filter>
+    <ClInclude Include="..\common\libhpxml.h">
+      <Filter>tools\processor</Filter>
     </ClInclude>
-    <ClInclude Include="osm_tools.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="..\common\osm_resolver.h">
+      <Filter>tools\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\osm_processor.h">
+      <Filter>tools\processor</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

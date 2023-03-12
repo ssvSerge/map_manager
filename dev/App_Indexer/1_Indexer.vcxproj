@@ -154,19 +154,16 @@
   <ItemGroup>
     <ClCompile Include="..\common\bstring.c" />
     <ClCompile Include="..\common\libhpxml.c" />
+    <ClCompile Include="..\common\osm_processor.cpp" />
     <ClCompile Include="..\common\ssearch.cpp" />
     <ClCompile Include="1_Indexer.cpp" />
-    <ClCompile Include="osm_resolver_node.cpp" />
-    <ClCompile Include="osm_resolver_rels.cpp" />
-    <ClCompile Include="osm_resolver_way.cpp" />
-    <ClCompile Include="osm_tools.cpp" />
-    <ClCompile Include="xml_parser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\bstring.h" />
+    <ClInclude Include="..\common\libhpxml.h" />
+    <ClInclude Include="..\common\osm_processor.h" />
+    <ClInclude Include="..\common\osm_resolver.h" />
     <ClInclude Include="..\common\ssearch.h" />
-    <ClInclude Include="osm_resolver.h" />
-    <ClInclude Include="osm_tools.h" />
-    <ClInclude Include="xml_parser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

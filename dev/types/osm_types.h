@@ -93,12 +93,10 @@ typedef enum tag_ref_type {
     REF_LAST
 }   ref_type_t;
 
-
 typedef struct tag_link_info {
     ref_type_t      ref;
     osm_id_t        id;
 }   link_info_t;
-
 
 typedef std::vector<link_info_t>     ref_list_t;
 
@@ -116,5 +114,12 @@ typedef struct tag_osm_mapper {
     osm_draw_type_t         v;
 }   osm_mapper_t;
 
+typedef struct tag_osm_obj_info {
+    ref_list_t          ref_list;
+    osm_node_t          xml_ctx[4];
+    int                 xml_ctx_cnt;
+    osm_tag_ctx_t       xml_tags;
+    osm_node_info_t     node_info;
+}   osm_obj_info_t;
 
 #endif

@@ -45,9 +45,9 @@ class ssearcher {
 
 };
 
-extern ssearcher g_skiplist_nodes;
-extern ssearcher g_skiplist_ways;
-extern ssearcher g_skiplist_rels;
+// extern ssearcher g_skiplist_nodes;
+// extern ssearcher g_skiplist_ways;
+// extern ssearcher g_skiplist_rels;
 
 
 #endif

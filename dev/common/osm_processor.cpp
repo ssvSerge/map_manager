@@ -1,38 +1,23 @@
-#include <cassert>
+#include <io.h>
+#include <fcntl.h>
+
 #include <iostream>
+#include <sstream>
+#include <fstream>
+#include <string>
+#include <cassert>
 
-#include "osm_tools.h"
-#include "osm_resolver.h"
+#include "osm_processor.h"
 
-#include "..\common\ssearch.h"
+//---------------------------------------------------------------------------//
 
 #define ITEMS_CNT(x)         ( ( sizeof(x) ) / ( sizeof (x[0]) ) )
+#define MAP_TYPE(p,c)        ( ((int)(p)<<16) + ((int)(c)) )
+#define OSM_TYPE_PREV        ( (int)(osm_info.xml_ctx[osm_info.xml_ctx_cnt-2]) )
+#define OSM_TYPE_CURR        ( (int)(osm_info.xml_ctx[osm_info.xml_ctx_cnt-1]) )
+#define GEO_SCALE            ( 10000000 )
 
-
-static ssearcher        g_area_landuse;
-static ssearcher        g_area_leisure;
-static ssearcher        g_area_natural;
-static ssearcher        g_area_amenity;
-static ssearcher        g_area_waterway;
-static ssearcher        g_area_manmade;
-static ssearcher        g_area_highway;
-static ssearcher        g_area_transport;
-static ssearcher        g_area_water;
-static ssearcher        g_area_railway;
-static ssearcher        g_area_boundary;
-static ssearcher        g_area_place;
-static ssearcher        g_path_highway;
-static ssearcher        g_path_railway;
-static ssearcher        g_path_waterway;
-static ssearcher        g_path_natural;
-static ssearcher        g_path_transport;
-static ssearcher        g_path_power;
-static ssearcher        g_path_bridge;
-static ssearcher        g_path_stairwell;
-static ssearcher        g_path_barrier;
-static ssearcher        g_path_golf;
-static ssearcher        g_path_shop;
-static ssearcher        g_ways_ignored;
+//---------------------------------------------------------------------------//
 
 static const osm_mapper_t map_path_stairwell[] = {
     {   "stairwell",                   DRAW_UNKNOWN          },
@@ -532,8 +517,535 @@ static const osm_mapper_t map_ways_unused[] = {
     {   "toilets",                     DRAW_SKIP              },
 };
 
+//---------------------------------------------------------------------------//
 
-void map_type ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor ) {
+osm_processor_t::osm_processor_t() {
+
+    memset(&g_xml_ctx, 0, sizeof(g_xml_ctx));
+    g_xml_ctx_cnt = 0;
+
+    load_skiplist("skip.nodes", skiplist_nodes);
+    load_skiplist("skip.ways",  skiplist_ways );
+    load_skiplist("skip.rels",  skiplist_rels );
+}
+
+//---------------------------------------------------------------------------//
+
+void osm_processor_t::log_node(osm_id_t id, const osm_tag_ctx_t& node_info) {
+
+    std::cout << "<way id=\"" << id << "\">" << std::endl;
+
+    for (int i = 0; i < node_info.cnt; i++) {
+        std::cout << "  <tag ";
+        std::cout << "k=\"" << node_info.list[i].k << "\" ";
+        std::cout << "v=\"" << node_info.list[i].v << "\" ";
+        std::cout << "/>" << std::endl;
+    }
+
+    std::cout << "</way>" << std::endl;
+}
+
+void osm_processor_t::load_skiplist(const char* const file_name, ssearcher& bor) {
+
+    std::ifstream cfg_file;
+    std::string   line;
+    std::string   key;
+
+    cfg_file.open(file_name);
+
+    while (std::getline(cfg_file, line)) {
+        if (!line.empty()) {
+            bor.add(line, 0);
+        }
+    }
+}
+
+void osm_processor_t::bor_init(const osm_mapper_t* const lex_list, size_t cnt, ssearcher& bor) {
+
+    if (lex_list == nullptr) {
+        return;
+    }
+
+    if (lex_list[0].v != DRAW_UNKNOWN) {
+        return;
+    }
+
+    bor.init(lex_list[0].k);
+
+    for (size_t i = 1; i < cnt; i++) {
+        bor.add(lex_list[i].k, lex_list[i].v);
+    }
+
+    return;
+}
+
+//---------------------------------------------------------------------------//
+
+void osm_processor_t::ways_init(void) {
+
+    bor_init(map_ways_unused, ITEMS_CNT(map_ways_unused), ways_ignored);
+
+    bor_init(map_area_landuse, ITEMS_CNT(map_area_landuse), area_landuse);
+    bor_init(map_area_leisure, ITEMS_CNT(map_area_leisure), area_leisure);
+    bor_init(map_area_natural, ITEMS_CNT(map_area_natural), area_natural);
+    bor_init(map_area_amenity, ITEMS_CNT(map_area_amenity), area_amenity);
+    bor_init(map_area_waterway, ITEMS_CNT(map_area_waterway), area_waterway);
+    bor_init(map_area_manmade, ITEMS_CNT(map_area_manmade), area_manmade);
+    bor_init(map_area_highway, ITEMS_CNT(map_area_highway), area_highway);
+    bor_init(map_area_transport, ITEMS_CNT(map_area_transport), area_transport);
+    bor_init(map_area_water, ITEMS_CNT(map_area_water), area_water);
+    bor_init(map_area_railway, ITEMS_CNT(map_area_railway), area_railway);
+    bor_init(map_area_boundary, ITEMS_CNT(map_area_boundary), area_boundary);
+    bor_init(map_area_place, ITEMS_CNT(map_area_place), area_place);
+
+    bor_init(map_path_highway, ITEMS_CNT(map_path_highway), path_highway);
+    bor_init(map_path_railway, ITEMS_CNT(map_path_railway), path_railway);
+    bor_init(map_path_waterway, ITEMS_CNT(map_path_waterway), path_waterway);
+    bor_init(map_path_natural, ITEMS_CNT(map_path_natural), path_natural);
+    bor_init(map_path_transport, ITEMS_CNT(map_path_transport), path_transport);
+    bor_init(map_path_power, ITEMS_CNT(map_path_power), path_power);
+    bor_init(map_path_bridge, ITEMS_CNT(map_path_bridge), path_bridge);
+    bor_init(map_path_stairwell, ITEMS_CNT(map_path_stairwell), path_stairwell);
+    bor_init(map_path_barrier, ITEMS_CNT(map_path_barrier), path_barrier);
+    bor_init(map_path_golf, ITEMS_CNT(map_path_golf), path_golf);
+    bor_init(map_path_shop, ITEMS_CNT(map_path_shop), path_shop);
+}
+
+void osm_processor_t::osm_push(osm_node_t next_node) {
+
+    osm_info.xml_ctx[osm_info.xml_ctx_cnt] = next_node;
+    osm_info.xml_ctx_cnt++;
+}
+
+void osm_processor_t::osm_pop (osm_node_t osm_node ) {
+
+    osm_info.xml_ctx_cnt--;
+
+    if (osm_info.xml_ctx[osm_info.xml_ctx_cnt] == XML_NODE_NODE ) {
+        expand_node_tags();    // 
+        resolve_node_type();   // 
+        store_node_info();     // 
+        clean_node_info();     // 
+    } else
+    if (osm_info.xml_ctx[osm_info.xml_ctx_cnt] == XML_NODE_WAY ) {
+        ways_expand_tags();
+        ways_resolve_type();
+        ways_store_info();
+        ways_clean_info();
+    } else
+    if (osm_info.xml_ctx[osm_info.xml_ctx_cnt] == XML_NODE_REL ) {
+        expand_rel_tags();
+        resolve_rel_type();
+        store_rel_info();
+    }
+
+    osm_info.xml_ctx[osm_info.xml_ctx_cnt] = XML_NODE_UNDEF;
+}
+
+void osm_processor_t::cp_val(const hpx_attr_t& src, alloc_str_t& dst) {
+
+    strncpy_s(dst, src.value.buf, src.value.len);
+    dst[src.value.len] = 0;
+}
+
+void osm_processor_t::process_root_node ( int attr_cnt, const hpx_attr_t* attr_list ) {
+
+    double val;
+
+    for (int i = 0; i < attr_cnt; i++) {
+
+        if (bs_cmp(attr_list[i].name, "id") == 0) {
+            osm_info.node_info.id = bs_tol(attr_list[i].value );
+        } else
+        if (bs_cmp(attr_list[i].name, "lat") == 0) {
+            val = bs_tod(attr_list[i].value);
+            osm_info.node_info.lat = (osm_lat_t) ( val * GEO_SCALE );
+        } else
+        if (bs_cmp(attr_list[i].name, "lon") == 0) {
+            val = bs_tod(attr_list[i].value);
+            osm_info.node_info.lon = (osm_lon_t)( val * GEO_SCALE );
+        }
+
+    }
+}
+
+void osm_processor_t::store_attr ( int attr_cnt, const hpx_attr_t* new_item ) {
+
+    int s = osm_info.xml_tags.cnt;
+    osm_info.xml_tags.cnt++;
+
+    assert ( osm_info.xml_tags.cnt < OSM_MAX_TAGS_CNT );
+
+    for (int i = 0; i < attr_cnt; i++) {
+        if ( bs_cmp(new_item[i].name, "k") == 0 ) {
+            cp_val(new_item[i], osm_info.xml_tags.list[s].k);
+        } else
+        if (bs_cmp(new_item[i].name, "v") == 0) {
+            cp_val(new_item[i], osm_info.xml_tags.list[s].v);
+        }
+    }
+}
+
+void osm_processor_t::store_ref(const bstring_t& value, ref_type_t ref_type) {
+
+    link_info_t next_item;
+
+    next_item.id = bs_tol(value);
+    next_item.ref = ref_type;
+
+    osm_info.ref_list.push_back(next_item);
+}
+
+void osm_processor_t::process_root_way(int attr_cnt, const hpx_attr_t* attr_list) {
+
+    for (int i = 0; i < attr_cnt; i++) {
+        if (bs_cmp(attr_list[i].name, "id") == 0) {
+            osm_info.node_info.id = bs_tol(attr_list[i].value);
+            break;
+        }
+    }
+}
+
+void osm_processor_t::process_way_nd(int attr_cnt, const hpx_attr_t* attr_list) {
+
+    for (int i = 0; i < attr_cnt; i++) {
+        if (bs_cmp(attr_list[i].name, "ref") == 0) {
+            store_ref(attr_list[i].value, REF_NODE);
+            break;
+        }
+    }
+}
+
+void osm_processor_t::process_node_tag(int attr_cnt, const hpx_attr_t* attr_list) {
+
+    int  type;
+    bool skip;
+
+    skip = skiplist_nodes.find(attr_list->value, type);
+    if (skip) {
+        return;
+    }
+
+    store_attr(attr_cnt, attr_list);
+}
+
+void osm_processor_t::process_way_tag(int attr_cnt, const hpx_attr_t* attr_list) {
+
+    int  type;
+    bool skip;
+
+    skip = skiplist_ways.find(attr_list->value, type);
+    if (skip) {
+        return;
+    }
+
+    store_attr(attr_cnt, attr_list);
+}
+
+void osm_processor_t::process_root_rel(int attr_cnt, const hpx_attr_t* attr_list) {
+
+}
+
+void osm_processor_t::process_rel_member(int attr_cnt, const hpx_attr_t* attr_list) {
+
+}
+
+void osm_processor_t::process_rel_tag(int attr_cnt, const hpx_attr_t* attr_list) {
+
+}
+
+void osm_processor_t::process_open ( int attr_cnt, const hpx_attr_t* attr_list ) {
+
+    switch ( MAP_TYPE(OSM_TYPE_PREV, OSM_TYPE_CURR) ) {
+
+
+        case MAP_TYPE(XML_NODE_ROOT, XML_NODE_NODE):
+            process_root_node(attr_cnt, attr_list);
+            break;
+        case MAP_TYPE(XML_NODE_NODE, XML_NODE_TAG):
+            process_node_tag(attr_cnt, attr_list);
+            break;
+
+
+        case MAP_TYPE(XML_NODE_ROOT, XML_NODE_WAY):
+            process_root_way(attr_cnt, attr_list);
+            break;
+        case MAP_TYPE(XML_NODE_WAY, XML_NODE_ND):
+            process_way_nd(attr_cnt, attr_list);
+            break;
+        case MAP_TYPE(XML_NODE_WAY, XML_NODE_TAG):
+            process_way_tag(attr_cnt, attr_list);
+            break;
+
+
+        case MAP_TYPE(XML_NODE_ROOT, XML_NODE_REL):
+            process_root_rel(attr_cnt, attr_list);
+            break;
+        case MAP_TYPE(XML_NODE_REL, XML_NODE_MEMBER):
+            process_rel_member(attr_cnt, attr_list);
+            break;
+        case MAP_TYPE(XML_NODE_REL, XML_NODE_TAG):
+            process_rel_tag(attr_cnt, attr_list);
+            break;
+
+
+        default:
+            assert(false);
+    }
+
+}
+
+void osm_processor_t::process_item (int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list ) {
+
+    osm_node_t osm_node = XML_NODE_UNDEF;
+
+    if ( bs_cmp(name, "node") == 0) {
+        osm_node = XML_NODE_NODE;
+    } else
+    if (bs_cmp(name, "tag") == 0) {
+        osm_node = XML_NODE_TAG;
+    } else
+    if (bs_cmp(name, "way") == 0) {
+        osm_node = XML_NODE_WAY;
+    } else
+    if (bs_cmp(name, "relation") == 0) {
+        osm_node = XML_NODE_REL;
+    } else
+    if (bs_cmp(name, "member") == 0) {
+        osm_node = XML_NODE_MEMBER;
+    } else
+    if (bs_cmp(name, "nd") == 0) {
+        osm_node = XML_NODE_ND;
+    } else
+    if (bs_cmp(name, "osm") == 0) {
+        osm_node = XML_NODE_SKIP;
+    } else
+    if (bs_cmp(name, "bounds") == 0) {
+        osm_node = XML_NODE_SKIP;
+    } else
+    if (bs_cmp(name, "xml") == 0) {
+        osm_node = XML_NODE_SKIP;
+    }
+
+    assert(osm_node != XML_NODE_UNDEF);
+
+    if (osm_node == XML_NODE_SKIP) {
+        return;
+    }
+
+    switch (xml_type) {
+
+        case HPX_OPEN: // open tag
+            osm_push(osm_node);
+            process_open(attr_cnt, attr_list);
+            break;
+
+        case HPX_SINGLE: // open tag + close tag
+            osm_push(osm_node);
+            process_open(attr_cnt, attr_list);
+            osm_pop(osm_node);
+            break;
+
+        case HPX_CLOSE:
+            osm_pop(osm_node);
+            break;
+
+        case HPX_INSTR:
+        case HPX_COMMENT:
+            break;
+
+        case HPX_ILL:
+        case HPX_LITERAL:
+        case HPX_ATT:
+            assert(false);
+            break;
+    }
+
+}
+
+void osm_processor_t::key_cmp(const char* const key, const char* const val, bool& r1, bool& r2) {
+
+    size_t i = 0;
+
+    for (i = 0; i < OSM_STR_MAX_LEN - 1; i++) {
+        if (key[i] == 0) {
+            break;
+        }
+        if (key[i] != val[i]) {
+            return;
+        }
+    }
+
+    if (val[i] == 0) {
+        r1 = true;
+    }
+
+    if (val[i] == ':') {
+        r2 = true;
+    }
+}
+
+void osm_processor_t::test_and_add(const char* const key) {
+
+    int  i;
+    bool key_defined = false;
+    bool ns_defined = false;
+
+    for (i = 0; i < osm_info.xml_tags.cnt; i++) {
+        key_cmp(key, osm_info.xml_tags.list[i].k, key_defined, ns_defined);
+    }
+
+    if (key_defined) {
+        // Key exists.
+        return;
+    }
+
+    if (!ns_defined) {
+        // namespese doesn't exists
+        return;
+    }
+
+    int s = osm_info.xml_tags.cnt;
+    osm_info.xml_tags.cnt++;
+
+    assert(osm_info.xml_tags.cnt < OSM_MAX_TAGS_CNT);
+
+    strncpy_s(osm_info.xml_tags.list[s].k, key, OSM_STR_MAX_LEN - 1);
+    strncpy_s(osm_info.xml_tags.list[s].v, "auto", OSM_STR_MAX_LEN - 1);
+}
+
+void osm_processor_t::ways_expand_tags(void) {
+
+    test_and_add("disused");
+    test_and_add("bridge");
+    test_and_add("building");
+    test_and_add("abandoned");
+    test_and_add("area");
+    test_and_add("proposed");
+    test_and_add("construction");
+    test_and_add("cycleway");
+    test_and_add("demolished");
+    test_and_add("was");
+    test_and_add("removed");
+    test_and_add("toilets");
+}
+
+void osm_processor_t::expand_node_tags(void) {
+
+}
+
+void osm_processor_t::resolve_node_type(void) {
+
+    osm_info.node_info.type = static_cast<osm_obj_type_t> (0);
+}
+
+void osm_processor_t::clean_node_info ( void ) {
+
+    assert(osm_info.xml_tags.cnt < OSM_MAX_TAGS_CNT);
+
+    while (osm_info.xml_tags.cnt > 0) {
+        osm_info.xml_tags.cnt--;
+        osm_info.xml_tags.list[osm_info.xml_tags.cnt].k[0] = 0;
+        osm_info.xml_tags.list[osm_info.xml_tags.cnt].v[0] = 0;
+    }
+
+    memset ( &osm_info.node_info, 0, sizeof(osm_info.node_info) );
+    osm_info.ref_list.clear();
+}
+
+void osm_processor_t::store_node_info(void) {
+
+}
+
+void osm_processor_t::ways_store_info(void) {
+
+}
+
+void osm_processor_t::ways_clean_info(void) {
+
+    assert(osm_info.xml_tags.cnt < OSM_MAX_TAGS_CNT);
+
+    while (osm_info.xml_tags.cnt > 0) {
+        osm_info.xml_tags.cnt--;
+        osm_info.xml_tags.list[osm_info.xml_tags.cnt].k[0] = 0;
+        osm_info.xml_tags.list[osm_info.xml_tags.cnt].v[0] = 0;
+    }
+
+    memset(&osm_info.node_info, 0, sizeof(osm_info.node_info) );
+    osm_info.ref_list.clear();
+}
+
+void osm_processor_t::expand_rel_tags(void) {
+
+}
+
+void osm_processor_t::resolve_rel_type(void) {
+
+}
+
+void osm_processor_t::store_rel_info(void) {
+
+}
+
+void osm_processor_t::clean_rel_info(void) {
+
+}
+
+bool osm_processor_t::find_key(const osm_tag_ctx_t& node_info, osm_str_t k, osm_str_t v1, osm_str_t v2, osm_str_t v3) {
+
+    size_t pos = 0;
+
+    for (pos = 0; pos < node_info.cnt; pos++) {
+        if (strcmp(node_info.list[pos].k, k) == 0) {
+            break;
+        }
+    }
+
+    if (pos == node_info.cnt) {
+        return false;
+    }
+
+    if ((v1 == nullptr) && (v2 == nullptr) && (v3 == nullptr)) {
+        return true;
+    }
+
+    if (v1 != nullptr) {
+        if (strcmp(node_info.list[pos].v, v1) == 0) {
+            return true;
+        }
+    }
+
+    if (v2 != nullptr) {
+        if (strcmp(node_info.list[pos].v, v2) == 0) {
+            return true;
+        }
+    }
+
+    if (v3 != nullptr) {
+        if (strcmp(node_info.list[pos].v, v3) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void osm_processor_t::process_osm_param(osm_draw_type_t& draw_type, osm_draw_type_t new_type, const char* const name) {
+
+    bool find_res;
+
+    if (draw_type != DRAW_UNKNOWN) {
+        return;
+    }
+
+    find_res = find_key(osm_info.xml_tags, name);
+    if (find_res) {
+        draw_type = new_type;
+    }
+
+}
+
+void osm_processor_t::map_type(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor) {
 
     int     type;
     bool    find_res;
@@ -561,80 +1073,7 @@ void map_type ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, cons
     draw_type = static_cast<osm_draw_type_t> (type);
 }
 
-void bor_init (const osm_mapper_t* const lex_list, size_t cnt, ssearcher& bor) {
-
-    if (lex_list == nullptr) {
-        return;
-    }
-
-    if (lex_list[0].v != DRAW_UNKNOWN) {
-        return;
-    }
-
-    bor.init(lex_list[0].k);
-
-    for (size_t i = 1; i < cnt; i++) {
-        bor.add(lex_list[i].k, lex_list[i].v);
-    }
-
-    return;
-}
-
-bool find_key ( const osm_tag_ctx_t& node_info, osm_str_t k, osm_str_t v1 = nullptr, osm_str_t v2 = nullptr, osm_str_t v3 = nullptr) {
-
-    size_t pos = 0;
-
-    for ( pos = 0; pos < node_info.cnt; pos++ ) {
-        if (strcmp(node_info.list[pos].k, k) == 0 ) {
-            break;
-        }
-    }
-
-    if ( pos == node_info.cnt ) {
-        return false;
-    }
-
-    if ( (v1==nullptr) && (v2==nullptr) && (v3==nullptr)) {
-        return true;
-    }
-
-    if (v1 != nullptr) {
-        if (strcmp(node_info.list[pos].v, v1) == 0) {
-            return true;
-        }
-    }
-
-    if (v2 != nullptr) {
-        if (strcmp(node_info.list[pos].v, v2) == 0) {
-            return true;
-        }
-    }
-
-    if (v3 != nullptr) {
-        if (strcmp(node_info.list[pos].v, v3) == 0) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-void process_osm_param ( osm_draw_type_t& draw_type, osm_draw_type_t new_type, const char* const name ) {
-
-    bool find_res;
-
-    if ( draw_type != DRAW_UNKNOWN) {
-        return;
-    }
-
-    find_res = find_key ( g_xml_tags, name );
-    if (find_res) {
-        draw_type = new_type;
-    }
-
-}
-
-static void _process_building ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info ) {
+void osm_processor_t::process_building(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info) {
 
     bool find_res;
 
@@ -642,48 +1081,48 @@ static void _process_building ( osm_draw_type_t& draw_type, const osm_tag_ctx_t&
         return;
     }
 
-    find_res = find_key ( node_info, "building" );
-    if ( !find_res ) {
+    find_res = find_key(node_info, "building");
+    if (!find_res) {
         return;
     }
 
-    find_res = find_key ( node_info, "building", "false", "0", "no" );
-    if ( find_res ) {
+    find_res = find_key(node_info, "building", "false", "0", "no");
+    if (find_res) {
         return;
     }
 
     draw_type = DRAW_BUILDING;
 }
 
-static bool _is_area ( const osm_tag_ctx_t& xml_tags ) {
+bool osm_processor_t::is_area(const osm_tag_ctx_t& xml_tags) {
 
     bool find_res;
 
-    find_res = find_key ( xml_tags, "area" );
-    if ( !find_res ) {
+    find_res = find_key(xml_tags, "area");
+    if (!find_res) {
         return false;
     }
 
-    find_res = find_key ( xml_tags, "area", "false", "0", "no" );
-    if ( find_res ) {
+    find_res = find_key(xml_tags, "area", "false", "0", "no");
+    if (find_res) {
         return false;
     }
 
     return true;
 }
 
-static void _process_unused ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor ) {
+void osm_processor_t::process_unused(osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor) {
 
     bool find_res;
     int  type;
 
-    if ( draw_type != DRAW_UNKNOWN ) {
+    if (draw_type != DRAW_UNKNOWN) {
         return;
     }
 
-    for ( int i = 0; i < xml_tags.cnt; i++ ) {
-        find_res = bor.find ( xml_tags.list[i].k, type );
-        if ( find_res ) {
+    for (int i = 0; i < xml_tags.cnt; i++) {
+        find_res = bor.find(xml_tags.list[i].k, type);
+        if (find_res) {
             draw_type = DRAW_SKIP;
             break;
         }
@@ -691,148 +1130,131 @@ static void _process_unused ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& x
 
 }
 
-static void _log_node ( osm_id_t id, const osm_tag_ctx_t& node_info ) {
-
-    std::cout << "<way id=\"" << id << "\">" << std::endl;
-
-    for (int i = 0; i < node_info.cnt; i++) {
-        std::cout << "  <tag ";
-        std::cout << "k=\"" << node_info.list[i].k << "\" ";
-        std::cout << "v=\"" << node_info.list[i].v << "\" ";
-        std::cout << "/>" << std::endl;
-    }
-
-    std::cout << "</way>" << std::endl;
-}
-
-void ways_init (void) {
-
-    bor_init ( map_ways_unused,    ITEMS_CNT(map_ways_unused),    g_ways_ignored );
-
-    bor_init ( map_area_landuse,   ITEMS_CNT(map_area_landuse),   g_area_landuse );
-    bor_init ( map_area_leisure,   ITEMS_CNT(map_area_leisure),   g_area_leisure );
-    bor_init ( map_area_natural,   ITEMS_CNT(map_area_natural),   g_area_natural );
-    bor_init ( map_area_amenity,   ITEMS_CNT(map_area_amenity),   g_area_amenity );
-    bor_init ( map_area_waterway,  ITEMS_CNT(map_area_waterway),  g_area_waterway );
-    bor_init ( map_area_manmade,   ITEMS_CNT(map_area_manmade),   g_area_manmade );
-    bor_init ( map_area_highway,   ITEMS_CNT(map_area_highway),   g_area_highway );
-    bor_init ( map_area_transport, ITEMS_CNT(map_area_transport), g_area_transport );
-    bor_init ( map_area_water,     ITEMS_CNT(map_area_water),     g_area_water );
-    bor_init ( map_area_railway,   ITEMS_CNT(map_area_railway),   g_area_railway );
-    bor_init ( map_area_boundary,  ITEMS_CNT(map_area_boundary),  g_area_boundary );
-    bor_init ( map_area_place,     ITEMS_CNT(map_area_place),     g_area_place );
-
-    bor_init ( map_path_highway,   ITEMS_CNT(map_path_highway),   g_path_highway );
-    bor_init ( map_path_railway,   ITEMS_CNT(map_path_railway),   g_path_railway );
-    bor_init ( map_path_waterway,  ITEMS_CNT(map_path_waterway),  g_path_waterway );
-    bor_init ( map_path_natural,   ITEMS_CNT(map_path_natural),   g_path_natural );
-    bor_init ( map_path_transport, ITEMS_CNT(map_path_transport), g_path_transport );
-    bor_init ( map_path_power,     ITEMS_CNT(map_path_power),     g_path_power );
-    bor_init ( map_path_bridge,    ITEMS_CNT(map_path_bridge),    g_path_bridge );
-    bor_init ( map_path_stairwell, ITEMS_CNT(map_path_stairwell), g_path_stairwell );
-    bor_init ( map_path_barrier,   ITEMS_CNT(map_path_barrier),   g_path_barrier );
-    bor_init ( map_path_golf,      ITEMS_CNT(map_path_golf),      g_path_golf );
-    bor_init ( map_path_shop,      ITEMS_CNT(map_path_shop),      g_path_shop );
-}
-
-void ways_expand_tags ( void ) {
-
-    test_and_add ( "disused" );
-    test_and_add ( "bridge" );
-    test_and_add ( "building" );
-    test_and_add ( "abandoned" );
-    test_and_add ( "area" );
-    test_and_add ( "proposed" );
-    test_and_add ( "construction" );
-    test_and_add ( "cycleway" );
-    test_and_add ( "demolished" );
-    test_and_add ( "was" );
-    test_and_add ( "removed" );
-    test_and_add ( "toilets" );
-}
-
-void ways_resolve_type ( void ) {
+void osm_processor_t::ways_resolve_type(void) {
 
     osm_draw_type_t draw_type = DRAW_UNKNOWN;
-
-    if ( g_xml_tags.cnt == 0 ) {
+    
+    if (osm_info.xml_tags.cnt == 0) {
         draw_type = DRAW_PENDING;
         return;
     }
-
-    process_osm_param ( draw_type, DRAW_SKIP, "abandoned" );
-    process_osm_param ( draw_type, DRAW_SKIP, "disused" );
-    process_osm_param ( draw_type, DRAW_SKIP, "construction" );
-    process_osm_param ( draw_type, DRAW_SKIP, "proposed" );
-    process_osm_param ( draw_type, DRAW_SKIP, "demolished" );
-
-    _process_building ( draw_type, g_xml_tags );
-
-    if ( _is_area(g_xml_tags) ) {
-
-        map_type ( draw_type, g_xml_tags, g_area_highway );
-        map_type ( draw_type, g_xml_tags, g_area_transport );
-        map_type ( draw_type, g_xml_tags, g_area_landuse );
-        map_type ( draw_type, g_xml_tags, g_area_leisure );
-        map_type ( draw_type, g_xml_tags, g_area_natural );
-        map_type ( draw_type, g_xml_tags, g_area_amenity );
-        map_type ( draw_type, g_xml_tags, g_area_waterway );
-        map_type ( draw_type, g_xml_tags, g_area_manmade );
-        map_type ( draw_type, g_xml_tags, g_area_water );
-        map_type ( draw_type, g_xml_tags, g_area_railway );
-        map_type ( draw_type, g_xml_tags, g_area_boundary );
-
-        if ( draw_type == DRAW_UNKNOWN ) {
+    
+    process_osm_param(draw_type, DRAW_SKIP, "abandoned");
+    process_osm_param(draw_type, DRAW_SKIP, "disused");
+    process_osm_param(draw_type, DRAW_SKIP, "construction");
+    process_osm_param(draw_type, DRAW_SKIP, "proposed");
+    process_osm_param(draw_type, DRAW_SKIP, "demolished");
+    
+    process_building(draw_type, osm_info.xml_tags);
+    
+    if (is_area(osm_info.xml_tags)) {
+    
+        map_type(draw_type, osm_info.xml_tags, area_highway);
+        map_type(draw_type, osm_info.xml_tags, area_transport);
+        map_type(draw_type, osm_info.xml_tags, area_landuse);
+        map_type(draw_type, osm_info.xml_tags, area_leisure);
+        map_type(draw_type, osm_info.xml_tags, area_natural);
+        map_type(draw_type, osm_info.xml_tags, area_amenity);
+        map_type(draw_type, osm_info.xml_tags, area_waterway);
+        map_type(draw_type, osm_info.xml_tags, area_manmade);
+        map_type(draw_type, osm_info.xml_tags, area_water);
+        map_type(draw_type, osm_info.xml_tags, area_railway);
+        map_type(draw_type, osm_info.xml_tags, area_boundary);
+    
+        if (draw_type == DRAW_UNKNOWN) {
             draw_type = DRAW_AREA_UNKNOWN;
         }
-
-    } else {
     
-        map_type ( draw_type, g_xml_tags, g_path_highway );
-        map_type ( draw_type, g_xml_tags, g_path_railway );
-        map_type ( draw_type, g_xml_tags, g_path_waterway );
-        map_type ( draw_type, g_xml_tags, g_path_natural );
-        map_type ( draw_type, g_xml_tags, g_path_transport );
-        map_type ( draw_type, g_xml_tags, g_path_power );
-        map_type ( draw_type, g_xml_tags, g_path_bridge );
-        map_type ( draw_type, g_xml_tags, g_path_stairwell );
-        map_type ( draw_type, g_xml_tags, g_path_barrier );
-        map_type ( draw_type, g_xml_tags, g_path_golf );
-        map_type ( draw_type, g_xml_tags, g_path_shop );
-
-        map_type ( draw_type, g_xml_tags, g_area_amenity );
-        map_type ( draw_type, g_xml_tags, g_area_water );
-        map_type ( draw_type, g_xml_tags, g_area_waterway );
-        map_type ( draw_type, g_xml_tags, g_area_leisure );
-        map_type ( draw_type, g_xml_tags, g_area_natural );
-        map_type ( draw_type, g_xml_tags, g_area_landuse );
-        map_type ( draw_type, g_xml_tags, g_area_manmade );
-        map_type ( draw_type, g_xml_tags, g_area_place );
     }
-
-    _process_unused ( draw_type, g_xml_tags, g_ways_ignored );
-
-    if ( draw_type == DRAW_UNKNOWN ) {
-        _log_node ( g_node_info.id, g_xml_tags );
+    else {
+    
+        map_type(draw_type, osm_info.xml_tags, path_highway);
+        map_type(draw_type, osm_info.xml_tags, path_railway);
+        map_type(draw_type, osm_info.xml_tags, path_waterway);
+        map_type(draw_type, osm_info.xml_tags, path_natural);
+        map_type(draw_type, osm_info.xml_tags, path_transport);
+        map_type(draw_type, osm_info.xml_tags, path_power);
+        map_type(draw_type, osm_info.xml_tags, path_bridge);
+        map_type(draw_type, osm_info.xml_tags, path_stairwell);
+        map_type(draw_type, osm_info.xml_tags, path_barrier);
+        map_type(draw_type, osm_info.xml_tags, path_golf);
+        map_type(draw_type, osm_info.xml_tags, path_shop);
+    
+        map_type(draw_type, osm_info.xml_tags, area_amenity);
+        map_type(draw_type, osm_info.xml_tags, area_water);
+        map_type(draw_type, osm_info.xml_tags, area_waterway);
+        map_type(draw_type, osm_info.xml_tags, area_leisure);
+        map_type(draw_type, osm_info.xml_tags, area_natural);
+        map_type(draw_type, osm_info.xml_tags, area_landuse);
+        map_type(draw_type, osm_info.xml_tags, area_manmade);
+        map_type(draw_type, osm_info.xml_tags, area_place);
     }
-
-    g_node_info.type = draw_type;
+    
+    process_unused(draw_type, osm_info.xml_tags, ways_ignored);
+    
+    if (draw_type == DRAW_UNKNOWN) {
+        log_node(osm_info.node_info.id, osm_info.xml_tags);
+    }
+    
+    osm_info.node_info.type = draw_type;
 }
 
-void ways_store_info ( void ) {
+//---------------------------------------------------------------------------//
 
-}
+bool osm_processor_t::process_file ( const char* const file_name ) {
 
-void ways_clean_info ( void ) {
+    int         fd = 0;
+    hpx_ctrl_t* ctrl = nullptr;
+    hpx_tag_t* xml_obj = nullptr;
+    bstring_t   xml_str;
+    long        lno;
+    int         io_res;
 
-    assert(g_xml_tags.cnt < OSM_MAX_TAGS_CNT);
-
-    while (g_xml_tags.cnt > 0) {
-        g_xml_tags.cnt--;
-        g_xml_tags.list[g_xml_tags.cnt].k[0] = 0;
-        g_xml_tags.list[g_xml_tags.cnt].v[0] = 0;
+    _sopen_s(&fd, "D:\\OSM_Extract\\prague_short.osm", _O_BINARY | _O_RDONLY, _SH_DENYWR, _S_IREAD);
+    if (fd == -1) {
+        return false;
     }
 
-    memset(&g_node_info, 0, sizeof(g_node_info));
-    g_ref_list.clear();
+    ctrl = hpx_init(fd, 100 * 1024 * 1024);
+    if (ctrl == NULL) {
+        return false;
+    }
+
+    xml_obj = hpx_tm_create(64);
+    if (xml_obj == NULL) {
+        return false;
+    }
+
+    ways_init();
+
+    g_xml_ctx[0] = XML_NODE_ROOT;
+    g_xml_ctx_cnt++;
+
+    for ( ; ; ) {
+
+        io_res = hpx_get_elem(ctrl, &xml_str, NULL, &lno);
+        if (io_res == 0) {
+            break;
+        }
+
+        io_res = hpx_process_elem(xml_str, xml_obj);
+        if (io_res != 0) {
+            printf("[%ld] ERROR in element: %.*s\n", lno, xml_str.len, xml_str.buf);
+            break;
+        }
+
+        process_item(xml_obj->type, xml_obj->tag, xml_obj->nattr, xml_obj->attr);
+    }
+
+    if ( !ctrl->eof ) {
+        assert(false);
+        return false;
+    }
+
+    hpx_tm_free(xml_obj);
+    hpx_free(ctrl);
+
+    _close(fd);
+
+    return true;
 }
