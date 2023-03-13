@@ -7,21 +7,24 @@
 #define OSM_STR_MAX_LEN             (2048)
 #define OSM_MAX_TAGS_CNT            (1024)
 
-typedef uint64_t            osm_obj_type_t;
-typedef uint64_t            osm_id_t;
-typedef uint32_t            osm_len_t;
-typedef uint32_t            osm_lon_t;
-typedef uint32_t            osm_lat_t;
-typedef const char* const   osm_str_t;
+typedef uint64_t                    osm_obj_type_t;
+typedef uint64_t                    osm_id_t;
+typedef uint32_t                    osm_len_t;
+typedef double                      osm_lon_t;
+typedef double                      osm_lat_t;
+typedef const char* const           osm_str_t;
 
 typedef enum tag_osm_draw_type {
 
     DRAW_UNKNOWN,
 
     DRAW_STUFF_BEGIN,
-    DRAW_SKIP,
-    DRAW_PENDING,
+        DRAW_SKIP,
     DRAW_STUFF_END,
+
+    DRAW_START,
+
+    DRAW_PENDING,
 
     DRAW_PATH_BEGIN,
         DRAW_PATH_RIVER,
@@ -93,19 +96,33 @@ typedef enum tag_ref_type {
     REF_LAST
 }   ref_type_t;
 
-typedef struct tag_link_info {
-    ref_type_t      ref;
-    osm_id_t        id;
-}   link_info_t;
+typedef enum tag_ref_role {
+    ROLE_UNKNOWN        = 0,
+    ROLE_INNER          = 1,
+    ROLE_OUTER          = 2,
+    ROLE_FORWARD        = 3,
+    ROLE_BACKWARD       = 4,
+    ROLE_ATERNATION     = 5,
+    ROLE_INFO           = 6,
+    ROLE_GUIDEPOST      = 7,
+    ROLE_LAST
+}   ref_role_t;
 
-typedef std::vector<link_info_t>     ref_list_t;
+
+typedef struct tag_ref_way {
+    osm_id_t        id;
+    ref_type_t      ref;
+    ref_role_t      role;
+}   ref_way_t;
+
+typedef std::vector<ref_way_t>     ref_list_nodes_t;
 
 typedef struct tag_osm_node_info {
     osm_id_t            id;             // Obj id
     osm_len_t           len;            // Obj Len
     osm_lat_t           lat;            // LAT
     osm_lon_t           lon;            // LON
-    osm_obj_type_t      type;           // TRANSPORT, METRO
+    osm_draw_type_t     type;           // TRANSPORT, METRO
     osm_id_t            name;           // NAME_ID
 }   osm_node_info_t;
 
@@ -115,7 +132,7 @@ typedef struct tag_osm_mapper {
 }   osm_mapper_t;
 
 typedef struct tag_osm_obj_info {
-    ref_list_t          ref_list;
+    ref_list_nodes_t    refs;
     osm_tag_ctx_t       xml_tags;
     osm_node_info_t     node_info;
 }   osm_obj_info_t;

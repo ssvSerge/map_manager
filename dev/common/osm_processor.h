@@ -5,7 +5,7 @@
 #include "..\common\ssearch.h"
 #include "..\common\libhpxml.h"
 
-typedef void (*osm_object_t) ( const osm_obj_info_t& info );
+typedef void (*osm_object_t) ( osm_obj_info_t& info );
 
 class osm_processor_t {
 
@@ -30,6 +30,9 @@ class osm_processor_t {
         bool find_key(const osm_tag_ctx_t& node_info, osm_str_t k, osm_str_t v1 = nullptr, osm_str_t v2 = nullptr, osm_str_t v3 = nullptr);
         void map_type(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor);
         bool is_area(const osm_tag_ctx_t& xml_tags);
+        void map_ref ( const hpx_attr_t* attr, ref_type_t& ref );
+        void map_role ( const hpx_attr_t* attr, ref_role_t& role );
+        void clean_info(void);
 
     private:
         void process_root_node(int attr_cnt, const hpx_attr_t* attr_list);
@@ -48,23 +51,22 @@ class osm_processor_t {
         void process_osm_param(osm_draw_type_t& draw_type, osm_draw_type_t new_type, const char* const name);
         void process_building(osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info);
         void process_unused(osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor);
-        void log_node(osm_id_t id, const osm_tag_ctx_t& node_info);
+        void log_node(const char* const name, osm_id_t id, const osm_tag_ctx_t& node_info);
 
+        void nodes_init(void);
         void node_expand_tags(void);
         void node_resolve_type(void);
         void node_store_info(void);
-        void node_clean_info(void);
 
         void ways_init(void);
         void ways_expand_tags(void);
         void ways_resolve_type(void);
         void ways_store_info(void);
-        void ways_clean_info(void);
 
+        void rels_init(void);
         void rel_expand_tags(void);
         void rel_resolve_type(void);
         void rel_store_info(void);
-        void rel_clean_info(void);
 
         void process_item(int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list);
 
@@ -100,6 +102,10 @@ class osm_processor_t {
         ssearcher        path_golf;
         ssearcher        path_shop;
         ssearcher        ways_ignored;
+
+    private:
+        ssearcher        rels_types;
+        ssearcher        rels_boundary;
 
     private:
         ssearcher        skiplist_nodes;
