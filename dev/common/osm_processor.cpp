@@ -557,6 +557,8 @@ osm_processor_t::osm_processor_t() {
 
 void osm_processor_t::log_node ( const char* const name, osm_id_t id, const osm_tag_ctx_t& node_info ) {
 
+    return;
+
     std::cout << "<" << name << " id = \"" << id << "\">" << std::endl;
 
     for (int i = 0; i < node_info.cnt; i++) {

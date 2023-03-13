@@ -108,7 +108,6 @@ typedef enum tag_ref_role {
     ROLE_LAST
 }   ref_role_t;
 
-
 typedef struct tag_ref_way {
     osm_id_t        id;
     ref_type_t      ref;
