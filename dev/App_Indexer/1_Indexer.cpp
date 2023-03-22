@@ -2,7 +2,6 @@
 #include <fcntl.h>
 
 #include <iostream>
-#include <sstream>
 #include <fstream>
 #include <string>
 #include <cassert>
@@ -14,10 +13,10 @@
 
 #include "..\common\osm_processor.h"
 
-class store_info_node_t {
+class storenode_t {
 
     public:
-        store_info_node_t() {
+        storenode_t() {
 
             in_use = false;
 
@@ -33,10 +32,10 @@ class store_info_node_t {
         osm_node_info_t    info;
 };
 
-class store_info_way_t {
+class storeway_t {
 
     public:
-        store_info_way_t() {
+        storeway_t() {
             in_use  = false;
             bad     = false;
             id      = 0;
@@ -48,13 +47,13 @@ class store_info_way_t {
         bool                bad;
         osm_id_t            id;
         osm_draw_type_t     type;
-        ref_list_nodes_t    refs;
+        vector_ways_t       refs;
 };
 
-class store_info_rels_t {
+class storerels_t {
 
     public:
-        store_info_rels_t() {
+        storerels_t() {
             in_use  = false;
             bad     = false;
             id      = 0;
@@ -65,93 +64,54 @@ class store_info_rels_t {
         bool                bad;
         osm_id_t            id;
         osm_draw_type_t     type;
-        ref_list_nodes_t    refs;
+        vector_ways_t       refs;
 };
 
-typedef std::map<osm_id_t, store_info_node_t>  nodes_map_t;
-typedef std::map<osm_id_t, store_info_way_t>   ways_map_t;
-typedef std::map<osm_id_t, store_info_rels_t>  rels_map_t;
-typedef nodes_map_t::iterator                  nodes_pos_t;
-typedef ways_map_t::const_iterator             ways_map_pos_t;
-typedef rels_map_t::iterator                   rels_pos_t;
-typedef std::list<ref_way_t>                   ways_list_t;
-typedef ways_list_t::iterator                  ways_list_pos_t;
-typedef std::list<osm_id_t>                    nodes_list_t;
-typedef nodes_list_t::iterator                 nodes_list_pos_t;
+typedef std::map<osm_id_t, storenode_t>         map_storenode_t;
+typedef map_storenode_t::iterator               map_storenode_pos_t;
 
-const nodes_map_t    g_nodes_list;
-const ways_map_t     g_ways_list;
-const rels_map_t     g_rels_list;
+typedef std::list<storenode_t>                  list_storenode_t;
+typedef list_storenode_t::iterator              list_storenode_pos_t;
 
-osm_processor_t processor;
+typedef std::list< list_storenode_t>            list_list_storenode_t;
+typedef list_list_storenode_t::iterator         list_list_storenode_pos_t;
 
-static bool _get_first_last ( const ways_list_pos_t& way, osm_id_t& first, osm_id_t& last ) {
+typedef std::map<osm_id_t, storeway_t>          map_storeway_t;
+typedef map_storeway_t::const_iterator          map_storeway_pos_t;
 
-    osm_id_t way_id = way->id;
+typedef std::list<storeway_t>                   list_storeway_t;
+typedef list_storeway_t::iterator               list_storeway_pos_t;
 
-    ways_map_pos_t it = g_ways_list.find(way_id);
-    if ( it == g_ways_list.end() ) {
-        return false;
-    }
+typedef std::map<osm_id_t, storerels_t>         map_storerel_t;
+typedef map_storerel_t::iterator                map_storerel_pos_t;
 
-    const ref_list_nodes_t& refs = it->second.refs;
+class storewayex_t {
+    public:
+        storewayex_t() {
+            type = DRAW_UNKNOWN;
+        }
 
-    if ( refs.size() < 2 ) {
-        return false;
-    }
+    public:
+        osm_draw_type_t     type;
+        list_storenode_t    ref;
+};
 
-    size_t b = 0;
-    size_t e = refs.size() - 1;
+typedef std::vector<storewayex_t>               vector_storewayex_t;
+typedef vector_storewayex_t::iterator           vector_storewayex_pos_t;
+typedef std::list<vector_storewayex_t>          list_vector_storewayex_t;
+typedef list_vector_storewayex_t::iterator      list_vector_storewayex_pos_t;
 
-    first = refs[b].id;
-    last  = refs[e].id;
+const map_storenode_t       g_nodes_list;
+const map_storeway_t        g_ways_list;
+const map_storerel_t        g_rels_list;
 
-    return true;
-}
-
-static bool _way_append_tail_forward ( const ref_way_t& src, ways_list_t& dst ) {
-
-    #if 0
-    osm_id_t way_id = src->id;
-
-    auto ptr = g_ways_list.find(way_id);
-
-    if ( ptr == g_ways_list.end() ) {
-        return false;
-    }
-
-    for ( size_t id = 1; id < ptr->second.refs.size(); id++ ) {
-        dst.push_back( ptr->second.refs[id] );
-    }
-    #endif
-
-    return true;
-}
-
-static bool _way_append_tail_backward ( const ways_list_pos_t& src, ways_list_t& dst ) {
-
-    #if 0
-    osm_id_t way_id = src->id;
-
-    auto ptr = g_ways_list.find(way_id);
-
-    if (ptr == g_ways_list.end()) {
-        return false;
-    }
-
-    for ( int64_t id = ptr->second.refs.size()-2; id >= 0; id-- ) {
-        dst.push_back(ptr->second.refs[id]);
-    }
-    #endif
-        
-    return true;
-}
+osm_processor_t             processor;
 
 static void _fix_area ( osm_obj_info_t& info ) {
 
     bool is_area = false;
 
-    if ( (info.node_info.type >= DRAW_AREA_BEGIN) && (info.node_info.type <= DRAW_AREA_END) ) {
+    if ((info.node_info.type >= DRAW_AREA_BEGIN) && (info.node_info.type <= DRAW_AREA_END)) {
         is_area = true;
     }
 
@@ -171,11 +131,11 @@ static void _fix_area ( osm_obj_info_t& info ) {
 
 static void _add_node ( osm_obj_info_t& info ) {
 
-    store_info_node_t new_obj;
+    storenode_t new_obj;
 
     new_obj.info = info.node_info;
 
-    nodes_map_t* ptr = const_cast<nodes_map_t*>(&g_nodes_list);
+    map_storenode_t* ptr = const_cast<map_storenode_t*>(&g_nodes_list);
     (*ptr)[info.node_info.id] = new_obj;
 }
 
@@ -183,32 +143,34 @@ static void _add_way ( osm_obj_info_t& info ) {
 
     static bool found_res = 0;
 
-    store_info_way_t new_info;
+    storeway_t new_info;
 
     if (info.node_info.type >= DRAW_START) {
         _fix_area(info);
     }
 
-    new_info.id   = info.node_info.id;
+    new_info.id = info.node_info.id;
     new_info.type = info.node_info.type;
     new_info.refs = info.refs;
 
-    ways_map_t* ptr = const_cast<ways_map_t*>(&g_ways_list);
+    map_storeway_t* ptr = const_cast<map_storeway_t*>(&g_ways_list);
     (*ptr)[new_info.id] = new_info;
 }
 
 static void _add_rel ( osm_obj_info_t& info ) {
 
-    store_info_rels_t new_rel;
+    storerels_t new_rel;
 
-    new_rel.in_use  = false;
-    new_rel.id      = info.node_info.id;
-    new_rel.type    = info.node_info.type;
-    new_rel.refs    = info.refs;
+    new_rel.in_use = false;
+    new_rel.id     = info.node_info.id;
+    new_rel.type   = info.node_info.type;
+    new_rel.refs   = info.refs;
 
-    rels_map_t* ptr = const_cast<rels_map_t*>(&g_rels_list);
+    map_storerel_t* ptr = const_cast<map_storerel_t*>(&g_rels_list);
     (*ptr)[info.node_info.id] = new_rel;
 }
+
+#if 0
 
 static bool _load_way ( const store_info_way_t& way, std::string& coord_list ) {
 
@@ -242,145 +204,23 @@ static bool _load_way ( const store_info_way_t& way, std::string& coord_list ) {
     return ret_val;
 }
 
-static bool _merge_type1 ( const ref_way_t& src, nodes_list_t& refs ) {
+static bool _merge_ways ( ways_list_t& ways_list, list_list_ways_t& refs_list ) {
 
-    auto way = g_ways_list.find(src.id);
-    if (way == g_ways_list.end()) {
-        return false;
+    bool         ret_val = true;
+
+    #if 0
+    bool         is_processed = false;
+
+    list_ways1_t refs;
+
+    osm_id_t     h1_f;
+    osm_id_t     h1_l;
+    osm_id_t     h2_f;
+    osm_id_t     h2_l;
+
+    if ( ways_list.size() == 0 ) {
+        return true;
     }
-
-    // 100, 101, 102
-    //           102, 103, 104
-
-    auto next_node = way->second.refs.begin();
-
-    while (next_node != way->second.refs.end() ) {
-
-        if ( next_node == way->second.refs.begin() ) {
-            if (refs.size() > 0) {
-                if (next_node->id == refs.back() ) {
-                    next_node++;
-                    continue;
-                }
-            }
-        }
-
-        refs.push_back(next_node->id);  
-        next_node++;
-    }
-
-    return true;
-}
-
-static bool _merge_type2 ( const ref_way_t& src, nodes_list_t& refs ) {
-
-    auto way = g_ways_list.find(src.id);
-    if (way == g_ways_list.end()) {
-        return false;
-    }
-
-    // 
-    // 100, 101, 102
-    //           104, 103, 102
-    //
-
-    auto next_node = way->second.refs.rbegin();
-
-    while ( next_node != way->second.refs.rend() ) {
-
-        if ( next_node == way->second.refs.rbegin() ) {
-            if (refs.size() > 0) {
-                if (next_node->id == refs.back() ) {
-                    next_node++;
-                    continue;
-                }
-            }
-        }
-
-        refs.push_back(next_node->id);  
-        next_node++;
-    }
-
-    return true;
-}
-
-static bool _merge_type3 ( const ref_way_t& src, nodes_list_t& refs ) {
-
-    auto way = g_ways_list.find(src.id);
-    if (way == g_ways_list.end()) {
-        return false;
-    }
-
-    // 
-    //            105, 106, 107
-    //  105, 104, 103
-    // 
-
-    auto next_node = way->second.refs.begin();
-
-    while (next_node != way->second.refs.end()) {
-
-        if (next_node == way->second.refs.begin()) {
-            if (refs.size() > 0) {
-                if (next_node->id == refs.front()) {
-                    next_node++;
-                    continue;
-                }
-            }
-        }
-
-        refs.push_front(next_node->id);
-        next_node++;
-    }
-
-    return true;
-}
-
-static bool _merge_type4 ( const ref_way_t& src, nodes_list_t& refs ) {
-
-    auto way = g_ways_list.find(src.id);
-    if (way == g_ways_list.end()) {
-        return false;
-    }
-
-    // 
-    //            105, 106, 107
-    //  103, 104, 105
-    // 
-
-    auto next_node = way->second.refs.rbegin();
-
-    while (next_node != way->second.refs.rend()) {
-
-        if (next_node == way->second.refs.rbegin()) {
-            if (refs.size() > 0) {
-                if (next_node->id == refs.front()) {
-                    next_node++;
-                    continue;
-                }
-            }
-        }
-
-        refs.push_front(next_node->id);
-        next_node++;
-    }
-
-    return true;
-}
-
-static bool _merge_ways ( const ways_list_t& list, nodes_list_t& refs ) {
-
-    bool        ret_val = true;
-    bool        is_processed = false;
-
-    osm_id_t    h1_f;
-    osm_id_t    h1_l;
-    osm_id_t    h2_f;
-    osm_id_t    h2_l;
-
-    ways_list_t ways_list = list;
-
-    assert ( ways_list.size() > 0 );
 
     {   auto way = ways_list.front();
         ways_list.erase(ways_list.begin());
@@ -451,42 +291,312 @@ static bool _merge_ways ( const ways_list_t& list, nodes_list_t& refs ) {
 
     }
 
+    refs_list.push_back(refs);
+
+    #endif
+
     return ret_val;
 }
 
-static bool _process_relation_building ( const store_info_rels_t& obj ) {
+#endif
+
+static void _get_first_last ( const list_nodes_t& ref, osm_id_t& f, osm_id_t& l ) {
+
+    f = -1;
+    l = -1;
+
+    assert ( ref.size() > 2 );
+
+    f = ref.front();
+    l = ref.back();
+}
+
+static void _get_first_last ( const vector_ways_t& refs, osm_id_t& f, osm_id_t& l ) {
+
+    f = -1;
+    l = -1;
+
+    if ( refs.size() < 2 ) {
+        return;
+    }
+    
+    f = refs.front().id;
+    l = refs.back().id;
+}
+
+static void _cut_areas ( list_nodes_t& ids, vector_storewayex_t& ways ) {
+
+    auto it = ids.begin();
+
+    while ( it != ids.end() ) {
+
+        auto id = (*it);
+
+        auto way_info = g_ways_list.find ( id );
+
+        if ( way_info == g_ways_list.end() ) {
+            it++;
+            continue;
+        }
+
+        if ( way_info->second.refs.size() < 2 ) {
+            it++;
+            continue;
+        }
+
+        if (way_info->second.refs.front().id != way_info->second.refs.back().id ) {
+            it++;
+            continue;
+        }
+
+        bool is_failed = false;
+
+        storenode_t     new_node;
+        storewayex_t    new_way;
+
+        new_way.type = way_info->second.type;
+
+        for ( size_t i = 0; i < way_info->second.refs.size(); i++ ) {
+        
+            auto node_id = way_info->second.refs[i].id;
+
+            auto node_ptr = g_nodes_list.find ( node_id );
+            if ( node_ptr == g_nodes_list.end() ) {
+                is_failed = true;
+                break;
+            }
+
+            new_node.info = node_ptr->second.info;
+            new_way.ref.push_back(new_node);
+        }
+
+        if ( !is_failed ) {
+            ways.push_back(new_way);
+        }
+
+        it = ids.erase ( it );
+    }
+}
+
+static bool _merge_type1 ( const vector_ways_t& src, list_nodes_t& dst ) {
+
+    // 100, 101, 102
+    //           102, 103, 104
+
+#if 0
+    auto next_node = way->second.refs.begin();
+
+    while (next_node != way->second.refs.end()) {
+
+        if (next_node == way->second.refs.begin()) {
+            if (refs.size() > 0) {
+                if (next_node->id == refs.back()) {
+                    next_node++;
+                    continue;
+                }
+            }
+        }
+
+        refs.push_back(next_node->id);
+        next_node++;
+    }
+
+#endif
+
+    return true;
+}
+
+static bool _merge_type2 ( const vector_ways_t& src, list_nodes_t& dst ) {
+
+    // 100, 101, 102
+    //           104, 103, 102
+
+    auto next_node = src.rbegin();
+
+    while ( next_node != src.rend() ) {
+        if ( next_node == src.rbegin()) {
+            if ( dst.size() > 0 ) {
+                if ( next_node->id == dst.back() ) {
+                    next_node++;
+                    continue;
+                }
+            }
+        }
+
+        dst.push_back(next_node->id);
+        next_node++;
+    }
+
+    return true;
+}
+
+static bool _merge_type3 ( const vector_ways_t& src, list_nodes_t& dst ) {
+
+    //            105, 106, 107
+    //  105, 104, 103
+
+    auto next_node = src.begin();
+
+    while (next_node != src.end()) {
+
+        if ( next_node == src.begin() ) {
+            if (dst.size() > 0) {
+                if (next_node->id == dst.front()) {
+                    next_node++;
+                    continue;
+                }
+            }
+        }
+
+        dst.push_front(next_node->id);
+        next_node++;
+    }
+
+    return true;
+}
+
+static bool _merge_type4 ( const vector_ways_t& src, list_nodes_t& dst ) {
+
+    //            105, 106, 107
+    //  103, 104, 105
+
+#if 0
+    auto next_node = way->second.refs.rbegin();
+
+    while (next_node != way->second.refs.rend()) {
+
+        if (next_node == way->second.refs.rbegin()) {
+            if (refs.size() > 0) {
+                if (next_node->id == refs.front()) {
+                    next_node++;
+                    continue;
+                }
+            }
+        }
+
+        refs.push_front(next_node->id);
+        next_node++;
+    }
+
+#endif
+
+    return true;
+}
+
+static void _reconstruct ( list_nodes_t& ids, vector_storewayex_t& ways ) {
+
+    osm_id_t     h1_f;
+    osm_id_t     h1_l;
+    osm_id_t     h2_f;
+    osm_id_t     h2_l;
+
+    list_nodes_t new_way;
+
+    if ( ids.size() == 0 ) {
+        return;
+    }
+
+    auto first_entry = ids.front();
+    ids.erase( ids.begin() );
+
+    bool is_processed;
+
+    while ( ids.size() > 0 ) {
+
+        auto segment = ids.front();
+
+        auto src_way_ptr = g_ways_list.find(segment);
+        assert ( src_way_ptr != g_ways_list.end() );
+
+        const vector_ways_t& refs = src_way_ptr->second.refs;
+
+        _get_first_last ( new_way, h1_f, h1_l );
+        _get_first_last ( refs,    h2_f, h2_l );
+
+        is_processed = false;
+
+        if ( h1_l == h2_f ) {
+            // 100, 101, 102
+            //           102, 103, 104
+            _merge_type1 ( refs, new_way );
+            is_processed = true;
+            break;
+        } else
+        if ( h1_l == h2_l ) {
+            // 100, 101, 102
+            //           104, 103, 102
+            _merge_type2 ( refs, new_way );
+            is_processed = true;
+            break;
+        } else
+        if ( h1_f == h2_f ) {
+            //            105, 106, 107
+            //  105, 104, 103
+            _merge_type3 ( refs, new_way );
+            is_processed = true;
+            break;
+        } else
+        if ( h1_f == h2_l ) {
+            //            105, 106, 107
+            //  103, 104, 105
+            _merge_type4 ( refs, new_way );
+            is_processed = true;
+            break;
+        }
+
+        assert(is_processed);
+
+        ids.erase ( ids.begin() );
+    }
+
+}
+
+static void _merge_areas ( list_nodes_t& ids, vector_storewayex_t& ways ) {
+
+    _cut_areas   ( ids, ways );
+    _reconstruct ( ids, ways );
+}
+
+static bool _process_relation_building(const storerels_t& obj) {
 
     bool ret_val = true;
 
-    std::stringstream building_shape;
-    std::string       part;
+//  std::stringstream   building_shape;
+//  std::string         part;
 
-    ways_list_t  outer_list;
-    ways_list_t  inner_list;
+    list_nodes_t            rel_outer_way;
+    vector_storewayex_t     out_outer_list;
+    list_nodes_t            rel_inner_way;
+    vector_storewayex_t     out_inner_list;
 
-    for ( size_t i = 0; i<obj.refs.size(); i++ ) {
+    for (size_t i = 0; i < obj.refs.size(); i++) {
         if (obj.refs[i].role == ROLE_OUTER) {
-            outer_list.push_back( obj.refs[i] );
+            rel_outer_way.emplace_back ( obj.refs[i].id );
         } else
         if (obj.refs[i].role == ROLE_INNER) {
-            inner_list.push_back(obj.refs[i] );
+            rel_inner_way.emplace_back ( obj.refs[i].id );
         } else {
             ret_val = false;
             assert(false);
         }
     }
 
-    if (outer_list.size() == 0) {
+    if (rel_outer_way.size() == 0) {
         ret_val = false;
         assert(false);
     }
 
-    nodes_list_t refs;
-    bool io_res = _merge_ways ( outer_list, refs );
+    _merge_areas ( rel_outer_way, out_outer_list );
+    _merge_areas ( rel_inner_way, out_inner_list );
 
-    if ( ! io_res ) {
+    #if 0
+    nodes_list_t refs;
+    bool io_res = _merge_ways(outer_list, refs);
+
+    if (!io_res) {
         ret_val = false;
-    }  else  {
+    }
+    else {
 
         building_shape << "[BUILDING]" << std::endl;
         building_shape << "[ID " << obj.id << "]" << std::endl;
@@ -508,6 +618,7 @@ static bool _process_relation_building ( const store_info_rels_t& obj ) {
     }
 
     std::cout << building_shape.str();
+    #endif
 
     return ret_val;
 }

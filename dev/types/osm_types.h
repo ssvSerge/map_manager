@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <vector>
+#include <list>
 
 #define OSM_STR_MAX_LEN             (2048)
 #define OSM_MAX_TAGS_CNT            (1024)
@@ -114,7 +115,7 @@ typedef struct tag_ref_way {
     ref_role_t      role;
 }   ref_way_t;
 
-typedef std::vector<ref_way_t>     ref_list_nodes_t;
+typedef std::vector<ref_way_t>     vector_ways_t;
 
 typedef struct tag_osm_node_info {
     osm_id_t            id;             // Obj id
@@ -130,8 +131,20 @@ typedef struct tag_osm_mapper {
     osm_draw_type_t         v;
 }   osm_mapper_t;
 
+typedef std::list<osm_id_t>             list_nodes_t;
+typedef std::list<list_nodes_t>         list_list_nodes_t;
+
+typedef std::list<ref_way_t>            list_ways_t;
+typedef list_ways_t::iterator           ways_list_pos_t;
+
+typedef std::list<list_ways_t>          list_list_ways_t;
+typedef list_list_ways_t::iterator      list_list_ways_pos_t;
+
+typedef std::list<vector_ways_t>        list_vector_ways_t;
+typedef list_vector_ways_t::iterator    list_vector_ways_pos_t;
+
 typedef struct tag_osm_obj_info {
-    ref_list_nodes_t    refs;
+    vector_ways_t       refs;
     osm_tag_ctx_t       xml_tags;
     osm_node_info_t     node_info;
 }   osm_obj_info_t;
