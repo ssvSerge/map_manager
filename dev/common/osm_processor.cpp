@@ -626,11 +626,17 @@ void osm_processor_t::map_role(const hpx_attr_t* attr, ref_role_t& role) {
 
     role = ROLE_UNKNOWN;
 
+    if ( bs_cmp(attr->value, "outline") == 0 ) {
+        role = ROLE_OUTER;
+    } else
     if ( bs_cmp(attr->value, "outer") == 0 ) {
         role = ROLE_OUTER;
     } else
     if ( bs_cmp(attr->value, "inner") == 0 ) {
         role = ROLE_INNER;
+    } else
+    if (bs_cmp(attr->value, "part") == 0) {
+        role = ROLE_PART;
     }
 }
 

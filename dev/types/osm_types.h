@@ -101,11 +101,12 @@ typedef enum tag_ref_role {
     ROLE_UNKNOWN        = 0,
     ROLE_INNER          = 1,
     ROLE_OUTER          = 2,
-    ROLE_FORWARD        = 3,
-    ROLE_BACKWARD       = 4,
-    ROLE_ATERNATION     = 5,
-    ROLE_INFO           = 6,
-    ROLE_GUIDEPOST      = 7,
+    ROLE_PART           = 3,
+    ROLE_FORWARD        = 4,
+    ROLE_BACKWARD       = 5,
+    ROLE_ATERNATION     = 6,
+    ROLE_INFO           = 7,
+    ROLE_GUIDEPOST      = 8,
     ROLE_LAST
 }   ref_role_t;
 
@@ -130,6 +131,9 @@ typedef struct tag_osm_mapper {
     osm_str_t               k;
     osm_draw_type_t         v;
 }   osm_mapper_t;
+
+typedef std::vector<osm_id_t>           vector_nodes_t;
+typedef std::vector<vector_nodes_t>     vector_list_nodes_t;
 
 typedef std::list<osm_id_t>             list_nodes_t;
 typedef std::list<list_nodes_t>         list_list_nodes_t;

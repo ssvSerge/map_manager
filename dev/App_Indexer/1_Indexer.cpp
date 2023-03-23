@@ -170,148 +170,7 @@ static void _add_rel ( osm_obj_info_t& info ) {
     (*ptr)[info.node_info.id] = new_rel;
 }
 
-#if 0
-
-static bool _load_way ( const store_info_way_t& way, std::string& coord_list ) {
-
-    bool ret_val = true;
-    osm_id_t node_id;
-
-    coord_list.clear();
-
-    for (size_t i = 0; i < way.refs.size(); i++) {
-
-        node_id = way.refs[i].id;
-
-        auto it = g_nodes_list.find(node_id);
-
-        if ( it == g_nodes_list.end() ) {
-            ret_val = false;
-            break;
-        }
-
-        // coord_list += "(";
-        // coord_list += std::to_string(it->second.info.lat);
-        // coord_list += " ";
-        // coord_list += std::to_string(it->second.info.lon);
-        // coord_list += ")";
-
-        coord_list += "(";
-        coord_list += std::to_string (node_id);
-        coord_list += ")";
-    }
-    
-    return ret_val;
-}
-
-static bool _merge_ways ( ways_list_t& ways_list, list_list_ways_t& refs_list ) {
-
-    bool         ret_val = true;
-
-    #if 0
-    bool         is_processed = false;
-
-    list_ways1_t refs;
-
-    osm_id_t     h1_f;
-    osm_id_t     h1_l;
-    osm_id_t     h2_f;
-    osm_id_t     h2_l;
-
-    if ( ways_list.size() == 0 ) {
-        return true;
-    }
-
-    {   auto way = ways_list.front();
-        ways_list.erase(ways_list.begin());
-        _merge_type1(way, refs);
-    }
-
-    while ( ways_list.size() > 0 ) {
-
-        h1_f = refs.front();
-        h1_l = refs.back();
-
-        auto way = ways_list.begin();
-
-        is_processed = false;
-
-        while ( way != ways_list.end() ) {
-
-            _get_first_last ( way, h2_f, h2_l );
-
-            if ( h1_l == h2_f ) {
-                // 
-                // 100, 101, 102
-                //           102, 103, 104
-                // 
-                _merge_type1 ( (*way), refs );
-                ways_list.erase(way);
-                is_processed = true;
-                break;
-            } else
-            if ( h1_l == h2_l ) {
-                // 
-                // 100, 101, 102
-                //           104, 103, 102
-                //
-                _merge_type2 ( (*way), refs );
-                ways_list.erase(way);
-                is_processed = true;
-                break;
-            } else
-            if ( h1_f == h2_f ) {
-                // 
-                //            105, 106, 107
-                //  105, 104, 103
-                // 
-                _merge_type3 ( (*way), refs );
-                ways_list.erase(way);
-                is_processed = true;
-                break;
-            } else
-            if ( h1_f == h2_l ) {
-                // 
-                //            105, 106, 107
-                //  103, 104, 105
-                // 
-                _merge_type4 ( (*way), refs );
-                ways_list.erase(way);
-                is_processed = true;
-                break;
-            }
-
-            way++;
-        }
-
-        if ( ! is_processed ) {
-            ret_val = false;
-            break;
-        }
-
-    }
-
-    refs_list.push_back(refs);
-
-    #endif
-
-    return ret_val;
-}
-
-#endif
-
-static void _get_first_last ( const list_nodes_t& ref, osm_id_t& f, osm_id_t& l ) {
-
-    f = -1;
-    l = -1;
-
-    assert ( ref.size() > 2 );
-
-    f = ref.front();
-    l = ref.back();
-}
-
-static void _get_first_last ( const vector_ways_t& refs, osm_id_t& f, osm_id_t& l ) {
+static void _get_first_last ( const list_nodes_t& refs, osm_id_t& f, osm_id_t& l ) {
 
     f = -1;
     l = -1;
@@ -319,9 +178,9 @@ static void _get_first_last ( const vector_ways_t& refs, osm_id_t& f, osm_id_t& 
     if ( refs.size() < 2 ) {
         return;
     }
-    
-    f = refs.front().id;
-    l = refs.back().id;
+
+    f = refs.front();
+    l = refs.back();
 }
 
 static void _cut_areas ( list_nodes_t& ids, vector_storewayex_t& ways ) {
@@ -378,247 +237,289 @@ static void _cut_areas ( list_nodes_t& ids, vector_storewayex_t& ways ) {
     }
 }
 
-static bool _merge_type1 ( const vector_ways_t& src, list_nodes_t& dst ) {
+static bool _merge_type1 ( const list_nodes_t& src, list_nodes_t& dst ) {
 
+    // 
+    // h1_l == h2_f
+    // 
     // 100, 101, 102
     //           102, 103, 104
-
-#if 0
-    auto next_node = way->second.refs.begin();
-
-    while (next_node != way->second.refs.end()) {
-
-        if (next_node == way->second.refs.begin()) {
-            if (refs.size() > 0) {
-                if (next_node->id == refs.back()) {
-                    next_node++;
-                    continue;
-                }
-            }
-        }
-
-        refs.push_back(next_node->id);
-        next_node++;
-    }
-
-#endif
-
-    return true;
-}
-
-static bool _merge_type2 ( const vector_ways_t& src, list_nodes_t& dst ) {
-
-    // 100, 101, 102
-    //           104, 103, 102
-
-    auto next_node = src.rbegin();
-
-    while ( next_node != src.rend() ) {
-        if ( next_node == src.rbegin()) {
-            if ( dst.size() > 0 ) {
-                if ( next_node->id == dst.back() ) {
-                    next_node++;
-                    continue;
-                }
-            }
-        }
-
-        dst.push_back(next_node->id);
-        next_node++;
-    }
-
-    return true;
-}
-
-static bool _merge_type3 ( const vector_ways_t& src, list_nodes_t& dst ) {
-
-    //            105, 106, 107
-    //  105, 104, 103
+    // 
 
     auto next_node = src.begin();
 
-    while (next_node != src.end()) {
-
-        if ( next_node == src.begin() ) {
-            if (dst.size() > 0) {
-                if (next_node->id == dst.front()) {
-                    next_node++;
-                    continue;
-                }
-            }
+    if (dst.size() > 0) {
+        if ( (*next_node) == dst.back() ) {
+            next_node++;
         }
+    }
 
-        dst.push_front(next_node->id);
+    while ( next_node != src.end() ) {
+        dst.push_back( *next_node );
         next_node++;
     }
 
     return true;
 }
 
-static bool _merge_type4 ( const vector_ways_t& src, list_nodes_t& dst ) {
+static bool _merge_type2 ( const list_nodes_t& src, list_nodes_t& dst ) {
 
+    //
+    // h1_l == h2_l
+    // 
+    // 100, 101, 102
+    //           104, 103, 102
+    // 
+
+    auto next_node = src.rbegin();
+
+    if (dst.size() > 0) {
+        if ( *next_node == dst.back()) {
+            next_node++;
+        }
+    }
+
+    while ( next_node != src.rend() ) {
+        dst.push_back( *next_node );
+        next_node++;
+    }
+
+    return true;
+}
+
+static bool _merge_type3 ( const list_nodes_t& src, list_nodes_t& dst ) {
+
+    // 
+    // h1_f == h2_f
+    // 
+    //           105, 106, 107
+    // 105, 104, 103
+    // 
+
+    auto next_node = src.begin();
+
+    if (dst.size() > 0) {
+        if ( *next_node == dst.front()) {
+            next_node++;
+        }
+    }
+
+    while (next_node != src.end()) {
+        dst.push_front( *next_node );
+        next_node++;
+    }
+
+    return true;
+}
+
+static bool _merge_type4 ( const list_nodes_t& src, list_nodes_t& dst ) {
+
+    // 
+    // h1_f == h2_l
+    // 
     //            105, 106, 107
     //  103, 104, 105
+    // 
 
-#if 0
-    auto next_node = way->second.refs.rbegin();
+    auto next_node = src.rbegin();
 
-    while (next_node != way->second.refs.rend()) {
-
-        if (next_node == way->second.refs.rbegin()) {
-            if (refs.size() > 0) {
-                if (next_node->id == refs.front()) {
-                    next_node++;
-                    continue;
-                }
-            }
+    if (dst.size() > 0) {
+        if ( *next_node == dst.front()) {
+            next_node++;
         }
-
-        refs.push_front(next_node->id);
-        next_node++;
     }
 
-#endif
+    while (next_node != src.rend()) {
+        dst.push_front( *next_node );
+        next_node++;
+    }
 
     return true;
 }
 
-static void _reconstruct ( list_nodes_t& ids, vector_storewayex_t& ways ) {
+static void _load_segment_data ( osm_id_t id, list_nodes_t& data ) {
+
+    data.clear();
+
+    auto way = g_ways_list.find ( id );
+    assert ( way != g_ways_list.end() );
+
+    for (size_t i = 0; i < way->second.refs.size(); i++) {
+        data.push_back(way->second.refs[i].id );
+    }
+}
+
+static void _reconstruct ( list_nodes_t& ids, osm_draw_type_t draw_type, vector_storewayex_t& ways ) {
 
     osm_id_t     h1_f;
     osm_id_t     h1_l;
     osm_id_t     h2_f;
     osm_id_t     h2_l;
 
-    list_nodes_t new_way;
-
     if ( ids.size() == 0 ) {
         return;
     }
 
-    auto first_entry = ids.front();
-    ids.erase( ids.begin() );
+    osm_id_t        segment_id;
+    list_nodes_t    segment_refs_a;
+    list_nodes_t    segment_refs_b;
 
-    bool is_processed;
+    segment_id = ids.front();
+    ids.erase ( ids.begin() );
 
-    while ( ids.size() > 0 ) {
+    _load_segment_data ( segment_id, segment_refs_a );
 
-        auto segment = ids.front();
+    bool retry_required = true;
+    bool is_merged      = false;
 
-        auto src_way_ptr = g_ways_list.find(segment);
-        assert ( src_way_ptr != g_ways_list.end() );
+    while (retry_required) {
 
-        const vector_ways_t& refs = src_way_ptr->second.refs;
+        retry_required = false;
 
-        _get_first_last ( new_way, h1_f, h1_l );
-        _get_first_last ( refs,    h2_f, h2_l );
+        auto segment_ptr = ids.begin();
+        while ( segment_ptr != ids.end() ) {
 
-        is_processed = false;
+            segment_id = *segment_ptr;
 
-        if ( h1_l == h2_f ) {
-            // 100, 101, 102
-            //           102, 103, 104
-            _merge_type1 ( refs, new_way );
-            is_processed = true;
-            break;
-        } else
-        if ( h1_l == h2_l ) {
-            // 100, 101, 102
-            //           104, 103, 102
-            _merge_type2 ( refs, new_way );
-            is_processed = true;
-            break;
-        } else
-        if ( h1_f == h2_f ) {
-            //            105, 106, 107
-            //  105, 104, 103
-            _merge_type3 ( refs, new_way );
-            is_processed = true;
-            break;
-        } else
-        if ( h1_f == h2_l ) {
-            //            105, 106, 107
-            //  103, 104, 105
-            _merge_type4 ( refs, new_way );
-            is_processed = true;
-            break;
+            _load_segment_data ( segment_id, segment_refs_b );
+
+            _get_first_last ( segment_refs_a, h1_f, h1_l );
+            _get_first_last ( segment_refs_b, h2_f, h2_l );
+
+            is_merged = false;
+
+            if ( h1_l == h2_f ) {
+                // 100, 101, 102
+                //           102, 103, 104
+                _merge_type1 ( segment_refs_b, segment_refs_a );
+                is_merged = true;
+            } else
+            if ( h1_l == h2_l ) {
+                // 100, 101, 102
+                //           104, 103, 102
+                _merge_type2 ( segment_refs_b, segment_refs_a );
+                is_merged = true;
+            } else
+            if ( h1_f == h2_f ) {
+                //            105, 106, 107
+                //  105, 104, 103
+                _merge_type3 ( segment_refs_b, segment_refs_a );
+                is_merged = true;
+            } else
+            if ( h1_f == h2_l ) {
+                //            105, 106, 107
+                //  103, 104, 105
+                _merge_type4 ( segment_refs_b, segment_refs_a );
+                is_merged = true;
+            }
+
+            if ( !is_merged ) {
+                segment_ptr++;
+                continue;
+            }
+
+            retry_required = true;
+            segment_ptr = ids.erase (segment_ptr);
         }
-
-        assert(is_processed);
-
-        ids.erase ( ids.begin() );
     }
 
+    assert ( ids.size() == 0 );
+
+    storewayex_t new_way;
+    new_way.type = draw_type;
+
+    auto it = segment_refs_a.begin();
+    while ( it != segment_refs_a.end() ) {
+        auto node_ref = g_nodes_list.find( (*it) );
+        if (node_ref != g_nodes_list.end()) {
+            storenode_t new_node;
+            new_node.info = node_ref->second.info;
+            new_way.ref.push_back(new_node);
+        }
+        it++;
+    }
+
+    ways.push_back ( new_way );
 }
 
-static void _merge_areas ( list_nodes_t& ids, vector_storewayex_t& ways ) {
+static void _merge_areas ( list_nodes_t& ids, osm_draw_type_t draw_type, vector_storewayex_t& ways ) {
 
     _cut_areas   ( ids, ways );
-    _reconstruct ( ids, ways );
+    _reconstruct ( ids, draw_type, ways );
+}
+
+static void _get_role ( const ref_way_t& way, ref_role_t& role ) {
+
+    role = ROLE_UNKNOWN;
+
+    switch ( way.role ) {
+        case ROLE_PART:
+        case ROLE_OUTER:
+            role = ROLE_OUTER;
+            return;
+        case ROLE_INNER:
+            role = ROLE_INNER;
+            return;
+        case ROLE_UNKNOWN:
+            break;
+        default:
+            assert(false);
+            return;
+    }
+
+    auto way_info = g_ways_list.find( way.id );
+    if ( way_info == g_ways_list.end() ) {
+        return;
+    }
+
+    if ( (way_info->second.type >= DRAW_BUILDING_BEGIN) && (way_info->second.type <= DRAW_BUILDING_END) ) {
+        role = ROLE_OUTER;
+        return;
+    }
+
+    assert(false);
 }
 
 static bool _process_relation_building(const storerels_t& obj) {
 
     bool ret_val = true;
 
-//  std::stringstream   building_shape;
-//  std::string         part;
-
     list_nodes_t            rel_outer_way;
     vector_storewayex_t     out_outer_list;
     list_nodes_t            rel_inner_way;
     vector_storewayex_t     out_inner_list;
+    ref_role_t              way_role;
 
-    for (size_t i = 0; i < obj.refs.size(); i++) {
-        if (obj.refs[i].role == ROLE_OUTER) {
-            rel_outer_way.emplace_back ( obj.refs[i].id );
-        } else
-        if (obj.refs[i].role == ROLE_INNER) {
-            rel_inner_way.emplace_back ( obj.refs[i].id );
-        } else {
-            ret_val = false;
-            assert(false);
+    for ( size_t i = 0; i < obj.refs.size(); i++ ) {
+
+        if (obj.refs[i].ref != REF_WAY) {
+            continue;
+        }
+
+        _get_role ( obj.refs[i], way_role );
+
+        if ( way_role == ROLE_OUTER ) {
+            rel_outer_way.push_back(obj.refs[i].id);
+            continue;
+        }
+
+        if (way_role == ROLE_INNER) {
+            rel_inner_way.push_back(obj.refs[i].id);
+            continue;
+        }               
+
+        if (way_role == ROLE_UNKNOWN) {
+            assert ( false );
         }
     }
 
-    if (rel_outer_way.size() == 0) {
+    if ( rel_outer_way.size() == 0 ) {
         ret_val = false;
-        assert(false);
+        return ret_val;
     }
 
-    _merge_areas ( rel_outer_way, out_outer_list );
-    _merge_areas ( rel_inner_way, out_inner_list );
-
-    #if 0
-    nodes_list_t refs;
-    bool io_res = _merge_ways(outer_list, refs);
-
-    if (!io_res) {
-        ret_val = false;
-    }
-    else {
-
-        building_shape << "[BUILDING]" << std::endl;
-        building_shape << "[ID " << obj.id << "]" << std::endl;
-        building_shape << "[OUTER ";
-
-        for (auto outer = refs.begin(); outer != refs.end(); outer++) {
-
-            auto pos = g_nodes_list.find(*outer);
-            if (pos == g_nodes_list.end()) {
-                ret_val = false;
-                break;
-            }
-
-            building_shape << "(" << std::setprecision(10) << pos->second.info.lat << " " << pos->second.info.lon << ") ";
-            // building_shape << "(" << pos->second.info.id << ") ";
-        }
-        building_shape << std::endl;
-        building_shape << "[END]" << std::endl << std::endl;
-    }
-
-    std::cout << building_shape.str();
-    #endif
+    _merge_areas ( rel_outer_way, DRAW_BUILDING_OUTER, out_outer_list );
+    _merge_areas ( rel_inner_way, DRAW_BUILDING_INNER, out_inner_list );
 
     return ret_val;
 }
