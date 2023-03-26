@@ -5,101 +5,10 @@
 #include <fstream>
 #include <string>
 #include <cassert>
-#include <vector>
-#include <list>
 #include <sstream>
-#include <map>
 #include <iomanip>
 
 #include "..\common\osm_processor.h"
-
-class storenode_t {
-
-    public:
-        storenode_t() {
-
-            in_use = false;
-
-            info.id   = 0;
-            info.lat  = 0;
-            info.lon  = 0;
-            info.name = 0;
-            info.type = DRAW_UNKNOWN;
-        }
-
-    public:
-        bool               in_use;
-        osm_node_info_t    info;
-};
-
-class storeway_t {
-
-    public:
-        storeway_t() {
-            in_use  = false;
-            bad     = false;
-            id      = 0;
-            type    = DRAW_UNKNOWN;
-        }
-
-    public:
-        bool                in_use;
-        bool                bad;
-        osm_id_t            id;
-        osm_draw_type_t     type;
-        vector_ways_t       refs;
-};
-
-class storerels_t {
-
-    public:
-        storerels_t() {
-            in_use  = false;
-            bad     = false;
-            id      = 0;
-            type    = DRAW_UNKNOWN;
-        }
-    public:
-        bool                in_use;
-        bool                bad;
-        osm_id_t            id;
-        osm_draw_type_t     type;
-        vector_ways_t       refs;
-};
-
-typedef std::map<osm_id_t, storenode_t>         map_storenode_t;
-typedef map_storenode_t::iterator               map_storenode_pos_t;
-
-typedef std::list<storenode_t>                  list_storenode_t;
-typedef list_storenode_t::iterator              list_storenode_pos_t;
-
-typedef std::list< list_storenode_t>            list_list_storenode_t;
-typedef list_list_storenode_t::iterator         list_list_storenode_pos_t;
-
-typedef std::map<osm_id_t, storeway_t>          map_storeway_t;
-typedef map_storeway_t::const_iterator          map_storeway_pos_t;
-
-typedef std::list<storeway_t>                   list_storeway_t;
-typedef list_storeway_t::iterator               list_storeway_pos_t;
-
-typedef std::map<osm_id_t, storerels_t>         map_storerel_t;
-typedef map_storerel_t::iterator                map_storerel_pos_t;
-
-class storewayex_t {
-    public:
-        storewayex_t() {
-            type = DRAW_UNKNOWN;
-        }
-
-    public:
-        osm_draw_type_t     type;
-        list_storenode_t    ref;
-};
-
-typedef std::vector<storewayex_t>               vector_storewayex_t;
-typedef vector_storewayex_t::iterator           vector_storewayex_pos_t;
-typedef std::list<vector_storewayex_t>          list_vector_storewayex_t;
-typedef list_vector_storewayex_t::iterator      list_vector_storewayex_pos_t;
 
 const map_storenode_t       g_nodes_list;
 const map_storeway_t        g_ways_list;
@@ -480,9 +389,7 @@ static void _get_role ( const ref_way_t& way, ref_role_t& role ) {
     assert(false);
 }
 
-static bool _process_relation_building(const storerels_t& obj) {
-
-    bool ret_val = true;
+static void _process_relation_building (bool& is_processed, const storerels_t& obj ) {
 
     list_nodes_t            rel_outer_way;
     vector_storewayex_t     out_outer_list;
@@ -490,52 +397,53 @@ static bool _process_relation_building(const storerels_t& obj) {
     vector_storewayex_t     out_inner_list;
     ref_role_t              way_role;
 
+    if (is_processed) {
+        return;
+    }
+
+    if ( ( obj.type < DRAW_BUILDING_BEGIN ) && (obj.type > DRAW_BUILDING_END) ) {
+        return;
+    }
+
+    is_processed = true;
+
     for ( size_t i = 0; i < obj.refs.size(); i++ ) {
 
-        if (obj.refs[i].ref != REF_WAY) {
+        if ( obj.refs[i].ref != REF_WAY ) {
             continue;
         }
 
         _get_role ( obj.refs[i], way_role );
 
         if ( way_role == ROLE_OUTER ) {
-            rel_outer_way.push_back(obj.refs[i].id);
+            rel_outer_way.push_back ( obj.refs[i].id );
             continue;
         }
 
-        if (way_role == ROLE_INNER) {
-            rel_inner_way.push_back(obj.refs[i].id);
+        if ( way_role == ROLE_INNER ) {
+            rel_inner_way.push_back ( obj.refs[i].id );
             continue;
         }               
 
-        if (way_role == ROLE_UNKNOWN) {
+        if ( way_role == ROLE_UNKNOWN ) {
             assert ( false );
         }
     }
 
-    if ( rel_outer_way.size() == 0 ) {
-        ret_val = false;
-        return ret_val;
-    }
+    assert ( rel_outer_way.size() > 0 );
 
     _merge_areas ( rel_outer_way, DRAW_BUILDING_OUTER, out_outer_list );
     _merge_areas ( rel_inner_way, DRAW_BUILDING_INNER, out_inner_list );
-
-    return ret_val;
 }
 
 static void process_rels() {
 
     auto pos = g_rels_list.begin();
+    bool is_processed = false;
 
     while ( pos != g_rels_list.end() ) {
 
-        if (pos->second.bad) {
-            pos++;
-            continue;
-        }
-
-        if (pos->second.in_use) {
+        if ( pos->second.bad ) {
             pos++;
             continue;
         }
@@ -545,8 +453,14 @@ static void process_rels() {
             continue;
         }
 
-        _process_relation_building ( pos->second );
+        _process_relation_building ( is_processed, pos->second );
         pos++;
+
+        // DRAW_REL_STREET,
+        // DRAW_REL_WATERWAY,
+        // DRAW_REL_BRIDGE,
+        // DRAW_REL_TUNNEL,
+
     }
 
 }
@@ -562,11 +476,11 @@ static void process_nodes() {
 int main() {
 
     processor.configure (_add_node, _add_way, _add_rel );
-    processor.process_file("D:\\OSM_Extract\\prague.osm");
+    processor.process_file("D:\\OSM_Extract\\prague_rel_cp.osm");
 
-    process_rels();
-    process_ways();
-    process_nodes();
+    // process_rels();
+    // process_ways();
+    // process_nodes();
 
     return 0;
 }

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <vector>
 #include <list>
+#include <map>
 
 #define OSM_STR_MAX_LEN             (2048)
 #define OSM_MAX_TAGS_CNT            (1024)
@@ -57,6 +58,13 @@ typedef enum tag_osm_draw_type {
         DRAW_AREA_UNKNOWN,
         DRAW_AREA_STONE,
     DRAW_AREA_END,
+
+    DRAW_REL_BEGIN,
+        DRAW_REL_STREET,
+        DRAW_REL_WATERWAY,
+        DRAW_REL_BRIDGE,
+        DRAW_REL_TUNNEL,
+    DRAW_REL_END,
 
     DRAW_WATER,
 
@@ -152,5 +160,90 @@ typedef struct tag_osm_obj_info {
     osm_tag_ctx_t       xml_tags;
     osm_node_info_t     node_info;
 }   osm_obj_info_t;
+
+class storenode_t {
+    public:
+        storenode_t() {
+
+            in_use = false;
+
+            info.id = 0;
+            info.lat = 0;
+            info.lon = 0;
+            info.name = 0;
+            info.type = DRAW_UNKNOWN;
+        }
+
+    public:
+        bool               in_use;
+        osm_node_info_t    info;
+};
+
+class storeway_t {
+    public:
+        storeway_t() {
+            in_use = false;
+            bad = false;
+            id = 0;
+            type = DRAW_UNKNOWN;
+        }
+
+    public:
+        bool                in_use;
+        bool                bad;
+        osm_id_t            id;
+        osm_draw_type_t     type;
+        vector_ways_t       refs;
+};
+
+class storerels_t {
+    public:
+        storerels_t() {
+            in_use = false;
+            bad = false;
+            id = 0;
+            type = DRAW_UNKNOWN;
+        }
+    public:
+        bool                in_use;
+        bool                bad;
+        osm_id_t            id;
+        osm_draw_type_t     type;
+        vector_ways_t       refs;
+};
+
+typedef std::map<osm_id_t, storenode_t>         map_storenode_t;
+typedef map_storenode_t::iterator               map_storenode_pos_t;
+
+typedef std::list<storenode_t>                  list_storenode_t;
+typedef list_storenode_t::iterator              list_storenode_pos_t;
+
+typedef std::list< list_storenode_t>            list_list_storenode_t;
+typedef list_list_storenode_t::iterator         list_list_storenode_pos_t;
+
+typedef std::map<osm_id_t, storeway_t>          map_storeway_t;
+typedef map_storeway_t::const_iterator          map_storeway_pos_t;
+
+typedef std::list<storeway_t>                   list_storeway_t;
+typedef list_storeway_t::iterator               list_storeway_pos_t;
+
+typedef std::map<osm_id_t, storerels_t>         map_storerel_t;
+typedef map_storerel_t::iterator                map_storerel_pos_t;
+
+class storewayex_t {
+    public:
+        storewayex_t() {
+            type = DRAW_UNKNOWN;
+        }
+
+    public:
+        osm_draw_type_t     type;
+        list_storenode_t    ref;
+};
+
+typedef std::vector<storewayex_t>               vector_storewayex_t;
+typedef vector_storewayex_t::iterator           vector_storewayex_pos_t;
+typedef std::list<vector_storewayex_t>          list_vector_storewayex_t;
+typedef list_vector_storewayex_t::iterator      list_vector_storewayex_pos_t;
 
 #endif

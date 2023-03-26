@@ -511,6 +511,58 @@ static const osm_mapper_t map_relation_boundary[] = {
     {   "administrative",              DRAW_SKIP              },
 };
 
+static const osm_mapper_t map_relation_restriction[] = {
+
+    {   "restriction",                 DRAW_UNKNOWN           },
+
+    {   "no_left_turn",                DRAW_SKIP              },
+    {   "only_straight_on",            DRAW_SKIP              },
+    {   "only_right_turn",             DRAW_SKIP              },
+    {   "no_u_turn",                   DRAW_SKIP              },
+    {   "no_right_turn",               DRAW_SKIP              },
+    {   "only_left_turn",              DRAW_SKIP              },
+    {   "no_straight_on",              DRAW_SKIP              },
+    {   "no_exit",                     DRAW_SKIP              },
+    {   "only_u_turn",                 DRAW_SKIP              },
+};
+
+static const osm_mapper_t map_relation_type[] = {
+
+    {   "type",                        DRAW_UNKNOWN           },
+
+    {   "building",                    DRAW_BUILDING          },
+    {   "street",                      DRAW_REL_STREET        },
+    {   "waterway",                    DRAW_REL_WATERWAY      },
+    {   "bridge",                      DRAW_REL_BRIDGE        },
+    {   "tunnel",                      DRAW_REL_TUNNEL        },
+
+    {   "network",                     DRAW_SKIP              },
+    {   "site",                        DRAW_SKIP              },
+    {   "route_master",                DRAW_SKIP              },
+    {   "boundary",                    DRAW_SKIP              },
+    {   "turnlanes:lengths",           DRAW_SKIP              },
+    {   "turnlanes:turns",             DRAW_SKIP              },
+    {   "connectivity",                DRAW_SKIP              },
+    {   "restriction",                 DRAW_SKIP              },
+    {   "enforcement",                 DRAW_SKIP              },
+    {   "treaty",                      DRAW_SKIP              },
+    {   "traffic_mirror",              DRAW_SKIP              },
+    {   "stop",                        DRAW_SKIP              },
+    {   "navigation",                  DRAW_SKIP              },
+    {   "pipeline",                    DRAW_SKIP              },
+    {   "group",                       DRAW_SKIP              },
+    {   "associatedStreet",            DRAW_SKIP              },
+    {   "disc_golf_course",            DRAW_SKIP              },
+    {   "give_way",                    DRAW_SKIP              },
+    {   "provides_feature",            DRAW_SKIP              },
+    {   "cluster",                     DRAW_SKIP              },
+    {   "junction",                    DRAW_SKIP              },
+    {   "level",                       DRAW_SKIP              },
+    {   "collection",                  DRAW_SKIP              },
+
+    {   "multipolygon",                DRAW_SKIP              },
+};
+
 static const osm_mapper_t map_ways_unused[] = {
 
     {   "unused",                      DRAW_UNKNOWN           },
@@ -548,7 +600,7 @@ osm_processor_t::osm_processor_t() {
     memset(&xml_ctx, 0, sizeof(xml_ctx));
     xml_ctx_cnt = 0;
 
-    load_skiplist("skip.nodes", skiplist_nodes);
+    load_skiplist("skip.nodes", skiplist_nodes );
     load_skiplist("skip.ways",  skiplist_ways );
     load_skiplist("skip.rels",  skiplist_rels );
 }
@@ -556,8 +608,6 @@ osm_processor_t::osm_processor_t() {
 //---------------------------------------------------------------------------//
 
 void osm_processor_t::log_node ( const char* const name, osm_id_t id, const osm_tag_ctx_t& node_info ) {
-
-    return;
 
     std::cout << "<" << name << " id = \"" << id << "\">" << std::endl;
 
@@ -1230,13 +1280,18 @@ void osm_processor_t::ways_store_info ( void ) {
 
 void osm_processor_t::rels_init ( void ) {
 
-    bor_init ( map_relation_route,    ITEMS_CNT(map_relation_route),    rels_types );
-    bor_init ( map_relation_boundary, ITEMS_CNT(map_relation_boundary), rels_boundary );
+    bor_init ( map_relation_route,        ITEMS_CNT(map_relation_route),       rels_routes );
+    bor_init ( map_relation_boundary,     ITEMS_CNT(map_relation_boundary),    rels_boundary );
+    bor_init ( map_relation_restriction,  ITEMS_CNT(map_relation_restriction), rels_restriction );
+    bor_init ( map_relation_type,         ITEMS_CNT(map_relation_type),        rels_type );
+    bor_init ( map_area_landuse,          ITEMS_CNT(map_area_landuse),         rels_landuse );
+    bor_init ( map_area_leisure,          ITEMS_CNT(map_area_leisure),         rels_leisure );
 }
 
 void osm_processor_t::rel_expand_tags ( void ) {
 
-    // test_and_add("disused");
+    test_and_add("building");
+    test_and_add("disused");
 }
 
 void osm_processor_t::rel_resolve_type ( void ) {
@@ -1244,8 +1299,15 @@ void osm_processor_t::rel_resolve_type ( void ) {
     osm_draw_type_t draw_type = DRAW_UNKNOWN;
 
     process_building ( draw_type, osm_info.xml_tags );
-    map_type ( draw_type, osm_info.xml_tags, rels_types );
+    map_type ( draw_type, osm_info.xml_tags, rels_routes );
     map_type ( draw_type, osm_info.xml_tags, rels_boundary );
+    map_type ( draw_type, osm_info.xml_tags, rels_landuse );
+    map_type ( draw_type, osm_info.xml_tags, rels_leisure );
+    map_type ( draw_type, osm_info.xml_tags, rels_restriction );
+    map_type ( draw_type, osm_info.xml_tags, rels_type );
+
+    process_osm_param ( draw_type, DRAW_SKIP, "abandoned" );
+    process_osm_param ( draw_type, DRAW_SKIP, "disused" );
 
     if ( draw_type == DRAW_UNKNOWN ) {
         log_node( "relation", osm_info.node_info.id, osm_info.xml_tags );
@@ -1360,18 +1422,18 @@ bool osm_processor_t::process_file ( const char* const file_name ) {
 
     for ( ; ; ) {
 
-        io_res = hpx_get_elem(ctrl, &xml_str, NULL, &lno);
+        io_res = hpx_get_elem ( ctrl, &xml_str, NULL, &lno );
         if (io_res == 0) {
             break;
         }
 
-        io_res = hpx_process_elem(xml_str, xml_obj);
+        io_res = hpx_process_elem ( xml_str, xml_obj );
         if (io_res != 0) {
             printf("[%ld] ERROR in element: %.*s\n", lno, xml_str.len, xml_str.buf);
             break;
         }
 
-        process_item(xml_obj->type, xml_obj->tag, xml_obj->nattr, xml_obj->attr);
+        process_item ( xml_obj->type, xml_obj->tag, xml_obj->nattr, xml_obj->attr );
     }
 
     if ( !ctrl->eof ) {

@@ -104,8 +104,12 @@ class osm_processor_t {
         ssearcher        ways_ignored;
 
     private:
-        ssearcher        rels_types;
+        ssearcher        rels_routes;
         ssearcher        rels_boundary;
+        ssearcher        rels_landuse;
+        ssearcher        rels_leisure;
+        ssearcher        rels_restriction;
+        ssearcher        rels_type;
 
     private:
         ssearcher        skiplist_nodes;
