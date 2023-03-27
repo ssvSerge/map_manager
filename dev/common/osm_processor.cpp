@@ -609,7 +609,7 @@ osm_processor_t::osm_processor_t() {
 
 void osm_processor_t::log_node ( const char* const name, osm_id_t id, const osm_tag_ctx_t& node_info ) {
 
-    std::cout << "<" << name << " id = \"" << id << "\">" << std::endl;
+    std::cout << "<" << name << " id=\"" << id << "\">" << std::endl;
 
     for (int i = 0; i < node_info.cnt; i++) {
         std::cout << "  <tag ";
@@ -618,7 +618,7 @@ void osm_processor_t::log_node ( const char* const name, osm_id_t id, const osm_
         std::cout << "/>" << std::endl;
     }
 
-    std::cout << "</way>" << std::endl;
+    std::cout << "</" << name << ">" << std::endl;
 }
 
 void osm_processor_t::load_skiplist ( const char* const file_name, ssearcher& bor ) {
@@ -1184,21 +1184,21 @@ void osm_processor_t::ways_init ( void ) {
 
 void osm_processor_t::ways_expand_tags ( void ) {
 
-    test_and_add("disused");
-    test_and_add("bridge");
-    test_and_add("building");
-    test_and_add("abandoned");
-    test_and_add("area");
-    test_and_add("proposed");
-    test_and_add("construction");
-    test_and_add("cycleway");
-    test_and_add("demolished");
-    test_and_add("was");
-    test_and_add("removed");
-    test_and_add("toilets");
-    test_and_add("roof");
-    test_and_add("addr");
-    test_and_add("eea");
+    test_and_add ( "disused" );
+    test_and_add ( "bridge" );
+    test_and_add ( "building" );
+    test_and_add ( "abandoned" );
+    test_and_add ( "area" );
+    test_and_add ( "proposed" );
+    test_and_add ( "construction" );
+    test_and_add ( "cycleway" );
+    test_and_add ( "demolished" );
+    test_and_add ( "was" );
+    test_and_add ( "removed" );
+    test_and_add ( "toilets" );
+    test_and_add ( "roof" );
+    test_and_add ( "addr" );
+    test_and_add ( "eea" );
 }
 
 void osm_processor_t::ways_resolve_type ( void ) {
@@ -1299,6 +1299,7 @@ void osm_processor_t::rel_resolve_type ( void ) {
     osm_draw_type_t draw_type = DRAW_UNKNOWN;
 
     process_building ( draw_type, osm_info.xml_tags );
+
     map_type ( draw_type, osm_info.xml_tags, rels_routes );
     map_type ( draw_type, osm_info.xml_tags, rels_boundary );
     map_type ( draw_type, osm_info.xml_tags, rels_landuse );
@@ -1310,7 +1311,7 @@ void osm_processor_t::rel_resolve_type ( void ) {
     process_osm_param ( draw_type, DRAW_SKIP, "disused" );
 
     if ( draw_type == DRAW_UNKNOWN ) {
-        log_node( "relation", osm_info.node_info.id, osm_info.xml_tags );
+        log_node ( "relation", osm_info.node_info.id, osm_info.xml_tags );
     }
 
     osm_info.node_info.type = draw_type;
@@ -1344,17 +1345,17 @@ void osm_processor_t::process_building ( osm_draw_type_t& draw_type, const osm_t
 
     bool find_res;
 
-    if (draw_type != DRAW_UNKNOWN) {
+    if ( draw_type != DRAW_UNKNOWN ) {
         return;
     }
 
     find_res = find_key(node_info, "building");
-    if (!find_res) {
+    if ( !find_res ) {
         return;
     }
 
     find_res = find_key(node_info, "building", "false", "0", "no");
-    if (find_res) {
+    if ( find_res ) {
         return;
     }
 

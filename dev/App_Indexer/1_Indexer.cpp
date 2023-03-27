@@ -10,11 +10,11 @@
 
 #include "..\common\osm_processor.h"
 
-const map_storenode_t       g_nodes_list;
-const map_storeway_t        g_ways_list;
-const map_storerel_t        g_rels_list;
+map_storenode_t       g_nodes_list;
+map_storeway_t        g_ways_list;
+map_storerel_t        g_rels_list;
 
-osm_processor_t             processor;
+osm_processor_t       processor;
 
 static void _fix_area ( osm_obj_info_t& info ) {
 
@@ -248,10 +248,15 @@ static bool _merge_type4 ( const list_nodes_t& src, list_nodes_t& dst ) {
 
 static void _load_segment_data ( osm_id_t id, list_nodes_t& data ) {
 
+    static int err_cnt = 0;
     data.clear();
 
     auto way = g_ways_list.find ( id );
-    assert ( way != g_ways_list.end() );
+    if ( way == g_ways_list.end() ) {
+        std::cout << "-> Cannot find object: " << id << std::endl;
+        err_cnt++;
+        return;
+    }
 
     for (size_t i = 0; i < way->second.refs.size(); i++) {
         data.push_back(way->second.refs[i].id );
@@ -389,7 +394,7 @@ static void _get_role ( const ref_way_t& way, ref_role_t& role ) {
     assert(false);
 }
 
-static void _process_relation_building (bool& is_processed, const storerels_t& obj ) {
+static void _process_rel_building ( bool& is_processed, const storerels_t& obj ) {
 
     list_nodes_t            rel_outer_way;
     vector_storewayex_t     out_outer_list;
@@ -397,7 +402,7 @@ static void _process_relation_building (bool& is_processed, const storerels_t& o
     vector_storewayex_t     out_inner_list;
     ref_role_t              way_role;
 
-    if (is_processed) {
+    if ( is_processed ) {
         return;
     }
 
@@ -430,6 +435,20 @@ static void _process_relation_building (bool& is_processed, const storerels_t& o
         }
     }
 
+    for ( auto it : rel_outer_way ) {
+        auto way_ptr = g_ways_list.find (it);
+        if ( way_ptr != g_ways_list.end() ) {
+            way_ptr->second.in_use = true;
+        }
+    }
+
+    for (auto it : rel_inner_way) {
+        auto way_ptr = g_ways_list.find(it);
+        if (way_ptr != g_ways_list.end()) {
+            way_ptr->second.in_use = true;
+        }
+    }
+
     assert ( rel_outer_way.size() > 0 );
 
     _merge_areas ( rel_outer_way, DRAW_BUILDING_OUTER, out_outer_list );
@@ -453,7 +472,21 @@ static void process_rels() {
             continue;
         }
 
-        _process_relation_building ( is_processed, pos->second );
+        is_processed = false;
+        _process_rel_building ( is_processed, pos->second );
+        if ( !is_processed ) {
+            is_processed = false;
+        }
+        // DRAW_AREA_UNKNOWN,
+        // DRAW_AREA_WATER,
+        // DRAW_AREA_ASPHALT,
+        // DRAW_AREA_GRASS,
+        // DRAW_AREA_FORSET,
+        // DRAW_AREA_SAND,
+        // DRAW_AREA_MOUNTAIN,
+        // DRAW_AREA_STONE,
+
+
         pos++;
 
         // DRAW_REL_STREET,
@@ -476,9 +509,9 @@ static void process_nodes() {
 int main() {
 
     processor.configure (_add_node, _add_way, _add_rel );
-    processor.process_file("D:\\OSM_Extract\\prague_rel_cp.osm");
+    processor.process_file("D:\\OSM_Extract\\prague.osm");
 
-    // process_rels();
+    process_rels();
     // process_ways();
     // process_nodes();
 

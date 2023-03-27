@@ -49,13 +49,13 @@ typedef enum tag_osm_draw_type {
     DRAW_BUILDING_END,
 
     DRAW_AREA_BEGIN,
+        DRAW_AREA_UNKNOWN,
         DRAW_AREA_WATER,
         DRAW_AREA_ASPHALT,
         DRAW_AREA_GRASS,
         DRAW_AREA_FORSET,
         DRAW_AREA_SAND,
         DRAW_AREA_MOUNTAIN,
-        DRAW_AREA_UNKNOWN,
         DRAW_AREA_STONE,
     DRAW_AREA_END,
 
@@ -222,7 +222,7 @@ typedef std::list< list_storenode_t>            list_list_storenode_t;
 typedef list_list_storenode_t::iterator         list_list_storenode_pos_t;
 
 typedef std::map<osm_id_t, storeway_t>          map_storeway_t;
-typedef map_storeway_t::const_iterator          map_storeway_pos_t;
+typedef map_storeway_t::iterator                map_storeway_pos_t;
 
 typedef std::list<storeway_t>                   list_storeway_t;
 typedef list_storeway_t::iterator               list_storeway_pos_t;
