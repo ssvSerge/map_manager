@@ -593,10 +593,6 @@ static const osm_mapper_t map_ways_unused[] = {
 
 osm_processor_t::osm_processor_t() {
 
-    m_callback_node = nullptr;
-    m_callback_way  = nullptr;
-    m_callback_rel  = nullptr;
-
     memset(&xml_ctx, 0, sizeof(xml_ctx));
     xml_ctx_cnt = 0;
 
@@ -766,12 +762,12 @@ void osm_processor_t::store_attr ( int attr_cnt, const hpx_attr_t* new_item ) {
 
 void osm_processor_t::store_ref ( const bstring_t& value, ref_type_t ref_type ) {
 
-    ref_way_t next_item;
+    ref_item_t ref;
 
-    next_item.id = bs_tol(value);
-    next_item.ref = ref_type;
+    ref.id = bs_tol(value);
+    ref.ref = ref_type;
 
-    osm_info.refs.push_back(next_item);
+    osm_info.refs.push_back(ref);
 }
 
 void osm_processor_t::process_root_way ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -832,27 +828,27 @@ void osm_processor_t::process_root_rel ( int attr_cnt, const hpx_attr_t* attr_li
 
 void osm_processor_t::process_rel_member ( int attr_cnt, const hpx_attr_t* attr_list ) {
 
-    ref_way_t way;
+    ref_item_t ref;
 
-    way.id   = 0;
-    way.ref  = REF_UNKNOWN;
-    way.role = ROLE_UNKNOWN;
+    ref.id   = 0;
+    ref.ref  = REF_UNKNOWN;
+    ref.role = ROLE_UNKNOWN;
 
     for (int i = 0; i < attr_cnt; i++) {
 
         if (bs_cmp(attr_list[i].name, "ref") == 0) {
-            way.id = bs_tol(attr_list[i].value);
+            ref.id = bs_tol(attr_list[i].value);
         } else
         if (bs_cmp(attr_list[i].name, "type") == 0) {
-            map_ref ( &attr_list[i], way.ref );
+            map_ref ( &attr_list[i], ref.ref );
         } else
         if (bs_cmp(attr_list[i].name, "role") == 0) {
-            map_role ( &attr_list[i], way.role );
+            map_role ( &attr_list[i], ref.role );
         } 
 
     }
 
-    osm_info.refs.push_back(way);
+    osm_info.refs.push_back(ref);
 }
 
 void osm_processor_t::process_rel_tag ( int attr_cnt, const hpx_attr_t* attr_list ) {
@@ -1129,9 +1125,7 @@ void osm_processor_t::node_resolve_type ( void ) {
 
 void osm_processor_t::node_store_info ( void ) {
 
-    if (m_callback_node != nullptr) {
-        m_callback_node(osm_info);
-    }
+    add_node(osm_info);
 }
 
 void osm_processor_t::clean_info( void ) {
@@ -1271,9 +1265,7 @@ void osm_processor_t::ways_resolve_type ( void ) {
 
 void osm_processor_t::ways_store_info ( void ) {
 
-    if (m_callback_way != nullptr) {
-        m_callback_way(osm_info);
-    }
+    add_way(osm_info);
 }
 
 //---------------------------------------------------------------------------//
@@ -1319,9 +1311,7 @@ void osm_processor_t::rel_resolve_type ( void ) {
 
 void osm_processor_t::rel_store_info ( void ) {
 
-    if (m_callback_rel != nullptr) {
-        m_callback_rel(osm_info);
-    }
+    add_rel(osm_info);
 }
 
 //---------------------------------------------------------------------------//
@@ -1383,14 +1373,87 @@ void osm_processor_t::process_unused ( osm_draw_type_t& draw_type, const osm_tag
 
 //---------------------------------------------------------------------------//
 
-void osm_processor_t::configure ( osm_object_t add_node, osm_object_t add_way, osm_object_t add_rel ) {
+void osm_processor_t::fix_area(osm_obj_info_t& info) {
 
-    m_callback_node = add_node;
-    m_callback_way  = add_way;
-    m_callback_rel  = add_rel;
+    bool is_area = false;
+
+    if ((info.node_info.type >= DRAW_AREA_BEGIN) && (info.node_info.type <= DRAW_AREA_END)) {
+        is_area = true;
+    }
+
+    if (is_area) {
+        if (info.refs.size() > 3) {
+            if ( info.refs.front().id = info.refs.back().id) {
+                info.refs.push_back ( info.refs.front() );
+            }
+        }
+    }
+
 }
 
-bool osm_processor_t::process_file ( const char* const file_name ) {
+void osm_processor_t::add_node ( osm_obj_info_t& info ) {
+
+    storenode_t new_obj;
+
+    new_obj.in_use = false;
+    new_obj.type   = info.node_info.type;
+    new_obj.id     = info.node_info.id;
+    new_obj.name   = info.node_info.name;
+    new_obj.lat    = info.node_info.lat;
+    new_obj.lon    = info.node_info.lon;
+
+    nodes_list[new_obj.id] = new_obj;
+}
+
+void osm_processor_t::add_way ( osm_obj_info_t& info ) {
+
+    storeway_t  way;
+    storenode_t node;
+
+    fix_area(info);
+
+    way.id    = info.node_info.id;
+    way.type  = info.node_info.type;
+
+    for ( size_t i = 0; i < info.refs.size(); i++ ) {
+
+        auto it = nodes_list.find ( info.refs[i].id );
+        if ( it == nodes_list.end() ) {
+            std::cout << "Way id: " << info.node_info.id << " node: " << info.refs[i].id << " not found" << std::endl;
+            continue;
+        }
+
+        it->second.in_use = true;
+
+        node.id   = it->second.id;
+        node.type = it->second.type;
+        node.lon  = it->second.lon;
+        node.lat  = it->second.lat;
+        node.name = it->second.name;
+
+        way.refs.push_back(node);
+    }
+    
+    ways_list[way.id] = way;
+}
+
+void osm_processor_t::add_rel ( osm_obj_info_t& info ) {
+
+    storerels_t rel;
+
+    rel.id     = info.node_info.id;
+    rel.type   = info.node_info.type;
+    rel.name   = info.node_info.name;
+    rel.in_use = false;
+
+    for ( size_t i=0; i<info.refs.size(); i++ ) {
+        rel.refs.push_back( info.refs[i] );
+    }
+
+    rels_list[rel.id] = rel;
+}
+
+bool osm_processor_t::load_osm ( const char* const file_name ) {
 
     int         fd      = 0;
     hpx_ctrl_t* ctrl    = nullptr;
@@ -1449,3 +1512,108 @@ bool osm_processor_t::process_file ( const char* const file_name ) {
 
     return true;
 }
+
+//---------------------------------------------------------------------------//
+
+bool osm_processor_t::process_file ( const char* const file_name ) {
+
+    load_osm(file_name);
+
+    return true;
+}
+
+bool osm_processor_t::populate_node ( osm_obj_type_t _id, obj_node_t& node ) {
+
+    auto ref_node = nodes_list.find( _id );
+    if ( ref_node == nodes_list.end() ) {
+        return false;
+    }
+
+    ref_node->second.in_use = true;
+
+    node.id     = _id;
+    node.type   = ref_node->second.type;
+    node.lon    = ref_node->second.lon;
+    node.lat    = ref_node->second.lat;
+
+    return true;
+}
+
+bool osm_processor_t::populate_way ( osm_obj_type_t _id, obj_way_t& way ) {
+
+    obj_node_t node;
+    bool find_res;
+
+    auto ref_way = ways_list.find ( _id );
+
+    if ( ref_way == ways_list.end() ) {
+        return false;
+    }
+
+    ref_way->second.in_use = true;
+
+    way.id      = ref_way->second.id;
+    way.type    = ref_way->second.type;
+
+    auto it = ref_way->second.refs.begin();
+
+    while ( it != ref_way->second.refs.end() ) {
+        find_res = populate_node ( it->id, node );
+        if ( find_res ) {
+            way.refs.push_back(node);
+        }
+        it++;
+    }
+
+    return true;
+}
+
+bool osm_processor_t::populate_rel ( osm_obj_type_t _id, obj_rel_t& rel ) {
+
+    auto ref_rel = rels_list.find (_id);
+
+    if ( ref_rel == rels_list.end() ) {
+        return false;
+    }
+
+    ref_rel->second.in_use = true;
+
+    rel.id      = ref_rel->second.id;
+    rel.type    = ref_rel->second.type;
+    
+    auto it = ref_rel->second.refs.begin();
+    bool find_res;
+
+    while ( it != ref_rel->second.refs.end() ) {
+
+        if ( it->ref == REF_NODE ) {
+            obj_node_t nd;
+            find_res = populate_node ( it->id, nd );
+            if ( find_res ) {
+                rel.refs.push_back(nd);
+            }
+        } else
+        if (it->ref == REF_WAY ) {
+            obj_way_t way;
+            find_res = populate_way ( it->id, way );
+            if ( find_res ) {
+                rel.refs.push_back(way);
+            }
+        } else
+        if (it->ref == REF_RELATION ) {
+            obj_rel_t rel;
+            find_res = populate_rel ( it->id, rel );
+            if ( find_res ) {
+                rel.refs.push_back(rel);
+            }
+        } else {
+            assert ( false );
+        }
+
+        it++;
+    }
+
+    return true;
+}
+
+//---------------------------------------------------------------------------//

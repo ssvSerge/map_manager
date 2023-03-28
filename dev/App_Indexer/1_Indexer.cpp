@@ -16,69 +16,7 @@ map_storerel_t        g_rels_list;
 
 osm_processor_t       processor;
 
-static void _fix_area ( osm_obj_info_t& info ) {
-
-    bool is_area = false;
-
-    if ((info.node_info.type >= DRAW_AREA_BEGIN) && (info.node_info.type <= DRAW_AREA_END)) {
-        is_area = true;
-    }
-
-    if (is_area) {
-        if (info.refs.size() > 3) {
-
-            size_t i1 = 0;
-            size_t i2 = info.refs.size() - 1;
-
-            if (info.refs[i1].id != info.refs[i2].id) {
-                info.refs.push_back(info.refs[i1]);
-            }
-        }
-    }
-
-}
-
-static void _add_node ( osm_obj_info_t& info ) {
-
-    storenode_t new_obj;
-
-    new_obj.info = info.node_info;
-
-    map_storenode_t* ptr = const_cast<map_storenode_t*>(&g_nodes_list);
-    (*ptr)[info.node_info.id] = new_obj;
-}
-
-static void _add_way ( osm_obj_info_t& info ) {
-
-    static bool found_res = 0;
-
-    storeway_t new_info;
-
-    if (info.node_info.type >= DRAW_START) {
-        _fix_area(info);
-    }
-
-    new_info.id = info.node_info.id;
-    new_info.type = info.node_info.type;
-    new_info.refs = info.refs;
-
-    map_storeway_t* ptr = const_cast<map_storeway_t*>(&g_ways_list);
-    (*ptr)[new_info.id] = new_info;
-}
-
-static void _add_rel ( osm_obj_info_t& info ) {
-
-    storerels_t new_rel;
-
-    new_rel.in_use = false;
-    new_rel.id     = info.node_info.id;
-    new_rel.type   = info.node_info.type;
-    new_rel.refs   = info.refs;
-
-    map_storerel_t* ptr = const_cast<map_storerel_t*>(&g_rels_list);
-    (*ptr)[info.node_info.id] = new_rel;
-}
-
+#if 0
 static void _get_first_last ( const list_nodes_t& refs, osm_id_t& f, osm_id_t& l ) {
 
     f = -1;
@@ -506,12 +444,21 @@ static void process_nodes() {
 
 }
 
+#endif
+
 int main() {
 
-    processor.configure (_add_node, _add_way, _add_rel );
+    obj_node_t      node;
+    obj_way_t       way;
+    obj_rel_t       rel;
+
     processor.process_file("D:\\OSM_Extract\\prague.osm");
 
-    process_rels();
+    processor.populate_node ( 21712137, node );
+    processor.populate_way  (  4020623,  way );
+    processor.populate_rel  (    21572,  rel );
+
+    // process_rels();
     // process_ways();
     // process_nodes();
 

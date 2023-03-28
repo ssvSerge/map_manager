@@ -16,6 +16,15 @@ typedef double                      osm_lon_t;
 typedef double                      osm_lat_t;
 typedef const char* const           osm_str_t;
 
+typedef char alloc_str_t[OSM_STR_MAX_LEN];
+
+typedef struct tag_osm_tag {
+    alloc_str_t         k;
+    alloc_str_t         v;
+}   osm_tag_t;
+
+typedef osm_tag_t osm_tags_list_t[OSM_MAX_TAGS_CNT];
+
 typedef enum tag_osm_draw_type {
 
     DRAW_UNKNOWN,
@@ -71,32 +80,6 @@ typedef enum tag_osm_draw_type {
     DRAW_LAST_ID
 }   osm_draw_type_t;
 
-typedef enum tag_osm_node {
-    XML_NODE_UNDEF,
-    XML_NODE_ROOT,
-    XML_NODE_NODE,
-    XML_NODE_WAY,
-    XML_NODE_REL,
-    XML_NODE_TAG,
-    XML_NODE_ND,
-    XML_NODE_MEMBER,
-    XML_NODE_SKIP,
-}   osm_node_t;
-
-typedef char alloc_str_t[OSM_STR_MAX_LEN];
-
-typedef struct tag_osm_tag {
-    alloc_str_t             k;
-    alloc_str_t             v;
-}   osm_tag_t;
-
-typedef osm_tag_t osm_tags_list_t[OSM_MAX_TAGS_CNT];
-
-typedef struct tag_osm_tag_ctx {
-    osm_tags_list_t         list;
-    int                     cnt;
-}   osm_tag_ctx_t;
-
 typedef enum tag_ref_type {
     REF_UNKNOWN         = 0,
     REF_NODE            = 1,
@@ -119,12 +102,31 @@ typedef enum tag_ref_role {
 }   ref_role_t;
 
 typedef struct tag_ref_way {
-    osm_id_t        id;
-    ref_type_t      ref;
-    ref_role_t      role;
-}   ref_way_t;
+    osm_id_t            id;
+    ref_type_t          ref;
+    ref_role_t          role;
+}   ref_item_t;
 
-typedef std::vector<ref_way_t>     vector_ways_t;
+typedef enum tag_osm_node {
+    XML_NODE_UNDEF,
+    XML_NODE_ROOT,
+    XML_NODE_NODE,
+    XML_NODE_WAY,
+    XML_NODE_REL,
+    XML_NODE_TAG,
+    XML_NODE_ND,
+    XML_NODE_MEMBER,
+    XML_NODE_SKIP,
+}   osm_node_t;
+
+typedef std::vector<ref_item_t>     vector_rel_refs_t;
+
+typedef std::list<ref_item_t>       list_rel_refs_t;
+
+typedef struct tag_osm_tag_ctx {
+    osm_tags_list_t     list;
+    int                 cnt;
+}   osm_tag_ctx_t;
 
 typedef struct tag_osm_node_info {
     osm_id_t            id;             // Obj id
@@ -135,84 +137,119 @@ typedef struct tag_osm_node_info {
     osm_id_t            name;           // NAME_ID
 }   osm_node_info_t;
 
-typedef struct tag_osm_mapper {
-    osm_str_t               k;
-    osm_draw_type_t         v;
-}   osm_mapper_t;
-
-typedef std::vector<osm_id_t>           vector_nodes_t;
-typedef std::vector<vector_nodes_t>     vector_list_nodes_t;
-
-typedef std::list<osm_id_t>             list_nodes_t;
-typedef std::list<list_nodes_t>         list_list_nodes_t;
-
-typedef std::list<ref_way_t>            list_ways_t;
-typedef list_ways_t::iterator           ways_list_pos_t;
-
-typedef std::list<list_ways_t>          list_list_ways_t;
-typedef list_list_ways_t::iterator      list_list_ways_pos_t;
-
-typedef std::list<vector_ways_t>        list_vector_ways_t;
-typedef list_vector_ways_t::iterator    list_vector_ways_pos_t;
-
 typedef struct tag_osm_obj_info {
-    vector_ways_t       refs;
+    vector_rel_refs_t   refs;
     osm_tag_ctx_t       xml_tags;
     osm_node_info_t     node_info;
 }   osm_obj_info_t;
 
-class storenode_t {
+typedef struct tag_osm_mapper {
+    osm_str_t           k;
+    osm_draw_type_t     v;
+}   osm_mapper_t;
+
+class storeinfo_t {
     public:
-        storenode_t() {
-
+        storeinfo_t() {
+            id     = -1;
+            type   = DRAW_UNKNOWN;
+            name   = -1;
             in_use = false;
-
-            info.id = 0;
-            info.lat = 0;
-            info.lon = 0;
-            info.name = 0;
-            info.type = DRAW_UNKNOWN;
         }
 
     public:
+        osm_id_t           id;
+        osm_draw_type_t    type;
+        osm_id_t           name;
         bool               in_use;
-        osm_node_info_t    info;
 };
 
-class storeway_t {
+class storenode_t : public storeinfo_t {
+    public:
+        storenode_t () {
+            lon    =  0;
+            lat    =  0; 
+        }
+
+    public:
+        osm_lon_t          lon;
+        osm_lat_t          lat;
+};
+
+typedef std::list<storenode_t>          list_storeinfo_t;
+
+class storeway_t : public storeinfo_t {
+
     public:
         storeway_t() {
-            in_use = false;
-            bad = false;
-            id = 0;
-            type = DRAW_UNKNOWN;
+            refs.clear();
         }
 
     public:
-        bool                in_use;
-        bool                bad;
-        osm_id_t            id;
-        osm_draw_type_t     type;
-        vector_ways_t       refs;
+        list_storeinfo_t   refs;
 };
 
-class storerels_t {
+class storerels_t : public storeinfo_t {
+
     public:
         storerels_t() {
-            in_use = false;
-            bad = false;
-            id = 0;
-            type = DRAW_UNKNOWN;
+            refs.clear();
         }
+
     public:
-        bool                in_use;
-        bool                bad;
-        osm_id_t            id;
-        osm_draw_type_t     type;
-        vector_ways_t       refs;
+        void populate ( osm_id_t _id );
+
+    public:
+        list_rel_refs_t refs;
 };
 
-typedef std::map<osm_id_t, storenode_t>         map_storenode_t;
+typedef std::map<osm_id_t, storenode_t> map_storenode_t;
+typedef std::map<osm_id_t, storeway_t>  map_storeway_t;
+typedef std::map<osm_id_t, storerels_t> map_storerel_t;
+
+class obj_t {
+    public:
+        osm_id_t           id;
+        osm_draw_type_t    type;
+};
+
+class obj_node_t : public obj_t {
+    public:
+        osm_lon_t          lon;
+        osm_lat_t          lat;
+};
+
+typedef std::list<obj_node_t> list_obj_node_t;
+
+class obj_way_t : public obj_t {
+    public:
+        list_obj_node_t    refs;
+};
+
+typedef std::list<obj_t> list_obj_t;
+
+class obj_rel_t : public obj_t {
+    public:
+        list_obj_t         refs;
+};
+
+#if 0
+
+typedef std::vector<osm_id_t>                   vector_nodes_t;
+typedef std::vector<vector_nodes_t>             vector_list_nodes_t;
+
+typedef std::list<osm_id_t>                     list_nodes_t;
+typedef std::list<list_nodes_t>                 list_list_nodes_t;
+
+typedef std::list<ref_way_t>                    list_ways_t;
+typedef list_ways_t::iterator                   ways_list_pos_t;
+
+typedef std::list<list_ways_t>                  list_list_ways_t;
+typedef list_list_ways_t::iterator              list_list_ways_pos_t;
+
+typedef std::list<vector_ways_t>                list_vector_ways_t;
+typedef list_vector_ways_t::iterator            list_vector_ways_pos_t;
+
 typedef map_storenode_t::iterator               map_storenode_pos_t;
 
 typedef std::list<storenode_t>                  list_storenode_t;
@@ -221,13 +258,11 @@ typedef list_storenode_t::iterator              list_storenode_pos_t;
 typedef std::list< list_storenode_t>            list_list_storenode_t;
 typedef list_list_storenode_t::iterator         list_list_storenode_pos_t;
 
-typedef std::map<osm_id_t, storeway_t>          map_storeway_t;
 typedef map_storeway_t::iterator                map_storeway_pos_t;
 
 typedef std::list<storeway_t>                   list_storeway_t;
 typedef list_storeway_t::iterator               list_storeway_pos_t;
 
-typedef std::map<osm_id_t, storerels_t>         map_storerel_t;
 typedef map_storerel_t::iterator                map_storerel_pos_t;
 
 class storewayex_t {
@@ -245,5 +280,7 @@ typedef std::vector<storewayex_t>               vector_storewayex_t;
 typedef vector_storewayex_t::iterator           vector_storewayex_pos_t;
 typedef std::list<vector_storewayex_t>          list_vector_storewayex_t;
 typedef list_vector_storewayex_t::iterator      list_vector_storewayex_pos_t;
+
+#endif
 
 #endif
