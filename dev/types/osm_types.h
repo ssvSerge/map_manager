@@ -135,6 +135,7 @@ typedef struct tag_osm_node_info {
     osm_lon_t           lon;            // LON
     osm_draw_type_t     type;           // TRANSPORT, METRO
     osm_id_t            name;           // NAME_ID
+    int                 level;          // Level <-1>, <0>, <1>, etc.
 }   osm_node_info_t;
 
 typedef struct tag_osm_obj_info {
@@ -155,12 +156,14 @@ class storeinfo_t {
             type   = DRAW_UNKNOWN;
             name   = -1;
             in_use = false;
+            level  = 0;
         }
 
     public:
         osm_id_t           id;
         osm_draw_type_t    type;
         osm_id_t           name;
+        int                level;
         bool               in_use;
 };
 
@@ -177,6 +180,7 @@ class storenode_t : public storeinfo_t {
 };
 
 typedef std::list<storenode_t>          list_storeinfo_t;
+typedef std::list<list_storeinfo_t>     list_list_storeinfo_t;
 
 class storeway_t : public storeinfo_t {
 
@@ -211,6 +215,7 @@ class obj_t {
     public:
         osm_id_t           id;
         osm_draw_type_t    type;
+        int                level;
 };
 
 class obj_node_t : public obj_t {
@@ -226,61 +231,14 @@ class obj_way_t : public obj_t {
         list_obj_node_t    refs;
 };
 
-typedef std::list<obj_t> list_obj_t;
+typedef std::list<obj_t>      list_obj_t;
+typedef std::list<list_obj_t> list_list_obj_t;
+
+typedef std::list<obj_way_t>  list_obj_way_t;
 
 class obj_rel_t : public obj_t {
     public:
         list_obj_t         refs;
 };
-
-#if 0
-
-typedef std::vector<osm_id_t>                   vector_nodes_t;
-typedef std::vector<vector_nodes_t>             vector_list_nodes_t;
-
-typedef std::list<osm_id_t>                     list_nodes_t;
-typedef std::list<list_nodes_t>                 list_list_nodes_t;
-
-typedef std::list<ref_way_t>                    list_ways_t;
-typedef list_ways_t::iterator                   ways_list_pos_t;
-
-typedef std::list<list_ways_t>                  list_list_ways_t;
-typedef list_list_ways_t::iterator              list_list_ways_pos_t;
-
-typedef std::list<vector_ways_t>                list_vector_ways_t;
-typedef list_vector_ways_t::iterator            list_vector_ways_pos_t;
-
-typedef map_storenode_t::iterator               map_storenode_pos_t;
-
-typedef std::list<storenode_t>                  list_storenode_t;
-typedef list_storenode_t::iterator              list_storenode_pos_t;
-
-typedef std::list< list_storenode_t>            list_list_storenode_t;
-typedef list_list_storenode_t::iterator         list_list_storenode_pos_t;
-
-typedef map_storeway_t::iterator                map_storeway_pos_t;
-
-typedef std::list<storeway_t>                   list_storeway_t;
-typedef list_storeway_t::iterator               list_storeway_pos_t;
-
-typedef map_storerel_t::iterator                map_storerel_pos_t;
-
-class storewayex_t {
-    public:
-        storewayex_t() {
-            type = DRAW_UNKNOWN;
-        }
-
-    public:
-        osm_draw_type_t     type;
-        list_storenode_t    ref;
-};
-
-typedef std::vector<storewayex_t>               vector_storewayex_t;
-typedef vector_storewayex_t::iterator           vector_storewayex_pos_t;
-typedef std::list<vector_storewayex_t>          list_vector_storewayex_t;
-typedef list_vector_storewayex_t::iterator      list_vector_storewayex_pos_t;
-
-#endif
 
 #endif

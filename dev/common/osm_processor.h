@@ -7,16 +7,35 @@
 
 typedef void (*osm_object_t) ( osm_obj_info_t& info );
 
+typedef void (*node_info_callback_t) ( const storenode_t& node );
+typedef void (*way_info_callback_t)  ( const storeway_t&   way );
+typedef void (*rel_info_callback_t)  ( const storerels_t&  rel );
+
 class osm_processor_t {
 
     public:
         osm_processor_t();
 
     public:
-        bool process_file  ( const char* const file_name );
-        bool populate_node ( osm_obj_type_t _id, obj_node_t& node );
-        bool populate_way  ( osm_obj_type_t _id, obj_way_t& way );
-        bool populate_rel  ( osm_obj_type_t _id, obj_rel_t& rel );
+        bool process_file     ( const char* const file_name );
+                              
+        bool enum_nodes       ( node_info_callback_t callback );
+        bool enum_ways        ( way_info_callback_t  callback );
+        bool enum_rels        ( rel_info_callback_t  callback );
+                              
+        bool load_node        ( osm_obj_type_t _id, storenode_t& node );
+        bool load_way         ( osm_obj_type_t _id, storeway_t&   way );
+        bool load_rel         ( osm_obj_type_t _id, storerels_t&  rel );
+                              
+        bool populate_node    ( osm_obj_type_t _id, bool err_allowed, obj_node_t& node );
+        bool populate_way     ( osm_obj_type_t _id, bool err_allowed, obj_way_t& way );
+        bool populate_rel     ( osm_obj_type_t _id, bool err_allowed, obj_rel_t& rel );
+                              
+        void mark_relation    ( osm_obj_type_t _id );
+        void mark_way         ( osm_obj_type_t _id );
+        void mark_nodes       ( osm_obj_type_t _id );
+
+        bool reconstruct_way  ( list_rel_refs_t& in_list, osm_draw_type_t draw_type, bool fail_allowed, list_obj_way_t& out_list );
 
     private:
         void bor_init ( const osm_mapper_t* const lex_list, size_t cnt, ssearcher& bor );
@@ -35,6 +54,11 @@ class osm_processor_t {
         void map_ref ( const hpx_attr_t* attr, ref_type_t& ref );
         void map_role ( const hpx_attr_t* attr, ref_role_t& role );
         void clean_info ( void );
+
+        void _merge_type1 ( const obj_way_t& src, obj_way_t& dst );
+        void _merge_type2 ( const obj_way_t& src, obj_way_t& dst );
+        void _merge_type3 ( const obj_way_t& src, obj_way_t& dst );
+        void _merge_type4 ( const obj_way_t& src, obj_way_t& dst );
 
     private:
         void process_root_node ( int attr_cnt, const hpx_attr_t* attr_list );
@@ -69,6 +93,8 @@ class osm_processor_t {
         void rel_expand_tags ( void );
         void rel_resolve_type ( void );
         void rel_store_info ( void );
+
+        void resolve_level ( int& level );
 
         void process_item ( int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list );
 
