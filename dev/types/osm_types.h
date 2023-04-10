@@ -89,15 +89,19 @@ typedef enum tag_ref_type {
 }   ref_type_t;
 
 typedef enum tag_ref_role {
-    ROLE_UNKNOWN        = 0,
-    ROLE_INNER          = 1,
-    ROLE_OUTER          = 2,
-    ROLE_PART           = 3,
-    ROLE_FORWARD        = 4,
-    ROLE_BACKWARD       = 5,
-    ROLE_ATERNATION     = 6,
-    ROLE_INFO           = 7,
-    ROLE_GUIDEPOST      = 8,
+    ROLE_UNKNOWN        =  0,
+    ROLE_INNER          =  1,
+    ROLE_OUTER          =  2,
+    ROLE_PART           =  3,
+    ROLE_FORWARD        =  4,
+    ROLE_BACKWARD       =  5,
+    ROLE_ATERNATION     =  6,
+    ROLE_INFO           =  7,
+    ROLE_GUIDEPOST      =  8,
+    ROLE_EMPTY          =  9,
+    ROLE_MAINSTREAM     = 10,
+    ROLE_SIDESTREAM     = 11,
+    ROLE_ACROSS         = 12,
     ROLE_LAST
 }   ref_role_t;
 

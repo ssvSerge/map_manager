@@ -336,6 +336,7 @@ static const osm_mapper_t map_area_leisure[] = {
     {   "dog_park",                    DRAW_AREA_GRASS        },
     {   "miniature_golf",              DRAW_AREA_GRASS        },
     {   "meadow",                      DRAW_AREA_GRASS        },
+    {   "sport",                       DRAW_AREA_GRASS        },
 
     {   "ice_rink",                    DRAW_SKIP              },
     {   "swimming_pool",               DRAW_SKIP              },
@@ -561,6 +562,7 @@ static const osm_mapper_t map_relation_type[] = {
     {   "building",                    DRAW_BUILDING          },
     {   "street",                      DRAW_REL_STREET        },
     {   "waterway",                    DRAW_REL_WATERWAY      },
+    {   "water",                       DRAW_REL_WATERWAY      },
     {   "bridge",                      DRAW_REL_BRIDGE        },
     {   "tunnel",                      DRAW_REL_TUNNEL        },
 
@@ -700,17 +702,39 @@ void osm_processor_t::map_role(const hpx_attr_t* attr, ref_role_t& role) {
 
     role = ROLE_UNKNOWN;
 
+    if ( bs_cmp(attr->value, "acros") == 0 ) {
+        role = ROLE_ACROSS;
+    } else
+
+    if ( bs_cmp(attr->value, "tributary") == 0 ) {
+        role = ROLE_MAINSTREAM;
+    } else
+    if ( bs_cmp(attr->value, "spring") == 0 ) {
+        role = ROLE_MAINSTREAM;
+    } else
+    if ( bs_cmp(attr->value, "main_stream") == 0 ) {
+        role = ROLE_MAINSTREAM;
+    } else
+    if ( bs_cmp(attr->value, "side_stream") == 0 ) {
+        role = ROLE_SIDESTREAM;
+    } else
+
     if ( bs_cmp(attr->value, "outline") == 0 ) {
         role = ROLE_OUTER;
     } else
     if ( bs_cmp(attr->value, "outer") == 0 ) {
         role = ROLE_OUTER;
     } else
+
     if ( bs_cmp(attr->value, "inner") == 0 ) {
         role = ROLE_INNER;
     } else
     if (bs_cmp(attr->value, "part") == 0) {
         role = ROLE_PART;
+    } else
+
+    if (bs_cmp(attr->value, "") == 0) {
+        role = ROLE_EMPTY;
     }
 }
 
@@ -1914,30 +1938,24 @@ bool osm_processor_t::enum_rels ( const rel_info_callback_t callback ) {
 
 //---------------------------------------------------------------------------//
 
-bool osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, osm_draw_type_t draw_type, bool err_allowed, list_obj_way_t& out_list ) {
+void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t& out_list ) {
 
     bool        is_ok = true;
     osm_id_t    f;
     osm_id_t    l;
 
-    out_list.clear();
-
     if ( in_list.size() == 0 ) {
-        return true;
+        return;
     }
 
     {   auto it = in_list.begin();
 
         while ( it != in_list.end() ) {
 
-            auto way_ptr = ways_list.find(it->id);
+            auto way_ptr = ways_list.find ( it->id );
 
             if ( way_ptr == ways_list.end() ) {
                 std::cout << "Way ID: " << it->id << " not found" << std::endl;
-                if ( !err_allowed ) {
-                    assert(false);
-                    is_ok = false;
-                }
                 it = in_list.erase(it);
                 continue;
             }
@@ -1946,10 +1964,9 @@ bool osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, osm_draw_type_
 
             if ( f == l ) {
                 obj_way_t new_way;
-                populate_way ( way_ptr->second.id, err_allowed, new_way );
-                new_way.type = draw_type;
+                populate_way ( way_ptr->second.id, false, new_way );
                 out_list.push_back ( new_way );
-                it = in_list.erase(it);
+                it = in_list.erase ( it );
                 continue;
             }
 
@@ -1958,19 +1975,17 @@ bool osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, osm_draw_type_
     }
 
     if ( in_list.size() == 0 ) {
-        return true;
+        return;
     }
 
     bool        retry_required = true;
+    bool        is_merged = false;
     obj_way_t   full_way;
     obj_way_t   part_way;
     osm_id_t    h1_f;
     osm_id_t    h1_l;
     osm_id_t    h2_f;
     osm_id_t    h2_l;
-
-    populate_way  ( in_list.begin()->id, err_allowed, full_way );
-    in_list.erase ( in_list.begin() );
 
     while ( retry_required ) {
 
@@ -1980,68 +1995,69 @@ bool osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, osm_draw_type_
 
         while ( it != in_list.end() ) {
 
-            populate_way ( it->id, err_allowed, part_way );
+            populate_way ( it->id, false, part_way );
+
+            if ( full_way.refs.size() == 0 ) {
+                full_way = part_way;
+                it = in_list.erase ( it );
+                continue;
+            }
 
             _get_first_last ( full_way.refs, h1_f, h1_l );
             _get_first_last ( part_way.refs, h2_f, h2_l );
+
+            is_merged = false;
 
             if ( h1_l == h2_f ) {
                 // 100, 101, 102
                 //           102, 103, 104
                 _merge_type1 ( part_way, full_way );
-                it = in_list.erase(it);
-                it = in_list.begin();
-                retry_required = true;
-                continue;
-            }
-
+                is_merged = true;
+            } else 
             if ( h1_l == h2_l ) {
                 // 100, 101, 102
                 //           104, 103, 102
                 _merge_type2 ( part_way, full_way );
-                it = in_list.erase(it);
-                it = in_list.begin();
-                retry_required = true;
-                continue;
-            }
-
+                is_merged = true;
+            } else
             if ( h1_f == h2_f ) {
                 //            105, 106, 107
                 //  105, 104, 103
                 _merge_type3 ( part_way, full_way );
-                it = in_list.erase(it);
-                it = in_list.begin();
-                retry_required = true;
-                continue;
-            }
-
+                is_merged = true;
+            } else
             if ( h1_f == h2_l ) {
                 //            105, 106, 107
                 //  103, 104, 105
                 _merge_type4 ( part_way, full_way );
-                it = in_list.erase(it);
-                it = in_list.begin();
-                retry_required = true;
+                is_merged = true;
+            }
+
+            if ( !is_merged ) {
+                it++;
                 continue;
             }
 
-            it++;
+            it = in_list.erase(it);
+            retry_required = true;
+
+            _get_first_last ( full_way.refs, h1_f, h1_l );
+            if ( h1_f == h1_l ) {
+                out_list.push_back ( full_way );
+                full_way.refs.clear();
+            }
+
         }
 
     }
 
-    full_way.type = draw_type;
-    out_list.push_back ( full_way );
+    if ( full_way.refs.size() != 0 ) {
+        out_list.push_back(full_way);
+    }
 
     if ( in_list.size() != 0 ) {
         std::cout << "Reconstruction failed." << std::endl;
-        if (!err_allowed) {
-            assert(false);
-            is_ok = false;
-        }
     }
-
-    return (is_ok);
 }
 
 //---------------------------------------------------------------------------//

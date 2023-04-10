@@ -35,7 +35,7 @@ class osm_processor_t {
         void mark_way         ( osm_obj_type_t _id );
         void mark_nodes       ( osm_obj_type_t _id );
 
-        bool reconstruct_way  ( list_rel_refs_t& in_list, osm_draw_type_t draw_type, bool fail_allowed, list_obj_way_t& out_list );
+        void reconstruct_way  ( list_rel_refs_t& in_list, list_obj_way_t& out_list );
 
     private:
         void bor_init ( const osm_mapper_t* const lex_list, size_t cnt, ssearcher& bor );
