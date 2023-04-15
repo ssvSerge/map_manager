@@ -12,27 +12,96 @@ map_storerel_t        g_rels_list;
 
 osm_processor_t       processor;
 
-static void _log_building ( osm_id_t id, const list_obj_way_t& outers, const list_obj_way_t& inners ) {
+static void _reorder1 ( const list_obj_node_t& in_refs, list_obj_node_t& out_refs ) {
 
-    char position[80];
+    out_refs.clear();
 
-    return;
+    if ( in_refs.size() <= 2 ) {
+        out_refs = in_refs;
+        return;
+    }
 
-    std::cout << "BUILDING [ID " << id << "] " << std::endl;
-        for ( auto it = outers.begin(); it != outers.end(); it++ ) {
-            std::cout << "OUTER [ID " << it->id << "] ";
-            for ( auto pos = it->refs.begin(); pos != it->refs.end(); pos++ ) {
-                sprintf_s ( position, "%.7f %.7f; ", pos->lat, pos->lon );
-                std::cout << position;
+    auto pScan = in_refs.begin();
+    pScan++;
+
+    auto pMostRight = pScan;
+    pScan++;
+
+    while ( pScan != in_refs.end() ) {
+
+        if ( pScan->lon > pMostRight->lon ) {
+            pMostRight = pScan;
+        } else 
+        if ( pScan->lon == pMostRight->lon ) {
+            if ( pScan->lat < pMostRight->lat ) {
+                pMostRight = pScan;
             }
-            std::cout << std::endl;
         }
+
+        pScan++;
+    }
+
+    auto pNext = pMostRight;
+
+    pNext++;
+    if ( pNext == in_refs.end() ) {
+        pNext = in_refs.begin();
+        pNext++;
+    }
+
+    bool cv_direction = true;
+
+    if ( pMostRight->lon == pNext->lon) {
+        cv_direction = false;
+    } else
+    if (pMostRight->lat >= pNext->lat ) {
+        cv_direction = true;
+    } else {
+        cv_direction = false;
+    }
+
+    if ( cv_direction ) {
+        out_refs = in_refs;
+    } else {
+
+        auto pos = in_refs.rbegin();
+        while ( pos != in_refs.rend() ) {
+            out_refs.push_back( *pos );
+            pos++;
+        }
+    }
+
+}
+
+static void _log_area ( const char* name, osm_id_t id, const list_obj_way_t& outers, const list_obj_way_t& inners ) {
+
+    char            position[80];
+    list_obj_node_t out_refs;
+
+    std::cout << name << " ";
+    std::cout << "[ID " << id << "] " << std::endl;
+
+        for ( auto it = outers.begin(); it != outers.end(); it++ ) {
+
+                std::cout << "OUTER [ID " << it->id << "] ";
+
+                for ( auto pos = out_refs.begin(); pos != out_refs.end(); pos++ ) {
+                    sprintf_s ( position, "%.7f %.7f; ", pos->lat, pos->lon );
+                    std::cout << position;
+                }
+
+                std::cout << std::endl;
+        }
+
         for ( auto it = inners.begin(); it != inners.end(); it++ ) {
+
             std::cout << "INNER [ID " << it->id << "] ";
-            for ( auto pos = it->refs.begin(); pos != it->refs.end(); pos++ ) {
+
+            for ( auto pos = out_refs.begin(); pos != out_refs.end(); pos++ ) {
                 sprintf_s(position, "%.7f %.7f; ", pos->lat, pos->lon);
                 std::cout << position;
             }
+
             std::cout << std::endl;
         }
 
@@ -123,7 +192,7 @@ static void _reconstruct_building ( const storerels_t& rel ) {
     processor.reconstruct_way ( outer_ways, outers );
     processor.reconstruct_way ( inner_ways, inners );
 
-    _log_building ( rel.id, outers, inners );
+    _log_area ( "BUILDING", rel.id, outers, inners );
 }
 
 static void _reconstruct_area ( const storerels_t& rel ) {
@@ -157,7 +226,7 @@ static void _reconstruct_area ( const storerels_t& rel ) {
     processor.reconstruct_way ( outer_ways, outers );
     processor.reconstruct_way ( inner_ways, inners );
 
-    _log_building ( rel.id, outers, inners );
+    _log_area ( "AREA", rel.id, outers, inners );
 }
 
 static void process_rel ( const storerels_t& rel ) {
@@ -270,7 +339,8 @@ static void process_rel ( const storerels_t& rel ) {
 
 int main() {
 
-    processor.process_file ( "D:\\OSM_Extract\\prague.osm" );
+    // processor.process_file ( "D:\\OSM_Extract\\prague.osm" );
+    processor.process_file("C:\\Users\\serg\\Downloads\\map.osm");
 
     processor.enum_rels  ( scan_child );
     processor.enum_rels  ( process_rel );

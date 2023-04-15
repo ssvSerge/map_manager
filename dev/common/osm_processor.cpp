@@ -1827,6 +1827,72 @@ bool osm_processor_t::populate_rel ( osm_obj_type_t _id, bool err_allowed, obj_r
 
 //---------------------------------------------------------------------------//
 
+void osm_processor_t::reorder ( const obj_way_t& in_way, obj_way_t& out_way ) {
+
+    out_way.refs.clear();
+
+    if ( in_way.refs.size() <= 2) {
+        out_way = in_way;
+        return;
+    }
+
+    auto pScan = in_way.refs.begin();
+    pScan++;
+
+    auto pMostRight = pScan;
+    pScan++;
+
+    while ( pScan != in_way.refs.end() ) {
+
+        if ( pScan->lon > pMostRight->lon ) {
+            pMostRight = pScan;
+        } else 
+        if ( pScan->lon == pMostRight->lon ) {
+            if ( pScan->lat < pMostRight->lat ) {
+                pMostRight = pScan;
+            }
+        }
+
+        pScan++;
+    }
+
+    auto pNext = pMostRight;
+
+    pNext++;
+    if ( pNext == in_way.refs.end() ) {
+        pNext = in_way.refs.begin();
+        pNext++;
+    }
+
+    bool cv_direction = true;
+
+    if ( pMostRight->lon == pNext->lon) {
+        cv_direction = false;
+    } else
+    if (pMostRight->lat >= pNext->lat ) {
+        cv_direction = true;
+    } else {
+        cv_direction = false;
+    }
+
+    if ( cv_direction ) {
+        out_way = in_way;
+    } else {
+
+        out_way.id    = in_way.id;
+        out_way.level = in_way.level;
+        out_way.type  = in_way.type;
+
+        auto pos = in_way.refs.rbegin();
+        while ( pos != in_way.refs.rend() ) {
+            out_way.refs.push_back( *pos );
+            pos++;
+        }
+    }
+}
+
+//---------------------------------------------------------------------------//
+
 void osm_processor_t::mark_relation ( osm_obj_type_t _id ) {
 
     auto ref_rel = rels_list.find(_id);
@@ -1964,8 +2030,10 @@ void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t
 
             if ( f == l ) {
                 obj_way_t new_way;
+                obj_way_t new_way_reordered;
                 populate_way ( way_ptr->second.id, false, new_way );
-                out_list.push_back ( new_way );
+                reorder ( new_way, new_way_reordered );
+                out_list.push_back ( new_way_reordered );
                 it = in_list.erase ( it );
                 continue;
             }
@@ -2043,6 +2111,8 @@ void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t
 
             _get_first_last ( full_way.refs, h1_f, h1_l );
             if ( h1_f == h1_l ) {
+                obj_way_t full_way_reordered;
+                reorder ( full_way, full_way_reordered );
                 out_list.push_back ( full_way );
                 full_way.refs.clear();
             }
@@ -2052,6 +2122,8 @@ void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t
     }
 
     if ( full_way.refs.size() != 0 ) {
+        obj_way_t full_way_reordered;
+        reorder ( full_way, full_way_reordered );
         out_list.push_back(full_way);
     }
 

@@ -224,8 +224,8 @@ class obj_t {
 
 class obj_node_t : public obj_t {
     public:
-        osm_lon_t          lon;
         osm_lat_t          lat;
+        osm_lon_t          lon;
 };
 
 typedef std::list<obj_node_t> list_obj_node_t;

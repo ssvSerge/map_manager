@@ -98,6 +98,8 @@ class osm_processor_t {
 
         void process_item ( int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list );
 
+        void reorder ( const obj_way_t& in, obj_way_t& out );
+
         bool load_osm ( const char* const file_name );
 
     private:
