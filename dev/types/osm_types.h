@@ -156,9 +156,9 @@ typedef struct tag_osm_mapper {
 class storeinfo_t {
     public:
         storeinfo_t() {
-            id     = -1;
+            id     = static_cast<osm_id_t>(-1);
             type   = DRAW_UNKNOWN;
-            name   = -1;
+            name   = static_cast<osm_id_t>(-1);
             in_use = false;
             level  = 0;
         }

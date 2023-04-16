@@ -12,341 +12,316 @@ map_storerel_t        g_rels_list;
 
 osm_processor_t       processor;
 
-static void _reorder1 ( const list_obj_node_t& in_refs, list_obj_node_t& out_refs ) {
+static const char* _type_to_str ( osm_draw_type_t type ) {
 
-    out_refs.clear();
+    switch (type) {
 
-    if ( in_refs.size() <= 2 ) {
-        out_refs = in_refs;
+        // Area
+        case DRAW_AREA_UNKNOWN:
+            return "GENERAL  ";
+            break;
+        case DRAW_AREA_WATER:
+            return "WATER    ";
+            break;
+        case DRAW_AREA_ASPHALT:
+            return "ASPHALT  ";
+            break;
+        case DRAW_AREA_GRASS:
+            return "GRASS    ";
+            break;
+        case DRAW_AREA_FORSET:
+            return "FOREST   ";
+            break;
+        case DRAW_AREA_SAND:
+            return "SAND     ";
+            break;
+        case DRAW_AREA_MOUNTAIN:
+            return "MOUNTAIN ";
+            break;
+        case DRAW_AREA_STONE:
+            return "STONE    ";
+            break;
+
+        case DRAW_BUILDING:
+            return "BUILDING ";
+            break;
+        case DRAW_BUILDING_OUTER:
+            return "BUILDING ";
+            break;
+        case DRAW_BUILDING_INNER:
+            return "BUILDING ";
+            break;
+
+        case DRAW_PATH_RIVER:
+            return "RIVER    ";
+            break;
+        case DRAW_PATH_MOTORWAY:
+            return "MOTORWAY ";
+            break;
+        case DRAW_PATH_TRUNK:
+            return "TRUNK    ";
+            break;
+        case DRAW_PATH_PRIMARY:
+            return "PRIMARY  ";
+            break;
+        case DRAW_PATH_SECONDARY:
+            return "SECONDARY";
+            break;
+        case DRAW_PATH_TERTIARY:
+            return "TERTIARY ";
+            break;
+        case DRAW_PATH_ROAD:
+            return "ROAD     ";
+            break;
+        case DRAW_PATH_FOOTWAY:
+            return "FOOTWAY  ";
+            break;
+        case DRAW_PATH_RAILWAY:
+            return "RAILWAY  ";
+            break;
+        case DRAW_PATH_BRIDGE:
+            return "BRIDGE   ";
+            break;
+        case DRAW_PATH_TUNNEL:
+            return "YUNNEL   ";
+            break;
+
+        case DRAW_PENDING:
+            return "GENERAL  ";
+            break;
+
+        default:
+            return "UNDEFINED";
+            break;
+    }
+}
+
+static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
+
+    char position [80];
+    sprintf_s ( position, "%.7f %.7f; ", lat, lon );
+    std::cout << position;
+}
+
+static void _log_area ( const char* name, const storeway_t& way ) {
+
+    // std::cout << "; " << way.id << std::endl;
+    std::cout << name << std::endl;
+    std::cout << "OUTER " << _type_to_str(way.type) << " ";
+    // std::cout << "COORD ";
+
+    auto it = way.refs.begin();
+    while (it != way.refs.end()) {
+        _log_position ( it->lat, it->lon );
+        it++;
+    }
+    std::cout << std::endl << std::endl;
+}
+
+static void _log_relation ( const char* name, const storerels_t& rel, const list_obj_way_t& out, const list_obj_way_t& inl ) {
+
+    std::cout << name << std::endl;
+
+    for (auto it = out.begin(); it != out.end(); it++ ) {
+        std::cout << "OUTER ";
+        std::cout << _type_to_str(rel.type) << " ";
+        for ( auto coord = it->refs.begin(); coord != it->refs.end(); coord++ ) {
+            _log_position(coord->lat, coord->lon);
+        }
+        std::cout << std::endl;
+    }
+
+    for (auto it = inl.begin(); it != inl.end(); it++) {
+        std::cout << "INNER ";
+        std::cout << _type_to_str(it->type) << " ";
+        for (auto coord = it->refs.begin(); coord != it->refs.end(); coord++) {
+            _log_position(coord->lat, coord->lon);
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+}
+
+static void _log_road ( const storeway_t& way ) {
+
+    std::cout << "HIGHWAY" << std::endl;
+    std::cout << _type_to_str(way.type) << "       ";
+
+    auto it = way.refs.begin();
+    while (it != way.refs.end()) {
+        _log_position(it->lat, it->lon);
+        it++;
+    }
+    std::cout << std::endl << std::endl;
+}
+
+static void store_area ( const storeway_t& way ) {
+
+    if ( way.in_use ) {
         return;
     }
 
-    auto pScan = in_refs.begin();
-    pScan++;
-
-    auto pMostRight = pScan;
-    pScan++;
-
-    while ( pScan != in_refs.end() ) {
-
-        if ( pScan->lon > pMostRight->lon ) {
-            pMostRight = pScan;
-        } else 
-        if ( pScan->lon == pMostRight->lon ) {
-            if ( pScan->lat < pMostRight->lat ) {
-                pMostRight = pScan;
-            }
-        }
-
-        pScan++;
+    if ( way.level != 0 ) {
+        return;
     }
 
-    auto pNext = pMostRight;
-
-    pNext++;
-    if ( pNext == in_refs.end() ) {
-        pNext = in_refs.begin();
-        pNext++;
+    if ( (way.type <= DRAW_AREA_BEGIN) || (way.type >= DRAW_AREA_END) ) {
+        return;
     }
 
-    bool cv_direction = true;
-
-    if ( pMostRight->lon == pNext->lon) {
-        cv_direction = false;
-    } else
-    if (pMostRight->lat >= pNext->lat ) {
-        cv_direction = true;
-    } else {
-        cv_direction = false;
-    }
-
-    if ( cv_direction ) {
-        out_refs = in_refs;
-    } else {
-
-        auto pos = in_refs.rbegin();
-        while ( pos != in_refs.rend() ) {
-            out_refs.push_back( *pos );
-            pos++;
-        }
-    }
-
-}
-
-static void _log_area ( const char* name, osm_id_t id, const list_obj_way_t& outers, const list_obj_way_t& inners ) {
-
-    char            position[80];
-    list_obj_node_t out_refs;
-
-    std::cout << name << " ";
-    std::cout << "[ID " << id << "] " << std::endl;
-
-        for ( auto it = outers.begin(); it != outers.end(); it++ ) {
-
-                std::cout << "OUTER [ID " << it->id << "] ";
-
-                for ( auto pos = out_refs.begin(); pos != out_refs.end(); pos++ ) {
-                    sprintf_s ( position, "%.7f %.7f; ", pos->lat, pos->lon );
-                    std::cout << position;
-                }
-
-                std::cout << std::endl;
-        }
-
-        for ( auto it = inners.begin(); it != inners.end(); it++ ) {
-
-            std::cout << "INNER [ID " << it->id << "] ";
-
-            for ( auto pos = out_refs.begin(); pos != out_refs.end(); pos++ ) {
-                sprintf_s(position, "%.7f %.7f; ", pos->lat, pos->lon);
-                std::cout << position;
-            }
-
-            std::cout << std::endl;
-        }
-
-    std::cout << "" << std::endl;
+    _log_area ( "AREA", way );
 }
 
 static void scan_child ( const storerels_t& rel ) {
 
     for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
 
-        switch ( it->ref ) {
+        switch (it->ref) {
             case REF_NODE:
-                processor.mark_nodes ( it->id );
+                processor.mark_nodes(it->id);
                 break;
             case REF_WAY:
-                processor.mark_way ( it->id );
+                processor.mark_way(it->id);
                 break;
             case REF_RELATION:
-                processor.mark_relation ( it->id );
+                processor.mark_relation(it->id);
                 break;
-        }
+            }
     }
 }
 
-static void _reconstruct_bridge ( const storerels_t& rel ) {
+static void store_rel_area ( const storerels_t& rel ) {
 
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-        
-    }
-}
-
-static void _reconstruct_waterway ( const storerels_t& rel ) {
-
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-
-    }
-}
-
-static void _reconstruct_street ( const storerels_t& rel ) {
-
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-
-    }
-}
-
-static void _reconstruct_tunel ( const storerels_t& rel ) {
-
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-
-    }
-}
-
-static void _reconstruct_area_undef ( const storerels_t& rel ) {
-
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-
-    }
-}
-
-static void _reconstruct_building ( const storerels_t& rel ) {
-
-    list_rel_refs_t outer_ways;
-    list_rel_refs_t inner_ways;
-
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-
-        if ( it->ref == REF_NODE ) {
-            continue;
-        }
-
-        switch ( it->role ) {
-            case ROLE_EMPTY:
-            case ROLE_PART:
-            case ROLE_OUTER:
-                outer_ways.push_back ( *it );
-                break;
-            case ROLE_INNER:
-                inner_ways.push_back ( *it );
-                break;
-            default:
-                break;
-        }
-    }
-
-    list_obj_way_t  outers;
-    list_obj_way_t  inners;
-
-    processor.reconstruct_way ( outer_ways, outers );
-    processor.reconstruct_way ( inner_ways, inners );
-
-    _log_area ( "BUILDING", rel.id, outers, inners );
-}
-
-static void _reconstruct_area ( const storerels_t& rel ) {
-
-    list_rel_refs_t outer_ways;
-    list_rel_refs_t inner_ways;
-
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
-
-        if ( it->ref == REF_NODE ) {
-            continue;
-        }
-
-        switch ( it->role ) {
-            case ROLE_EMPTY:
-            case ROLE_PART:
-            case ROLE_OUTER:
-                outer_ways.push_back ( *it );
-                break;
-            case ROLE_INNER:
-                inner_ways.push_back ( *it );
-                break;
-            default:
-                break;
-        }
-    }
-
-    list_obj_way_t  outers;
-    list_obj_way_t  inners;
-
-    processor.reconstruct_way ( outer_ways, outers );
-    processor.reconstruct_way ( inner_ways, inners );
-
-    _log_area ( "AREA", rel.id, outers, inners );
-}
-
-static void process_rel ( const storerels_t& rel ) {
-
-    static int err_cnt = 0;
-    list_rel_refs_t     outer_ways;   // +
-    list_rel_refs_t     outer_areas;  // 
-    list_rel_refs_t     inner_ways;   // 
-    list_rel_refs_t     inner_areas;  // 
-    list_rel_refs_t     undef_ways;   // +
-    list_rel_refs_t     undef_areas;  // 
-
-    if ( rel.in_use ) {
+    if ( rel.level != 0 ) {
         return;
     }
 
-    switch ( rel.type ) {
-
-        case DRAW_REL_BRIDGE:
-            _reconstruct_bridge ( rel );
-            break;
-
-        case DRAW_REL_WATERWAY:
-            _reconstruct_waterway ( rel );
-            break;
-
-        case DRAW_REL_STREET:
-            _reconstruct_street ( rel );
-            break;
-
-        case DRAW_REL_TUNNEL:
-            _reconstruct_tunel ( rel );
-            return;
-
-        case DRAW_AREA_WATER:
-        case DRAW_AREA_ASPHALT:
-        case DRAW_AREA_GRASS:
-        case DRAW_AREA_FORSET:
-        case DRAW_AREA_SAND:
-        case DRAW_AREA_MOUNTAIN:
-        case DRAW_AREA_STONE:
-            _reconstruct_area ( rel );
-            break;
-
-        case DRAW_BUILDING:
-            _reconstruct_building ( rel );
-            break;
-
-        case DRAW_AREA_UNKNOWN:
-            _reconstruct_area_undef ( rel );
-            return;
-
-        case DRAW_SKIP:
-            return;
-
-        default:
-            assert(false);
-            return;
-
+    if ( (rel.type <= DRAW_AREA_BEGIN) || (rel.type >= DRAW_AREA_END)) {
+        return;
     }
 
-    return;
+    list_rel_refs_t outer_ways;
+    list_rel_refs_t inner_ways;
 
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
+    for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
 
-        switch ( it->role ) {
+        if (it->ref == REF_NODE) {
+            continue;
+        }
+
+        switch (it->role) {
+            case ROLE_EMPTY:
+            case ROLE_PART:
             case ROLE_OUTER:
-                if ( it->ref == REF_WAY ) {
-                    outer_ways.push_back ( *it );
-                } else
-                if ( it->ref == REF_RELATION ) {
-                    outer_areas.push_back ( *it );
-                } else {
-                    assert ( false );
-                }
+                outer_ways.push_back(*it);
                 break;
-
             case ROLE_INNER:
-                if ( it->ref == REF_WAY ) {
-                    inner_ways.push_back ( *it );
-                } else
-                if ( it->ref == REF_RELATION ) {
-                    inner_areas.push_back ( *it );
-                } else {
-                    assert ( false );
-                }
+                inner_ways.push_back(*it);
                 break;
-
-            case ROLE_MAINSTREAM:
-            case ROLE_SIDESTREAM:
-                break;
-
-            case ROLE_ACROSS:
-                break;
-
-
             default:
-                assert ( false );
+                break;
         }
     }
 
-    list_obj_way_t outers;
-    list_obj_way_t inners;
-    
+    list_obj_way_t  outers;
+    list_obj_way_t  inners;
+
     processor.reconstruct_way ( outer_ways, outers );
     processor.reconstruct_way ( inner_ways, inners );
 
-    return;
+    _log_relation ( "AREA", rel, outers, inners );
+}
+
+static void store_building ( const storeway_t& way ) {
+
+    if (way.in_use) {
+        return;
+    }
+
+    if (way.level != 0) {
+        return;
+    }
+
+    if ( (way.type <= DRAW_BUILDING_BEGIN) || (way.type >= DRAW_BUILDING_END) ) {
+        return;
+    }
+
+    _log_area ( "BUILDING", way );
+}
+
+static void store_rel_building ( const storerels_t& rel ) {
+
+    if (rel.level != 0) {
+        return;
+    }
+
+    if ( (rel.type <= DRAW_BUILDING_BEGIN) || (rel.type >= DRAW_BUILDING_END) ) {
+        return;
+    }
+
+    list_rel_refs_t outer_ways;
+    list_rel_refs_t inner_ways;
+
+    for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
+
+        if (it->ref == REF_NODE) {
+            continue;
+        }
+
+        switch (it->role) {
+        case ROLE_EMPTY:
+        case ROLE_PART:
+        case ROLE_OUTER:
+            outer_ways.push_back(*it);
+            break;
+        case ROLE_INNER:
+            inner_ways.push_back(*it);
+            break;
+        default:
+            break;
+        }
+    }
+
+    list_obj_way_t  outers;
+    list_obj_way_t  inners;
+
+    processor.reconstruct_way(outer_ways, outers);
+    processor.reconstruct_way(inner_ways, inners);
+
+    _log_relation ( "BUIDING", rel, outers, inners );
+}
+
+static void store_roads ( const storeway_t& way ) {
+
+    if ( way.in_use ) {
+        return;
+    }
+
+    if ( way.level != 0 ) {
+        return;
+    }
+
+    if ( (way.type <= DRAW_PATH_BEGIN) || (way.type >= DRAW_PATH_END) ) {
+        return;
+    }
+
+    _log_road ( way );
 }
 
 int main() {
 
-    // processor.process_file ( "D:\\OSM_Extract\\prague.osm" );
-    processor.process_file("C:\\Users\\serg\\Downloads\\map.osm");
+    processor.process_file ( "D:\\OSM_Extract\\prague.osm" );
+    // processor.process_file("C:\\Users\\serg\\Downloads\\map.osm");
 
     processor.enum_rels  ( scan_child );
-    processor.enum_rels  ( process_rel );
-    // processor.enum_ways  ( process_way );
+    processor.enum_ways  ( store_area );
+    processor.enum_rels  ( store_rel_area );
 
-    std::cout << "\r\n";
+    processor.enum_ways  ( store_building );
+    processor.enum_rels  ( store_rel_building );
+
+    processor.enum_ways  ( store_roads );
 
     return 0;
 }

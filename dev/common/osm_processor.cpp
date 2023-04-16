@@ -20,8 +20,8 @@
 
 static void _get_first_last ( const list_storeinfo_t& refs, osm_id_t& f, osm_id_t& l ) {
 
-    f = -1;
-    l = -1;
+    f = static_cast<osm_id_t>(-1);
+    l = static_cast<osm_id_t>(-1);
 
     if (refs.size() <= 1) {
         return;
@@ -33,8 +33,8 @@ static void _get_first_last ( const list_storeinfo_t& refs, osm_id_t& f, osm_id_
 
 static void _get_first_last ( const list_obj_node_t& refs, osm_id_t& f, osm_id_t& l ) {
 
-    f = -1;
-    l = -1;
+    f = static_cast<osm_id_t>(-1);
+    l = static_cast<osm_id_t>(-1);
 
     if ( refs.size() <= 1 ) {
         return;
@@ -635,16 +635,24 @@ osm_processor_t::osm_processor_t() {
 
 void osm_processor_t::log_node ( const char* const name, osm_id_t id, const osm_tag_ctx_t& node_info ) {
 
-    std::cout << "<" << name << " id=\"" << id << "\">" << std::endl;
+    #if 0
 
-    for (int i = 0; i < node_info.cnt; i++) {
-        std::cout << "  <tag ";
-        std::cout << "k=\"" << node_info.list[i].k << "\" ";
-        std::cout << "v=\"" << node_info.list[i].v << "\" ";
-        std::cout << "/>" << std::endl;
-    }
+        std::cout << "<" << name << " id=\"" << id << "\">" << std::endl;
 
-    std::cout << "</" << name << ">" << std::endl;
+        for (int i = 0; i < node_info.cnt; i++) {
+            std::cout << "  <tag ";
+            std::cout << "k=\"" << node_info.list[i].k << "\" ";
+            std::cout << "v=\"" << node_info.list[i].v << "\" ";
+            std::cout << "/>" << std::endl;
+        }
+
+        std::cout << "</" << name << ">" << std::endl;
+
+    #else
+        (void) name;
+        (void) id;
+        (void) node_info;
+    #endif
 }
 
 void osm_processor_t::load_skiplist ( const char* const file_name, ssearcher& bor ) {
@@ -681,7 +689,7 @@ void osm_processor_t::bor_init ( const osm_mapper_t* const lex_list, size_t cnt,
     return;
 }
 
-void osm_processor_t::map_ref(const hpx_attr_t* attr, ref_type_t& ref) {
+void osm_processor_t::map_ref ( const hpx_attr_t* attr, ref_type_t& ref ) {
 
     ref = REF_UNKNOWN;
 
@@ -698,7 +706,7 @@ void osm_processor_t::map_ref(const hpx_attr_t* attr, ref_type_t& ref) {
     }
 }
 
-void osm_processor_t::map_role(const hpx_attr_t* attr, ref_role_t& role) {
+void osm_processor_t::map_role ( const hpx_attr_t* attr, ref_role_t& role ) {
 
     role = ROLE_UNKNOWN;
 
@@ -749,6 +757,8 @@ void osm_processor_t::osm_push ( osm_node_t next_node ) {
 void osm_processor_t::osm_pop ( osm_node_t osm_node ) {
 
     xml_ctx_cnt--;
+
+    (void)(osm_node);
 
     if (xml_ctx[xml_ctx_cnt] == XML_NODE_NODE ) {
         node_expand_tags();
@@ -959,7 +969,16 @@ void osm_processor_t::process_open ( int attr_cnt, const hpx_attr_t* attr_list )
 
 void osm_processor_t::process_item ( int xml_type, const bstring_t& name, int attr_cnt, const hpx_attr_t* attr_list ) {
 
+    static int enter_cnt = 0;
+    static int stop_cnt  = 0;
+
     osm_node_t osm_node = XML_NODE_UNDEF;
+
+    enter_cnt++;
+
+    if ( enter_cnt > 73590) {
+        stop_cnt++;
+    }
 
     if ( bs_cmp(name, "node") == 0 ) {
         osm_node = XML_NODE_NODE;
@@ -1186,7 +1205,7 @@ void osm_processor_t::node_store_info ( void ) {
     add_node(osm_info);
 }
 
-void osm_processor_t::clean_info( void ) {
+void osm_processor_t::clean_info ( void ) {
 
     assert(osm_info.xml_tags.cnt < OSM_MAX_TAGS_CNT);
 
@@ -1547,7 +1566,7 @@ void osm_processor_t::process_unused ( osm_draw_type_t& draw_type, const osm_tag
 
 //---------------------------------------------------------------------------//
 
-void osm_processor_t::fix_area(osm_obj_info_t& info) {
+void osm_processor_t::fix_area ( osm_obj_info_t& info ) {
 
     bool is_area = false;
 
@@ -1557,7 +1576,7 @@ void osm_processor_t::fix_area(osm_obj_info_t& info) {
 
     if (is_area) {
         if (info.refs.size() > 3) {
-            if ( info.refs.front().id = info.refs.back().id) {
+            if ( info.refs.front().id != info.refs.back().id) {
                 info.refs.push_back ( info.refs.front() );
             }
         }
@@ -1594,7 +1613,7 @@ void osm_processor_t::add_way ( osm_obj_info_t& info ) {
 
         auto it = nodes_list.find ( info.refs[i].id );
         if ( it == nodes_list.end() ) {
-            std::cout << "Way id: " << info.node_info.id << " node: " << info.refs[i].id << " not found" << std::endl;
+            // std::cout << "Way id: " << info.node_info.id << " node: " << info.refs[i].id << " not found" << std::endl;
             continue;
         }
 
@@ -1726,7 +1745,7 @@ bool osm_processor_t::populate_way ( osm_obj_type_t _id, bool err_allowed, obj_w
     bool find_res;
 
     way.refs.clear();
-    way.id    = -1;
+    way.id    =  static_cast<osm_id_t>(-1);
     way.level =  0;
     way.type  =  DRAW_UNKNOWN;
 
@@ -1806,10 +1825,10 @@ bool osm_processor_t::populate_rel ( osm_obj_type_t _id, bool err_allowed, obj_r
             }
         } else
         if (it->ref == REF_RELATION ) {
-            obj_rel_t rel;
-            find_res = populate_rel ( it->id, false, rel );
+            obj_rel_t rel2;
+            find_res = populate_rel ( it->id, false, rel2 );
             if ( find_res ) {
-                rel.refs.push_back(rel);
+                rel.refs.push_back(rel2);
             } else {
                 if (!err_allowed) {
                     ret_val = false;
@@ -1866,10 +1885,10 @@ void osm_processor_t::reorder ( const obj_way_t& in_way, obj_way_t& out_way ) {
 
     bool cv_direction = true;
 
-    if ( pMostRight->lon == pNext->lon) {
+    if ( pMostRight->lon == pNext->lon ) {
         cv_direction = false;
     } else
-    if (pMostRight->lat >= pNext->lat ) {
+    if ( pMostRight->lat >= pNext->lat ) {
         cv_direction = true;
     } else {
         cv_direction = false;
@@ -1897,12 +1916,12 @@ void osm_processor_t::mark_relation ( osm_obj_type_t _id ) {
 
     auto ref_rel = rels_list.find(_id);
 
-    if (ref_rel != rels_list.end()) {
+    if ( ref_rel != rels_list.end() ) {
         ref_rel->second.in_use = true;
     }
 }
 
-void osm_processor_t::mark_way(osm_obj_type_t _id) {
+void osm_processor_t::mark_way ( osm_obj_type_t _id ) {
 
     auto ref_way = ways_list.find(_id);
 
@@ -1915,7 +1934,7 @@ void osm_processor_t::mark_nodes ( osm_obj_type_t _id ) {
 
     auto ref_node = nodes_list.find(_id);
 
-    if ( ref_node != nodes_list.end()) {
+    if ( ref_node != nodes_list.end() ) {
         ref_node->second.in_use = true;
     }
 }
@@ -2006,7 +2025,6 @@ bool osm_processor_t::enum_rels ( const rel_info_callback_t callback ) {
 
 void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t& out_list ) {
 
-    bool        is_ok = true;
     osm_id_t    f;
     osm_id_t    l;
 
@@ -2021,7 +2039,7 @@ void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t
             auto way_ptr = ways_list.find ( it->id );
 
             if ( way_ptr == ways_list.end() ) {
-                std::cout << "Way ID: " << it->id << " not found" << std::endl;
+                // std::cout << "Way ID: " << it->id << " not found" << std::endl;
                 it = in_list.erase(it);
                 continue;
             }
@@ -2128,7 +2146,7 @@ void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t
     }
 
     if ( in_list.size() != 0 ) {
-        std::cout << "Reconstruction failed." << std::endl;
+        // std::cout << "Reconstruction failed." << std::endl;
     }
 }
 
