@@ -1,8 +1,9 @@
-#include <iostream>
+﻿#include <iostream>
 #include <cassert>
 #include <string>
 #include <sstream>
 #include <limits>
+#include <vector>
 
 #include "..\common\osm_processor.h"
 
@@ -12,82 +13,109 @@ map_storerel_t        g_rels_list;
 
 osm_processor_t       processor;
 
+static double toRadians ( double val ) {
+
+    return val / 57.295779513082325;
+}
+
+static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
+
+    double R  = 6371e3;
+    double f1 = toRadians(lat1);
+    double f2 = toRadians(lat2);
+    double dF = toRadians(lat2 - lat1);
+    double dL = toRadians(lon2 - lon1);
+
+    double a = sin(dF/2)*sin(dF/2) + cos(f1)*cos(f2) * sin(dL/2)*sin(dL/2);
+    double c = 2 * atan2 ( sqrt(a), sqrt(1-a) );
+    double d = R * c;
+
+    return d;
+}
+
+static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
+
+    char position[80];
+    sprintf_s(position, "%.7f %.7f; ", lat, lon);
+    std::cout << position;
+}
+
 static const char* _type_to_str ( osm_draw_type_t type ) {
 
     switch (type) {
 
         // Area
         case DRAW_AREA_UNKNOWN:
-            return "GENERAL  ";
+            return "GENERAL";
             break;
         case DRAW_AREA_WATER:
-            return "WATER    ";
+            return "WATER";
             break;
         case DRAW_AREA_ASPHALT:
-            return "ASPHALT  ";
+            return "ASPHALT";
             break;
         case DRAW_AREA_GRASS:
-            return "GRASS    ";
+            return "GRASS";
             break;
         case DRAW_AREA_FORSET:
-            return "FOREST   ";
+            return "FOREST";
             break;
         case DRAW_AREA_SAND:
-            return "SAND     ";
+            return "SAND";
             break;
         case DRAW_AREA_MOUNTAIN:
-            return "MOUNTAIN ";
+            return "MOUNTAIN";
             break;
         case DRAW_AREA_STONE:
-            return "STONE    ";
+            return "STONE";
             break;
 
         case DRAW_BUILDING:
-            return "BUILDING ";
+            return "BUILDING";
             break;
         case DRAW_BUILDING_OUTER:
-            return "BUILDING ";
+            return "BUILDING";
             break;
         case DRAW_BUILDING_INNER:
-            return "BUILDING ";
+            return "BUILDING";
             break;
 
         case DRAW_PATH_RIVER:
-            return "RIVER    ";
+            return "RIVER";
             break;
         case DRAW_PATH_MOTORWAY:
-            return "MOTORWAY ";
+            return "MOTORWAY";
             break;
         case DRAW_PATH_TRUNK:
-            return "TRUNK    ";
+            return "TRUNK";
             break;
         case DRAW_PATH_PRIMARY:
-            return "PRIMARY  ";
+            return "PRIMARY";
             break;
         case DRAW_PATH_SECONDARY:
             return "SECONDARY";
             break;
         case DRAW_PATH_TERTIARY:
-            return "TERTIARY ";
+            return "TERTIARY";
             break;
         case DRAW_PATH_ROAD:
-            return "ROAD     ";
+            return "ROAD";
             break;
         case DRAW_PATH_FOOTWAY:
-            return "FOOTWAY  ";
+            return "FOOTWAY";
             break;
         case DRAW_PATH_RAILWAY:
-            return "RAILWAY  ";
+            return "RAILWAY";
             break;
         case DRAW_PATH_BRIDGE:
-            return "BRIDGE   ";
+            return "BRIDGE";
             break;
         case DRAW_PATH_TUNNEL:
-            return "YUNNEL   ";
+            return "YUNNEL";
             break;
 
         case DRAW_PENDING:
-            return "GENERAL  ";
+            return "GENERAL";
             break;
 
         default:
@@ -96,48 +124,121 @@ static const char* _type_to_str ( osm_draw_type_t type ) {
     }
 }
 
-static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
+template<typename Type>
+double _calc_area ( const Type& refs ) {
 
-    char position [80];
-    sprintf_s ( position, "%.7f %.7f; ", lat, lon );
-    std::cout << position;
+    double  res      = 0;
+    double  s        = 0;
+    double  minLat   = 0;
+    double  maxLat   = 0;
+    double  minLon   = 0;
+    double  maxLon   = 0;
+
+    std::vector<double>  x;
+    std::vector<double>  y;
+    size_t n = refs.size();
+
+    x.reserve ( refs.size() + 8 );
+    y.reserve ( refs.size() + 8 );
+
+    auto in_ptr = refs.begin();
+
+    minLat = in_ptr->lat;
+    maxLat = in_ptr->lat;
+    minLon = in_ptr->lon;
+    maxLon = in_ptr->lon;
+
+    while ( in_ptr != refs.end() ) {
+        minLat = std::min ( minLat, in_ptr->lat );
+        maxLat = std::max ( maxLat, in_ptr->lat );
+        minLon = std::min ( minLon, in_ptr->lon );
+        maxLon = std::max ( maxLon, in_ptr->lon );
+        in_ptr++;
+    }
+
+    double lon_m     = _delta ( minLon, minLat, maxLon, minLat );
+    double lat_m     = _delta ( minLon, minLat, minLon, maxLat );
+    double scale_lon = lon_m / (maxLon-minLon);
+    double scale_lat = lat_m / (maxLat-minLat);
+    
+    double val;
+    in_ptr = refs.begin();
+    while (in_ptr != refs.end()) {
+
+        val = (in_ptr->lat - minLat) * scale_lat;
+        x.push_back (val);
+
+        val = (in_ptr->lon - minLon) * scale_lon;
+        y.push_back (val);
+
+        in_ptr++;
+    }
+
+    for ( size_t i = 0; i < refs.size(); i++) {
+        if ( i == 0 ) {
+            s    = x[i] * ( y[n-1] - y[i+1] );
+            res += s;
+        } else
+        if ( i == (n-1) ) {
+            s    = x[i] * ( y[i-1] - y[0] );
+            res += s;
+        } else {
+            s    = x[i] * ( y[i-1] - y[i+1] );
+            res += s;
+        }
+    }
+
+    res = abs ( res / 2 );
+
+    return res;
+}
+
+template<typename Type>
+static void _log ( const char* const out_type, osm_draw_type_t draw_type, double area, const Type& refs ) {
+
+    std::cout << "[ROLE " << out_type << "]";
+    std::cout << "[TYPE " << _type_to_str(draw_type) << "]";
+    std::cout << "[SIZE " << (int) (area) << "]";
+    std::cout << "[POINTS ";
+
+    auto it = refs.begin();
+    while (it != refs.end()) {
+        _log_position(it->lat, it->lon);
+        it++;
+    }
+
+    std::cout << "]";
+    std::cout << std::endl;
+}
+
+static void _log_header ( const char* const name, osm_draw_type_t draw_type ) {
+
+    std::cout << "[RECORD " << name << "][TYPE " << _type_to_str(draw_type) << "]" << std::endl;
 }
 
 static void _log_area ( const char* name, const storeway_t& way ) {
 
-    // std::cout << "; " << way.id << std::endl;
-    std::cout << name << std::endl;
-    std::cout << "OUTER " << _type_to_str(way.type) << " ";
-    // std::cout << "COORD ";
+    double area = _calc_area<list_storeinfo_t> ( way.refs );
 
-    auto it = way.refs.begin();
-    while (it != way.refs.end()) {
-        _log_position ( it->lat, it->lon );
-        it++;
-    }
-    std::cout << std::endl << std::endl;
+    _log_header ( name, way.type );
+    _log ( "OUTER", way.type, area, way.refs );
+    std::cout << std::endl;
 }
 
 static void _log_relation ( const char* name, const storerels_t& rel, const list_obj_way_t& out, const list_obj_way_t& inl ) {
 
-    std::cout << name << std::endl;
+    double area;
+
+    _log_header (name, rel.type );
 
     for (auto it = out.begin(); it != out.end(); it++ ) {
-        std::cout << "OUTER ";
-        std::cout << _type_to_str(rel.type) << " ";
-        for ( auto coord = it->refs.begin(); coord != it->refs.end(); coord++ ) {
-            _log_position(coord->lat, coord->lon);
-        }
-        std::cout << std::endl;
+        area = _calc_area<list_obj_node_t> ( it->refs );
+        _log ( "OUTER", it->type, area, it->refs );
     }
 
     for (auto it = inl.begin(); it != inl.end(); it++) {
-        std::cout << "INNER ";
-        std::cout << _type_to_str(it->type) << " ";
-        for (auto coord = it->refs.begin(); coord != it->refs.end(); coord++) {
-            _log_position(coord->lat, coord->lon);
-        }
-        std::cout << std::endl;
+        area = _calc_area<list_obj_node_t> ( it->refs );
+        _log ( "INNER", it->type, area, it->refs );
     }
 
     std::cout << std::endl;
@@ -145,15 +246,16 @@ static void _log_relation ( const char* name, const storerels_t& rel, const list
 
 static void _log_road ( const storeway_t& way ) {
 
-    std::cout << "HIGHWAY" << std::endl;
-    std::cout << _type_to_str(way.type) << "       ";
+    _log_header ( "HIGHWAY", way.type );
 
+    std::cout << "[POINTS ";
     auto it = way.refs.begin();
     while (it != way.refs.end()) {
         _log_position(it->lat, it->lon);
         it++;
     }
-    std::cout << std::endl << std::endl;
+    std::cout << "]" << std::endl;
+    std::cout << std::endl;
 }
 
 static void store_area ( const storeway_t& way ) {
@@ -309,10 +411,13 @@ static void store_roads ( const storeway_t& way ) {
     _log_road ( way );
 }
 
-int main() {
+int main ( int argc, char* argv[] ) {
 
-    processor.process_file ( "D:\\OSM_Extract\\prague.osm" );
-    // processor.process_file("C:\\Users\\serg\\Downloads\\map.osm");
+    if ( argc != 2 ) {
+        return -1;
+    }
+
+    processor.process_file ( argv[1] );
 
     processor.enum_rels  ( scan_child );
     processor.enum_ways  ( store_area );

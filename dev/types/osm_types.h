@@ -183,6 +183,7 @@ class storenode_t : public storeinfo_t {
         osm_lat_t          lat;
 };
 
+typedef std::vector<storenode_t>        vector_storeinfo_t;
 typedef std::list<storenode_t>          list_storeinfo_t;
 typedef std::list<list_storeinfo_t>     list_list_storeinfo_t;
 
