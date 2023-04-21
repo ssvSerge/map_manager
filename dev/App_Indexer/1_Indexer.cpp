@@ -36,7 +36,7 @@ static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
 static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
 
     char position[80];
-    sprintf_s(position, "%.7f %.7f; ", lat, lon);
+    sprintf_s(position, "C:%.7f %.7f;", lat, lon);
     std::cout << position;
 }
 
@@ -196,10 +196,9 @@ double _calc_area ( const Type& refs ) {
 template<typename Type>
 static void _log ( const char* const out_type, osm_draw_type_t draw_type, double area, const Type& refs ) {
 
-    std::cout << "[ROLE " << out_type << "]";
-    std::cout << "[TYPE " << _type_to_str(draw_type) << "]";
-    std::cout << "[SIZE " << (int) (area) << "]";
-    std::cout << "[POINTS ";
+    std::cout << "ROLE:" << out_type << ";";
+    std::cout << "TYPE:" << _type_to_str(draw_type) << ";";
+    std::cout << "SIZE:" << (int) (area) << ";";
 
     auto it = refs.begin();
     while (it != refs.end()) {
@@ -207,13 +206,12 @@ static void _log ( const char* const out_type, osm_draw_type_t draw_type, double
         it++;
     }
 
-    std::cout << "]";
     std::cout << std::endl;
 }
 
 static void _log_header ( const char* const name, osm_draw_type_t draw_type ) {
 
-    std::cout << "[RECORD " << name << "][TYPE " << _type_to_str(draw_type) << "]" << std::endl;
+    std::cout << "RECORD:" << name << ";TYPE:" << _type_to_str(draw_type) << ";" << std::endl;
 }
 
 static void _log_area ( const char* name, const storeway_t& way ) {
@@ -248,13 +246,13 @@ static void _log_road ( const storeway_t& way ) {
 
     _log_header ( "HIGHWAY", way.type );
 
-    std::cout << "[POINTS ";
+    std::cout << "POINTS:";
     auto it = way.refs.begin();
     while (it != way.refs.end()) {
         _log_position(it->lat, it->lon);
         it++;
     }
-    std::cout << "]" << std::endl;
+    std::cout << std::endl;
     std::cout << std::endl;
 }
 

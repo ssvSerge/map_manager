@@ -57,7 +57,6 @@ bool ssearcher::find ( const std::string& var, int& type ) const {
     return true;
 }
 
-
 bool ssearcher::find ( const bstring_t& var, int& type ) const {
 
     int     num = 0;
