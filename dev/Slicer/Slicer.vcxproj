@@ -158,6 +158,8 @@
     <ClCompile Include="Slicer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="geo_lex.h" />
+    <ClInclude Include="geo_obj.h" />
     <ClInclude Include="MemMapper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

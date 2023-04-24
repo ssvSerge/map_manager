@@ -111,7 +111,7 @@ static const char* _type_to_str ( osm_draw_type_t type ) {
             return "BRIDGE";
             break;
         case DRAW_PATH_TUNNEL:
-            return "YUNNEL";
+            return "TUNNEL";
             break;
 
         case DRAW_PENDING:
@@ -205,7 +205,7 @@ static void _log ( const char* const out_type, osm_draw_type_t draw_type, double
         _log_position(it->lat, it->lon);
         it++;
     }
-
+    std::cout << "ROLE:END;";
     std::cout << std::endl;
 }
 
@@ -214,12 +214,17 @@ static void _log_header ( const char* const name, osm_draw_type_t draw_type ) {
     std::cout << "RECORD:" << name << ";TYPE:" << _type_to_str(draw_type) << ";" << std::endl;
 }
 
+static void _log_footer() {
+    std::cout << "RECORD:END;" << std::endl;
+}
+
 static void _log_area ( const char* name, const storeway_t& way ) {
 
     double area = _calc_area<list_storeinfo_t> ( way.refs );
 
     _log_header ( name, way.type );
     _log ( "OUTER", way.type, area, way.refs );
+    _log_footer();
     std::cout << std::endl;
 }
 
@@ -246,13 +251,14 @@ static void _log_road ( const storeway_t& way ) {
 
     _log_header ( "HIGHWAY", way.type );
 
-    std::cout << "POINTS:";
+    std::cout << "ROLE:COORDS;";
     auto it = way.refs.begin();
     while (it != way.refs.end()) {
         _log_position(it->lat, it->lon);
         it++;
     }
-    std::cout << std::endl;
+    std::cout << "ROLE:END;" << std::endl;
+    _log_footer();
     std::cout << std::endl;
 }
 
@@ -389,7 +395,7 @@ static void store_rel_building ( const storerels_t& rel ) {
     processor.reconstruct_way(outer_ways, outers);
     processor.reconstruct_way(inner_ways, inners);
 
-    _log_relation ( "BUIDING", rel, outers, inners );
+    _log_relation ( "BUILDING", rel, outers, inners );
 }
 
 static void store_roads ( const storeway_t& way ) {
