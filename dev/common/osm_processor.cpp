@@ -2039,7 +2039,6 @@ void osm_processor_t::reconstruct_way ( list_rel_refs_t& in_list, list_obj_way_t
             auto way_ptr = ways_list.find ( it->id );
 
             if ( way_ptr == ways_list.end() ) {
-                // std::cout << "Way ID: " << it->id << " not found" << std::endl;
                 it = in_list.erase(it);
                 continue;
             }
