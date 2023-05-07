@@ -36,5 +36,8 @@
     <ClInclude Include="geo_obj.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="thread_pool.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
