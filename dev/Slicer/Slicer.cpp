@@ -6,12 +6,20 @@
 #include <sstream>
 #include <cassert>
 
+#include <clipper2/clipper.h>
+
 #include "geo_lex.h"
 #include "geo_obj.h"
 
 #include "MemMapper.h"
 
+typedef Clipper2Lib::Point<double>      clipper_point_t;
+typedef std::vector<clipper_point_t>    clipper_polygon_t;
+typedef std::vector<clipper_polygon_t>  clipper_multipolygon_t;
+
+
 #define CNT(x)   ( sizeof(x) / sizeof(x[0]) )
+
 
 typedef enum tag_obj_id {
 
@@ -65,8 +73,8 @@ class geo_coords_t {
         double  lat;
 
     public:
-        double x(void)  { return lon; }
-        double y(void)  { return lat; }
+        double x(void) const { return lon; }
+        double y(void) const { return lat; }
 };
 
 typedef std::vector<geo_coords_t>   list_geo_ccords_t;
@@ -126,7 +134,7 @@ int                 g_geo_scale     = 500;
 double              g_step_ver      = 0;
 double              g_step_hor      = 0;
 
-static double toRadians (double val) {
+static double toRadians ( double val ) {
 
     return val / 57.295779513082325;
 }
@@ -226,7 +234,7 @@ static void _load ( uint32_t& geo_coords ) {
     sscanf_s ( g_value.msg, "%d", &geo_coords );
 }
 
-static void _commit_lex () {
+static void _commit_lex ( void ) {
 
     const lex_ctx_t l_lex[] = {
 
@@ -346,7 +354,7 @@ static void _commit_lex () {
     _reset();
 }
 
-static void _find_box () {
+static void _find_box ( void ) {
 
     bool first_entry  = true;
 
@@ -388,7 +396,7 @@ static void _find_box () {
 
 }
 
-static void _find_scale () {
+static void _find_scale ( void ) {
 
     {   double  len_left   =  _delta ( g_lon_min, g_lat_min, g_lon_min, g_lat_max );
         double  len_right  =  _delta ( g_lon_max, g_lat_min, g_lon_max, g_lat_max );
@@ -410,74 +418,43 @@ static void _find_scale () {
 
 }
 
-static geo_coords_t getIntersection ( geo_coords_t A, geo_coords_t B, geo_coords_t C, geo_coords_t D ) {
+static list_geo_ccords_t _clip (const list_geo_ccords_t& coords, const list_geo_ccords_t& rect ) {
 
-    double  a1 = B.y() - A.y();
-    double  b1 = A.x() - B.x();
-    double  c1 = a1 * A.x() + b1 * A.y();
+    static int in_cnt    = 0;
+    static int res_cnt   = 0;
+    list_geo_ccords_t ret;
 
-    double  a2 = D.y() - C.y();
-    double  b2 = C.x() - D.x();
-    double  c2 = a2 * C.x() + b2 * C.y();
+    Clipper2Lib::PathsD     in_poly;
+    Clipper2Lib::PathsD     in_rect;
 
-    double det = a1 * b2 - a2 * b1;
+    Clipper2Lib::PointD     tmp_pt;
+    Clipper2Lib::PathD      tmp_path;
 
-    if (det == 0) {
-        return { 0, 0 };
-    } else {
-        double x = (b2 * c1 - b1 * c2) / det;
-        double y = (a1 * c2 - a2 * c1) / det;
-        return { x, y };
+    in_cnt++;
+
+    tmp_path.clear();
+    for ( size_t i = 0; i < coords.size(); i++ ) {
+        tmp_pt.x = coords[i].x();
+        tmp_pt.y = coords[i].y();
+        tmp_path.push_back(tmp_pt);
     }
-}
+    in_poly.push_back(tmp_path);
 
-static list_geo_ccords_t clipAgainstEdge ( list_geo_ccords_t polygon, geo_coords_t edgeStart, geo_coords_t edgeEnd) {
+    tmp_path.clear();
+    for (size_t i = 0; i < rect.size(); i++) {
+        tmp_pt.x = rect[i].x();
+        tmp_pt.y = rect[i].y();
+        tmp_path.push_back(tmp_pt);
+    }
+    in_rect.push_back(tmp_path);
 
-    list_geo_ccords_t clippedPolygon;
-    size_t    numVertices = polygon.size();
-    geo_coords_t   S = polygon[numVertices - 1];
-
-    for (int i = 0; i < numVertices; i++) {
-
-        geo_coords_t E = polygon[i];
-
-        double S_dist = (S.x() - edgeStart.x()) * (edgeEnd.y() - edgeStart.y()) - (S.y() - edgeStart.y()) * (edgeEnd.x() - edgeStart.x());
-        double E_dist = (E.x() - edgeStart.x()) * (edgeEnd.y() - edgeStart.y()) - (E.y() - edgeStart.y()) * (edgeEnd.x() - edgeStart.x());
-        if (E_dist < 0) {
-            if (S_dist >= 0) {
-                auto pt = getIntersection(S, E, edgeStart, edgeEnd);
-                clippedPolygon.push_back(pt);
-            }
-            clippedPolygon.push_back(E);
-        } else
-        if (S_dist < 0) {
-            auto pt = getIntersection(S, E, edgeStart, edgeEnd);
-            clippedPolygon.push_back(pt);
-        }
-
-        S = E;
+    if (in_cnt >= 59) {
+        res_cnt++;
     }
 
-    return clippedPolygon;
-}
+    auto res = Clipper2Lib::Intersect ( in_poly, in_rect, Clipper2Lib::FillRule::NonZero, 13 );
 
-static list_geo_ccords_t _clip ( const list_geo_ccords_t& subjectPolygon, const list_geo_ccords_t& clipPolygon ) {
-
-    list_geo_ccords_t clippedPolygon = subjectPolygon;
-
-    for (int i = 0; i < clipPolygon.size() - 1; i++) {
-
-        geo_coords_t edgeStart = clipPolygon[i + 0];
-        geo_coords_t edgeEnd = clipPolygon[i + 1];
-
-        clippedPolygon = clipAgainstEdge ( clippedPolygon, edgeStart, edgeEnd );
-
-        if (clippedPolygon.size() == 0) {
-            break;
-        }
-    }
-
-    return clippedPolygon;
+    return ret;
 }
 
 static void _check_line ( const list_geo_ccords_t& coords, list_geo_ccords_t& resPolygon ) {
@@ -485,7 +462,9 @@ static void _check_line ( const list_geo_ccords_t& coords, list_geo_ccords_t& re
     list_geo_ccords_t rect;
     list_geo_ccords_t res;
     geo_coords_t      pt;
-    int               ok = 0;
+    int               ok    = 0;
+    int               x_cnt = 0;
+    int               y_cnt = 0;
 
     double x_min  = g_lon_min;
     double x_max  = g_lon_max - g_step_hor;
@@ -496,6 +475,7 @@ static void _check_line ( const list_geo_ccords_t& coords, list_geo_ccords_t& re
     double y_step = g_step_ver;
 
     for ( double y = y_min; y <= g_lat_max; y += g_step_ver ) {
+
         for ( double x = x_min; x <= x_max; x += x_step ) {
 
             rect.clear();
@@ -508,15 +488,19 @@ static void _check_line ( const list_geo_ccords_t& coords, list_geo_ccords_t& re
 
             res = _clip ( coords, rect );
 
-            if (res.size() != 0) {
+            if ( res.size() != 0 ) {
                 ok++;
             }
 
+            x_cnt++;
         }
+
+        y_cnt++;
+
     }
 }
 
-static void _slicing() {
+static void _slicing ( void ) {
 
     list_geo_ccords_t resPolygon;
 
@@ -532,7 +516,7 @@ static void _slicing() {
     }
 }
 
-int main() {
+int main ( void ) {
 
     file_mapper file;
     uint64_t    file_size;
