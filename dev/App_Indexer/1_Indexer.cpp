@@ -6,12 +6,34 @@
 #include <vector>
 
 #include "..\common\osm_processor.h"
+#include "..\common\lex_keys.h"
 
 map_storenode_t       g_nodes_list;
 map_storeway_t        g_ways_list;
 map_storerel_t        g_rels_list;
 
 osm_processor_t       processor;
+
+static void _log_key ( const char* const name, const char* const value, bool cr = false ) {
+
+    std::cout << name;
+    std::cout << ":";
+    std::cout << value;
+    std::cout << ";";
+
+    if (cr) {
+        std::cout << std::endl;
+    }
+}
+
+static void _log_key ( const char* const name, int value, bool cr = false ) {
+
+    char tmp[32];
+
+    sprintf_s ( tmp, sizeof(tmp), "%d", value );
+
+    _log_key ( name, tmp, cr );
+}
 
 static double toRadians ( double val ) {
 
@@ -36,8 +58,8 @@ static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
 static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
 
     char position[80];
-    sprintf_s(position, "C:%.7f %.7f;", lat, lon);
-    std::cout << position;
+    sprintf_s ( position, "%.7f %.7f", lat, lon );
+    _log_key ( KEYNAME_COORDINATES, position);
 }
 
 static const char* _type_to_str ( osm_draw_type_t type ) {
@@ -103,6 +125,9 @@ static const char* _type_to_str ( osm_draw_type_t type ) {
             break;
         case DRAW_PATH_FOOTWAY:
             return "FOOTWAY";
+            break;
+        case DRAW_PATH_TREEROW:
+            return "TREEROW";
             break;
         case DRAW_PATH_RAILWAY:
             return "RAILWAY";
@@ -194,28 +219,29 @@ double _calc_area ( const Type& refs ) {
 }
 
 template<typename Type>
-static void _log ( const char* const out_type, osm_draw_type_t draw_type, double area, const Type& refs ) {
+static void _log_role ( const char* const out_type, osm_draw_type_t draw_type, double area, const Type& refs ) {
 
-    std::cout << "ROLE:" << out_type << ";";
-    std::cout << "TYPE:" << _type_to_str(draw_type) << ";";
-    std::cout << "SIZE:" << (int) (area) << ";";
+    _log_key ( KEYNAME_ROLE, out_type );
+    _log_key ( KEYNAME_TYPE, _type_to_str(draw_type) );
+    _log_key ( KEYNAME_SIZE, (int)(area) );
 
     auto it = refs.begin();
     while (it != refs.end()) {
         _log_position(it->lat, it->lon);
         it++;
     }
-    std::cout << "ROLE:END;";
-    std::cout << std::endl;
+
+    _log_key ( KEYNAME_ROLE, KEYPARAM_END, true );
 }
 
 static void _log_header ( const char* const name, osm_draw_type_t draw_type ) {
 
-    std::cout << "RECORD:" << name << ";TYPE:" << _type_to_str(draw_type) << ";" << std::endl;
+    _log_key ( KEYNAME_RECORD, name );
+    _log_key ( KEYNAME_TYPE, _type_to_str(draw_type), true );
 }
 
 static void _log_footer() {
-    std::cout << "RECORD:END;" << std::endl;
+    _log_key ( KEYNAME_RECORD, KEYPARAM_END, true );
 }
 
 static void _log_area ( const char* name, const storeway_t& way ) {
@@ -223,8 +249,8 @@ static void _log_area ( const char* name, const storeway_t& way ) {
     double area = _calc_area<list_storeinfo_t> ( way.refs );
 
     _log_header ( name, way.type );
-    _log ( "OUTER", way.type, area, way.refs );
-    _log_footer();
+    _log_role   ( KEYPARAM_OUTER, way.type, area, way.refs );
+    _log_footer ();
     std::cout << std::endl;
 }
 
@@ -236,12 +262,12 @@ static void _log_relation ( const char* name, const storerels_t& rel, const list
 
     for (auto it = out.begin(); it != out.end(); it++ ) {
         area = _calc_area<list_obj_node_t> ( it->refs );
-        _log ( "OUTER", it->type, area, it->refs );
+        _log_role ( KEYPARAM_OUTER, it->type, area, it->refs );
     }
 
     for (auto it = inl.begin(); it != inl.end(); it++) {
         area = _calc_area<list_obj_node_t> ( it->refs );
-        _log ( "INNER", it->type, area, it->refs );
+        _log_role ( KEYPARAM_INNER, it->type, area, it->refs );
     }
 
     std::cout << std::endl;
@@ -249,16 +275,18 @@ static void _log_relation ( const char* name, const storerels_t& rel, const list
 
 static void _log_road ( const storeway_t& way ) {
 
-    _log_header ( "HIGHWAY", way.type );
+    _log_header ( KEYNAME_HIGHWAY, way.type );
+    _log_key ( KEYNAME_ROLE, KEYPARAM_COORDS );
 
-    std::cout << "ROLE:COORDS;";
     auto it = way.refs.begin();
     while (it != way.refs.end()) {
         _log_position(it->lat, it->lon);
         it++;
     }
-    std::cout << "ROLE:END;" << std::endl;
+
+    _log_key ( KEYNAME_ROLE, KEYPARAM_END, true );
     _log_footer();
+
     std::cout << std::endl;
 }
 
@@ -276,7 +304,7 @@ static void store_area ( const storeway_t& way ) {
         return;
     }
 
-    _log_area ( "AREA", way );
+    _log_area ( KEYNAME_AREA, way );
 }
 
 static void scan_child ( const storerels_t& rel ) {
@@ -336,7 +364,7 @@ static void store_rel_area ( const storerels_t& rel ) {
     processor.reconstruct_way ( outer_ways, outers );
     processor.reconstruct_way ( inner_ways, inners );
 
-    _log_relation ( "AREA", rel, outers, inners );
+    _log_relation ( KEYNAME_AREA, rel, outers, inners );
 }
 
 static void store_building ( const storeway_t& way ) {
@@ -353,7 +381,7 @@ static void store_building ( const storeway_t& way ) {
         return;
     }
 
-    _log_area ( "BUILDING", way );
+    _log_area ( KEYNAME_BUILDING, way );
 }
 
 static void store_rel_building ( const storerels_t& rel ) {
@@ -395,7 +423,7 @@ static void store_rel_building ( const storerels_t& rel ) {
     processor.reconstruct_way(outer_ways, outers);
     processor.reconstruct_way(inner_ways, inners);
 
-    _log_relation ( "BUILDING", rel, outers, inners );
+    _log_relation ( KEYNAME_BUILDING, rel, outers, inners );
 }
 
 static void store_roads ( const storeway_t& way ) {

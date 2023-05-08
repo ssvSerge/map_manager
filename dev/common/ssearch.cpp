@@ -52,7 +52,7 @@ bool ssearcher::find ( const std::string& var, int& type ) const {
         num = m_bor[num].to[ ch ];
     }
 
-    type = num = m_bor[num].pat_num;
+    type = m_bor[num].pat_num;
 
     return true;
 }
@@ -86,6 +86,8 @@ bool ssearcher::find ( const bstring_t& var, int& type ) const {
     if ( !m_bor[num].flag_stop ) {
         return false;
     }
+
+    type = m_bor[num].pat_num;
 
     return true;
 }

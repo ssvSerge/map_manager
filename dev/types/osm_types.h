@@ -46,6 +46,7 @@ typedef enum tag_osm_draw_type {
         DRAW_PATH_TERTIARY,
         DRAW_PATH_ROAD,
         DRAW_PATH_FOOTWAY,
+        DRAW_PATH_TREEROW,
         DRAW_PATH_RAILWAY,
         DRAW_PATH_BRIDGE,
         DRAW_PATH_TUNNEL,

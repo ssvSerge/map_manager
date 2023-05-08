@@ -6,14 +6,17 @@
 #include <sstream>
 #include <future>
 #include <cassert>
+#include <mutex>
 
 #include <clipper2/clipper.h>
 
 #include "geo_lex.h"
 #include "geo_obj.h"
-#include "thread_pool.h"
 
+#include "thread_pool.h"
 #include "MemMapper.h"
+
+#include "..\common\lex_keys.h"
 
 #define CNT(x)   ( sizeof(x) / sizeof(x[0]) )
 
@@ -119,6 +122,7 @@ lex_t                       g_value;
 geo_line_t                  g_geo_line;
 geo_obj_t                   g_geo_obj;
 list_geo_objs_t             g_geo_obj_list;
+std::mutex                  g_pages_mutex;
 
 size_t                      g_file_offset       = 0;
 int                         g_geo_scale         = 500;
@@ -130,6 +134,7 @@ double                      g_y_max             = 0;
 bool                        g_geo_dir           = false;
 double                      g_step_ver          = 0;
 double                      g_step_hor          = 0;
+std::atomic<size_t>         g_pending_cnt       = 0;
 std::atomic<size_t>         g_active_cnt        = 0;
 
 
@@ -446,28 +451,26 @@ static void _find_scale ( void ) {
 
 static void _log_index ( const geo_set_t& in_rect, const std::list<size_t>& items_list ) {
 
+    char tmp[80];
+
     if ( items_list.size() == 0 ) {
         return;
     }
 
-    _log_pair ( "IDX", "RECT", true );
+    sprintf_s ( tmp, sizeof(tmp), "%lf %lf %lf %lf", in_rect[0][3].x, in_rect[0][3].y, in_rect[0][1].x, in_rect[0][1].y );
 
-        _log_pair ( "X1", in_rect[0][3].x, false );
-        _log_pair ( "Y1", in_rect[0][3].y, false );
-        _log_pair ( "X2", in_rect[0][1].x, false );
-        _log_pair ( "Y2", in_rect[0][1].y, true  );
+    _log_pair ( KEYNAME_INDEX,   KEYPARAM_RECT, true );
+    _log_pair ( KEYNAME_POSITION, tmp, true );
+    _log_pair ( KEYNAME_OFFSETS, KEYPARAM_BEGIN, false );
 
-        _log_pair ( "OFF", "BEGIN", false );
+        auto item_ptr = items_list.begin();
+        while ( item_ptr != items_list.end() ) {
+            _log_pair( KEYNAME_MEMBER, *item_ptr, false);
+            item_ptr++;
+        }
 
-            auto item_ptr = items_list.begin();
-            while ( item_ptr != items_list.end() ) {
-                _log_pair("O", *item_ptr, false);
-                item_ptr++;
-            }
-
-        _log_pair ( "OFF", "END", true );
-
-    _log_pair ( "IDX", "END", true );
+    _log_pair ( KEYNAME_OFFSETS, KEYPARAM_END, true );
+    _log_pair ( KEYNAME_INDEX, KEYPARAM_END, true );
 
     std::cout << std::endl;
 }
@@ -479,6 +482,8 @@ static list_offset_t _scan_rect ( const geo_set_t& in_rect ) {
     geo_set_t       in_area;
     geo_set_t       out_res;
     int             item_id = 0;
+
+    g_active_cnt++;
 
     auto geo_obj_it = g_geo_obj_list.begin();
 
@@ -502,8 +507,13 @@ static list_offset_t _scan_rect ( const geo_set_t& in_rect ) {
         geo_obj_it++;
     }
 
-    // _log_index ( in_rect, out_list );
     g_active_cnt--;
+
+    g_pending_cnt--;
+
+    {   std::lock_guard<std::mutex> guard(g_pages_mutex);
+        std::cerr << "Pendging cnt: " << g_pending_cnt << "      \r";
+    }
 
     return out_list;
 }
@@ -549,15 +559,19 @@ static void _slicing ( void ) {
 
     }
 
-    g_active_cnt = map_pages.size();
+    g_pending_cnt = map_pages.size();
 
-    for (size_t i = 0; i < map_pages.size(); i++) {
-        list_res.push_back ( std::async(_scan_rect, map_pages[i]) );
-    }
+    int id = 0;
+    while ( id < map_pages.size() ) {
 
-    while (g_active_cnt > 0) {
-        Sleep(1000);
-        std::cerr << "Pendging cnt: " << g_active_cnt << "      \r";
+        if ( g_active_cnt > 1 ) {
+            Sleep(100);
+            continue;
+        }
+
+        list_res.push_back(std::async(_scan_rect, map_pages[id]));
+        id++;
+        Sleep(25);
     }
 
     for ( size_t i = 0; i < map_pages.size(); i++ ) {

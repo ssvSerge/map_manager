@@ -233,7 +233,7 @@ static const osm_mapper_t map_path_waterway[] = {
 static const osm_mapper_t map_path_natural[] = {
 
     {   "natural",                     DRAW_UNKNOWN           },
-    {   "tree_row",                    DRAW_PATH_FOOTWAY       },
+    {   "tree_row",                    DRAW_PATH_TREEROW      },
 };
 
 static const osm_mapper_t map_path_transport[] = {
