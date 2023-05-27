@@ -11,11 +11,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
-    <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{4999cc90-9c24-46f4-a561-74f7220a1d01}</ProjectGuid>
-    <RootNamespace>Slicer</RootNamespace>
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{32984AC0-98A7-44B5-BA01-935BD8911B4E}</ProjectGuid>
+    <Keyword>MFCProj</Keyword>
+    <RootNamespace>AppRemderer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Renderer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -23,6 +24,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -30,6 +32,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -44,56 +47,69 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)wykobi;$(SolutionDir)clipper2\include;$(SolutionDir)geo\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)geo\include;$(SolutionDir)clipper2\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)wykobi;$(SolutionDir)clipper2\include;$(SolutionDir)geo\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)geo\include;$(SolutionDir)clipper2\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <OmitFramePointers>false</OmitFramePointers>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
     </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <OmitFramePointers>true</OmitFramePointers>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\clipper2\src\clipper.engine.cpp" />
-    <ClCompile Include="..\clipper2\src\clipper.offset.cpp" />
-    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp" />
-    <ClCompile Include="MemMapper.cpp" />
-    <ClCompile Include="Slicer.cpp" />
-  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\geo\include\geo\geo_idx.h" />
     <ClInclude Include="..\geo\include\geo\geo_lex.h" />
@@ -102,8 +118,38 @@
     <ClInclude Include="..\geo\include\geo\geo_param.h" />
     <ClInclude Include="..\geo\include\geo\geo_parser.h" />
     <ClInclude Include="..\geo\include\geo\geo_types.h" />
-    <ClInclude Include="MemMapper.h" />
-    <ClInclude Include="thread_pool.h" />
+    <ClInclude Include="App.h" />
+    <ClInclude Include="Dlg.h" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="GeoCache.h" />
+    <ClInclude Include="LexItem.h" />
+    <ClInclude Include="MapPainter.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\geographiclib\src\Geodesic.cpp" />
+    <ClCompile Include="..\geographiclib\src\GeodesicLine.cpp" />
+    <ClCompile Include="..\geographiclib\src\Math.cpp" />
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="Dlg.cpp" />
+    <ClCompile Include="GeoCache.cpp" />
+    <ClCompile Include="LexItem.cpp" />
+    <ClCompile Include="MapPainter.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="App_Renderer.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\App_Renderer.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\App_Renderer.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

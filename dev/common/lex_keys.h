@@ -2,7 +2,7 @@
 #define __LEX_KEYS_H__
 
 #define KEYNAME_ROLE           "ROLE"
-#define KEYNAME_TYPE           "TYPPE"
+#define KEYNAME_TYPE           "TYPE"
 #define KEYNAME_SIZE           "SIZE"
 #define KEYNAME_RECORD         "RECORD"
 #define KEYNAME_HIGHWAY        "HIGHWAY"

@@ -5,9 +5,9 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Indexer", "App_Indexer\1_Indexer.vcxproj", "{EA2C9964-440F-4612-8D16-7A318D45DC4B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer_Win", "App_Renderer_Win\Renderer_Win.vcxproj", "{8095EC62-EA8B-4EAF-A6E2-7AB12435C603}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Slicer", "Slicer\Slicer.vcxproj", "{4999CC90-9C24-46F4-A561-74F7220A1D01}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "App_Renderer\App_Renderer.vcxproj", "{32984AC0-98A7-44B5-BA01-935BD8911B4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,14 +19,14 @@ Global
 		{EA2C9964-440F-4612-8D16-7A318D45DC4B}.Debug|x64.Build.0 = Debug|x64
 		{EA2C9964-440F-4612-8D16-7A318D45DC4B}.Release|x64.ActiveCfg = Release|x64
 		{EA2C9964-440F-4612-8D16-7A318D45DC4B}.Release|x64.Build.0 = Release|x64
-		{8095EC62-EA8B-4EAF-A6E2-7AB12435C603}.Debug|x64.ActiveCfg = Debug|x64
-		{8095EC62-EA8B-4EAF-A6E2-7AB12435C603}.Debug|x64.Build.0 = Debug|x64
-		{8095EC62-EA8B-4EAF-A6E2-7AB12435C603}.Release|x64.ActiveCfg = Release|x64
-		{8095EC62-EA8B-4EAF-A6E2-7AB12435C603}.Release|x64.Build.0 = Release|x64
 		{4999CC90-9C24-46F4-A561-74F7220A1D01}.Debug|x64.ActiveCfg = Debug|x64
 		{4999CC90-9C24-46F4-A561-74F7220A1D01}.Debug|x64.Build.0 = Debug|x64
 		{4999CC90-9C24-46F4-A561-74F7220A1D01}.Release|x64.ActiveCfg = Release|x64
 		{4999CC90-9C24-46F4-A561-74F7220A1D01}.Release|x64.Build.0 = Release|x64
+		{32984AC0-98A7-44B5-BA01-935BD8911B4E}.Debug|x64.ActiveCfg = Debug|x64
+		{32984AC0-98A7-44B5-BA01-935BD8911B4E}.Debug|x64.Build.0 = Debug|x64
+		{32984AC0-98A7-44B5-BA01-935BD8911B4E}.Release|x64.ActiveCfg = Release|x64
+		{32984AC0-98A7-44B5-BA01-935BD8911B4E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

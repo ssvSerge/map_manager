@@ -8,6 +8,9 @@
     <Filter Include="Clipper">
       <UniqueIdentifier>{4064c7de-d8ff-4afb-9e60-95be313da98c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GeoLib">
+      <UniqueIdentifier>{c40a60a7-970d-4287-8c4d-2f7e397d1676}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Slicer.cpp">
@@ -30,14 +33,29 @@
     <ClInclude Include="MemMapper.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="geo_lex.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="geo_obj.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="thread_pool.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_idx.h">
+      <Filter>GeoLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_lex.h">
+      <Filter>GeoLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_line.h">
+      <Filter>GeoLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_obj.h">
+      <Filter>GeoLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_param.h">
+      <Filter>GeoLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_parser.h">
+      <Filter>GeoLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\geo\include\geo\geo_types.h">
+      <Filter>GeoLib</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
