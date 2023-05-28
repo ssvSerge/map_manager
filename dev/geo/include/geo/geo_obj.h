@@ -7,6 +7,8 @@
 #include "geo_param.h"
 #include "geo_line.h"
 
+#include <clipper2/clipper.h>
+
 typedef struct tag_geo_coord {
     double                  lon;
     double                  lat;
@@ -52,8 +54,6 @@ class geo_obj_map_t {
 
     public:
         geo_offset_t        m_off;
-        vector_geo_off_t    m_list_off;
-        geo_rect_t          m_rect;
         obj_id_t            m_type;
         list_geo_lines_t    m_lines;
         obj_id_t            m_record;
@@ -64,14 +64,6 @@ class geo_obj_map_t {
             m_type    = OBJID_UNDEF;
             m_off     = 0;
             m_lines.clear();
-            m_list_off.clear();
-            m_rect.clear();
-        }
-
-        void add_offset ( const char* const val ) {
-            geo_offset_t offset;
-            (void)sscanf_s ( val, "%ld", &offset );
-            m_list_off.push_back(offset);
         }
 };
 
@@ -92,6 +84,15 @@ class geo_idx_rec_t {
 
 typedef std::vector<geo_idx_rec_t> vector_geo_idx_rec_t;
 
+typedef std::vector<obj_id_t>  vector_types;
 
+class geo_draw_t {
+    public:
+        obj_id_t              m_type;
+        vector_types          m_types;
+        Clipper2Lib::PathsD   m_paths;
+};
+
+typedef std::vector<geo_draw_t>  vector_geo_draw_t;
 
 #endif

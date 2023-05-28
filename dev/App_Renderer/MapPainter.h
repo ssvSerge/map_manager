@@ -2,6 +2,8 @@
 
 #define WM_MAP_UPDATE (WM_USER + 1)
 
+#include <geo/geo_idx.h>
+
 
 class CMapPainter : public CStatic {
 
@@ -26,6 +28,9 @@ class CMapPainter : public CStatic {
         afx_msg void OnLButtonUp   ( UINT nFlags, CPoint point );
         afx_msg void OnMouseMove   ( UINT nFlags, CPoint point );
         afx_msg BOOL OnEraseBkgnd  ( CDC* pDC );
+
+    private:
+        void test ( const geo_rect_t& rect );
 
     private:
         bool			m_bMouseTracking;

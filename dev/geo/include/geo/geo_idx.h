@@ -3,6 +3,7 @@
 
 #include <string>
 #include <algorithm>
+#include <fstream>
 
 #include <geo/geo_idx.h>
 #include <geo/geo_obj.h>
@@ -68,28 +69,23 @@ class geo_indexer_t {
             return;
         }
 
-        void cache_region ( const geo_rect_t& rect ) {
+        void cache_region ( const geo_rect_t& rect, vector_geo_off_t& cache ) {
+            _load_idx ( rect, cache );
+        }
 
-            size_t idx_cnt = 0;
-            set_geo_off_t offs_list;
+        void prepare_window ( const geo_rect_t& rect ) {
 
-            auto it_cache = m_idx_list.cbegin();
-            while (it_cache != m_idx_list.cend()) {
-                if ( is_verlapped(rect, it_cache->m_rect ) ) {
-                    idx_cnt += it_cache->m_list_off.size();
-                    Attach ( offs_list, it_cache->m_list_off );
-                }
-                it_cache++;
-            }
+            (void)(rect);
 
-            m_geo_cache.clear();
-            m_geo_cache.resize ( offs_list.size() );
-            std::copy ( offs_list.begin(), offs_list.end(), m_geo_cache.begin() );
-            std::sort ( m_geo_cache.begin(), m_geo_cache.end() );
+            // geo_set_t  out_res;
+            // auto it_ptr = m_geo_cache.begin();
+            // while ( it_ptr != m_geo_cache.end() ) {
+            //     it_ptr++;
+            // }
         }
 
         private:
-            bool is_verlapped ( const geo_rect_t& window, const geo_rect_t& slice ) {
+            bool _is_verlapped ( const geo_rect_t& window, const geo_rect_t& slice ) {
                 if (window.min_lon < slice.max_lon) {
                     return false;
                 }
@@ -105,7 +101,7 @@ class geo_indexer_t {
                 return true;
             }
 
-            void Attach ( set_geo_off_t& offsets, const vector_geo_off_t& refs ) {
+            void _attach ( set_geo_off_t& offsets, const vector_geo_off_t& refs ) {
                 auto it = refs.cbegin();
                 while (it != refs.cend()) {
                     offsets.insert(*it);
@@ -113,6 +109,25 @@ class geo_indexer_t {
                 }
             }
 
+            void _load_idx ( const geo_rect_t& rect, vector_geo_off_t& cache ) {
+
+                size_t idx_cnt = 0;
+                set_geo_off_t offs_list;
+
+                auto it_cache = m_idx_list.cbegin();
+                while (it_cache != m_idx_list.cend()) {
+                    if (_is_verlapped(rect, it_cache->m_rect)) {
+                        idx_cnt += it_cache->m_list_off.size();
+                        _attach(offs_list, it_cache->m_list_off);
+                    }
+                    it_cache++;
+                }
+
+                cache.clear();
+                cache.resize(offs_list.size());
+                std::copy(offs_list.begin(), offs_list.end(), cache.begin());
+                std::sort(cache.begin(), cache.end());
+            }
 
     private:
         std::string             m_idx_file;
@@ -121,7 +136,6 @@ class geo_indexer_t {
     private:
         geo_parser_t            m_geo_parser;
         vector_geo_idx_rec_t    m_idx_list;
-        vector_geo_off_t        m_geo_cache;
 };
 
 

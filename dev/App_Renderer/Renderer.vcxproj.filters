@@ -19,6 +19,9 @@
     <Filter Include="GeoLib">
       <UniqueIdentifier>{bc5f284b-81b9-449e-9f08-d823048ca3bc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Clipper">
+      <UniqueIdentifier>{f78d5546-70e4-4fb8-97ee-5d7469d6acd4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -92,11 +95,14 @@
     <ClCompile Include="..\geographiclib\src\GeodesicLine.cpp">
       <Filter>lib</Filter>
     </ClCompile>
-    <ClCompile Include="GeoCache.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\clipper2\src\clipper.engine.cpp">
+      <Filter>Clipper</Filter>
     </ClCompile>
-    <ClCompile Include="LexItem.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\clipper2\src\clipper.offset.cpp">
+      <Filter>Clipper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp">
+      <Filter>Clipper</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

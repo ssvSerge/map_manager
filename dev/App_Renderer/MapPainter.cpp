@@ -4,11 +4,11 @@
 #include <string>
 
 #include "MapPainter.h"
-#include "GeoCache.h"
 
 #include <GeographicLib/Geodesic.hpp>
 
 #include <geo/geo_idx.h>
+#include <geo/geo_file.h>
 
 IMPLEMENT_DYNAMIC ( CMapPainter, CStatic )
 
@@ -22,8 +22,13 @@ BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
     ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
-static geo_idx_record_t         g_geo_idx;
-static geo_indexer_t            g_geo_idx_file;
+static geo_idx_record_t g_geo_idx;
+static geo_indexer_t    g_geo_idx_file;
+static geo_parser_t     g_geo_parser;
+static geo_file_t       g_geo_file;
+
+static std::string      g_idx_name;
+static std::string      g_map_name;
 
 CMapPainter::CMapPainter () {
 
@@ -39,20 +44,39 @@ CMapPainter::CMapPainter () {
     m_delta_lat      = 0;
     m_delta_lon      = 0;
 
-    g_geo_idx_file.set_idx_name ( "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt" );
-    g_geo_idx_file.set_map_name ( "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt" );
+    g_idx_name = "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt";
+    g_map_name = "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt";
+
+    g_geo_file.set_name ( g_map_name.c_str() );
+
+    g_geo_idx_file.set_idx_name ( g_idx_name.c_str() );
+    g_geo_idx_file.set_map_name ( g_map_name.c_str() );
     g_geo_idx_file.load_idx_file();
 }
 
 CMapPainter::~CMapPainter () {
 }
 
+void CMapPainter::test ( const geo_rect_t& rect ) {
+
+    vector_geo_off_t    geo_cache;
+    list_geo_objs_t     geo_map;
+    list_geo_objs_t     draw_map;
+
+    g_geo_idx_file.cache_region ( rect, geo_cache );
+    g_geo_file.load_by_idx ( geo_cache, geo_map );
+    g_geo_file.trim_by_rect ( rect, geo_map, draw_map );
+
+    g_geo_idx_file.prepare_window ( rect );
+}
+
 void CMapPainter::OnPaint ( void ) {
 
-    int			x;
-    int			y;
-    CRect		clientRect;
-    CRgn		clientRgn;
+    int	x;
+    int	y;
+
+    CRect       clientRect;
+    CRgn        clientRgn;
     geo_rect_t  geo_rect;
 
     CPaintDC dc ( this );
@@ -78,7 +102,7 @@ void CMapPainter::OnPaint ( void ) {
     geo_rect.max_lon = m_lon + geo_cache_width;
     geo_rect.max_lat = m_lat + geo_cache_height;
 
-    g_geo_idx_file.cache_region ( geo_rect );
+    test(geo_rect);
 
     clientRgn.CreateRectRgnIndirect ( clientRect );
 

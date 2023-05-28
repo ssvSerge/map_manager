@@ -80,6 +80,7 @@ class geo_parser_t {
                 case OBJID_RECORD_AREA:
                 case OBJID_RECORD_BUILDING:
                 case OBJID_RECORD_HIGHWAY:
+                    geo_obj.clear();
                     geo_obj.m_off = m_geo_param.param.off;
                     geo_obj.m_record = code;
                     m_dir_to_object = true;

@@ -97,7 +97,7 @@
     <ClCompile Include="..\common\libhpxml.c" />
     <ClCompile Include="..\common\osm_processor.cpp" />
     <ClCompile Include="..\common\ssearch.cpp" />
-    <ClCompile Include="1_Indexer.cpp" />
+    <ClCompile Include="Indexer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\bstring.h" />

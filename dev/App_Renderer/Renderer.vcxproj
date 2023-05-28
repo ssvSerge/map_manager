@@ -129,13 +129,14 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\clipper2\src\clipper.engine.cpp" />
+    <ClCompile Include="..\clipper2\src\clipper.offset.cpp" />
+    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp" />
     <ClCompile Include="..\geographiclib\src\Geodesic.cpp" />
     <ClCompile Include="..\geographiclib\src\GeodesicLine.cpp" />
     <ClCompile Include="..\geographiclib\src\Math.cpp" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Dlg.cpp" />
-    <ClCompile Include="GeoCache.cpp" />
-    <ClCompile Include="LexItem.cpp" />
     <ClCompile Include="MapPainter.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
