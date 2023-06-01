@@ -50,13 +50,13 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)geo\include;$(SolutionDir)clipper2\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)types;$(SolutionDir)clipper2\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)geo\include;$(SolutionDir)clipper2\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)types;$(SolutionDir)clipper2\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -111,18 +111,9 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\geo\include\geo\geo_idx.h" />
-    <ClInclude Include="..\geo\include\geo\geo_lex.h" />
-    <ClInclude Include="..\geo\include\geo\geo_line.h" />
-    <ClInclude Include="..\geo\include\geo\geo_obj.h" />
-    <ClInclude Include="..\geo\include\geo\geo_param.h" />
-    <ClInclude Include="..\geo\include\geo\geo_parser.h" />
-    <ClInclude Include="..\geo\include\geo\geo_types.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="Dlg.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="GeoCache.h" />
-    <ClInclude Include="LexItem.h" />
     <ClInclude Include="MapPainter.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />

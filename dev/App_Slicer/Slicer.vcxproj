@@ -46,12 +46,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)wykobi;$(SolutionDir)clipper2\include;$(SolutionDir)geo\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)clipper2\include;$(SolutionDir)types;$(SolutionDir)common;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)wykobi;$(SolutionDir)clipper2\include;$(SolutionDir)geo\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)clipper2\include;$(SolutionDir)types;$(SolutionDir)common;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -95,13 +95,6 @@
     <ClCompile Include="Slicer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\geo\include\geo\geo_idx.h" />
-    <ClInclude Include="..\geo\include\geo\geo_lex.h" />
-    <ClInclude Include="..\geo\include\geo\geo_line.h" />
-    <ClInclude Include="..\geo\include\geo\geo_obj.h" />
-    <ClInclude Include="..\geo\include\geo\geo_param.h" />
-    <ClInclude Include="..\geo\include\geo\geo_parser.h" />
-    <ClInclude Include="..\geo\include\geo\geo_types.h" />
     <ClInclude Include="MemMapper.h" />
     <ClInclude Include="thread_pool.h" />
   </ItemGroup>

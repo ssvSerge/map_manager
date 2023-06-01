@@ -13,6 +13,9 @@ static const lex_ctx_t g_lex_map[] = {
     { "RECORD",     "HIGHWAY",     OBJID_RECORD_HIGHWAY },
     { "RECORD",     "END",         OBJID_RECORD_END },
 
+    { "XTYPE",      "",            OBJID_COORD },
+    { "XCNT",       "",            OBJID_COORD },
+
     { "ROLE",       "OUTER",       OBJID_ROLE_OUTER },
     { "ROLE",       "INNER",       OBJID_ROLE_INNER },
     { "ROLE",       "COORDS",      OBJID_ROLE_COORDS },
@@ -40,7 +43,8 @@ static const lex_ctx_t g_lex_map[] = {
     { "TYPE",       "BRIDGE",      OBJID_TYPE_BRIDGE },
     { "TYPE",       "TUNNEL",      OBJID_TYPE_TUNNEL },
     { "SIZE",       "",            OBJID_AREA_SIZE },
-    { "C",          "",            OBJID_COORD },
+    { "C",          "",            OBJID_COORD }
+
 };
 
 static const lex_ctx_t g_lex_idx[] = {

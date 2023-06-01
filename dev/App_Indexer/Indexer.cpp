@@ -26,11 +26,11 @@ static void _log_key ( const char* const name, const char* const value, bool cr 
     }
 }
 
-static void _log_key ( const char* const name, int value, bool cr = false ) {
+static void _log_key ( const char* const name, size_t value, bool cr = false ) {
 
     char tmp[32];
 
-    sprintf_s ( tmp, sizeof(tmp), "%d", value );
+    sprintf_s ( tmp, sizeof(tmp), "%zd", value );
 
     _log_key ( name, tmp, cr );
 }
@@ -62,7 +62,7 @@ static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
     _log_key ( KEYNAME_COORDINATES, position);
 }
 
-static const char* _type_to_str ( osm_draw_type_t type ) {
+static const char* _type_to_str ( draw_type_t type ) {
 
     switch (type) {
 
@@ -219,11 +219,11 @@ double _calc_area ( const Type& refs ) {
 }
 
 template<typename Type>
-static void _log_role ( const char* const out_type, osm_draw_type_t draw_type, double area, const Type& refs ) {
+static void _log_role ( const char* const out_type, draw_type_t draw_type, double area, const Type& refs ) {
 
-    _log_key ( KEYNAME_ROLE, out_type );
-    _log_key ( KEYNAME_TYPE, _type_to_str(draw_type) );
-    _log_key ( KEYNAME_SIZE, (int)(area) );
+    _log_key ( KEYNAME_ROLE,  out_type );
+    _log_key ( KEYNAME_OTYPE, _type_to_str(draw_type) );
+    _log_key ( KEYNAME_SIZE,  (int)(area) );
 
     auto it = refs.begin();
     while (it != refs.end()) {
@@ -234,10 +234,15 @@ static void _log_role ( const char* const out_type, osm_draw_type_t draw_type, d
     _log_key ( KEYNAME_ROLE, KEYPARAM_END, true );
 }
 
-static void _log_header ( const char* const name, osm_draw_type_t draw_type ) {
+static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt ) {
+
+    if (cnt != 1) {
+        cnt = cnt;
+    }
 
     _log_key ( KEYNAME_RECORD, name );
-    _log_key ( KEYNAME_TYPE, _type_to_str(draw_type), true );
+    _log_key ( KEYNAME_XTYPE,  _type_to_str(draw_type) );
+    _log_key ( KEYNAME_CONTER, cnt, true);
 }
 
 static void _log_footer() {
@@ -248,7 +253,7 @@ static void _log_area ( const char* name, const storeway_t& way ) {
 
     double area = _calc_area<list_storeinfo_t> ( way.refs );
 
-    _log_header ( name, way.type );
+    _log_header ( name, way.type, 1 );
     _log_role   ( KEYPARAM_OUTER, way.type, area, way.refs );
     _log_footer ();
     std::cout << std::endl;
@@ -257,8 +262,12 @@ static void _log_area ( const char* name, const storeway_t& way ) {
 static void _log_relation ( const char* name, const storerels_t& rel, const list_obj_way_t& out, const list_obj_way_t& inl ) {
 
     double area;
+    size_t cnt = 0;
 
-    _log_header (name, rel.type );
+    cnt += out.size();
+    cnt += inl.size();
+
+    _log_header ( name, rel.type, cnt );
 
     for (auto it = out.begin(); it != out.end(); it++ ) {
         area = _calc_area<list_obj_node_t> ( it->refs );
@@ -270,12 +279,18 @@ static void _log_relation ( const char* name, const storerels_t& rel, const list
         _log_role ( KEYPARAM_INNER, it->type, area, it->refs );
     }
 
+    _log_footer();
+
     std::cout << std::endl;
 }
 
 static void _log_road ( const storeway_t& way ) {
 
-    _log_header ( KEYNAME_HIGHWAY, way.type );
+    size_t cnt = 0;
+
+    cnt += way.refs.size();
+
+    _log_header ( KEYNAME_HIGHWAY, way.type, cnt );
     _log_key ( KEYNAME_ROLE, KEYPARAM_COORDS );
 
     auto it = way.refs.begin();
@@ -454,7 +469,6 @@ int main ( int argc, char* argv[] ) {
     processor.enum_rels  ( scan_child );
     processor.enum_ways  ( store_area );
     processor.enum_rels  ( store_rel_area );
-
     processor.enum_ways  ( store_building );
     processor.enum_rels  ( store_rel_building );
 

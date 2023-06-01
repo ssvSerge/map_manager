@@ -1134,7 +1134,7 @@ bool osm_processor_t::find_key ( const osm_tag_ctx_t& node_info, osm_str_t k, os
     return false;
 }
 
-void osm_processor_t::map_type ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor ) {
+void osm_processor_t::map_type ( draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor ) {
 
     int     type;
     bool    find_res;
@@ -1159,7 +1159,7 @@ void osm_processor_t::map_type ( osm_draw_type_t& draw_type, const osm_tag_ctx_t
         return;
     }
 
-    draw_type = static_cast<osm_draw_type_t> (type);
+    draw_type = static_cast<draw_type_t> (type);
 }
 
 bool osm_processor_t::is_area ( const osm_tag_ctx_t& xml_tags ) {
@@ -1287,7 +1287,7 @@ void osm_processor_t::ways_expand_tags ( void ) {
 
 void osm_processor_t::ways_resolve_type ( void ) {
 
-    osm_draw_type_t draw_type = DRAW_UNKNOWN;
+    draw_type_t draw_type = DRAW_UNKNOWN;
     int level;
 
     if ( osm_info.xml_tags.cnt == 0 ) {
@@ -1381,7 +1381,7 @@ void osm_processor_t::rel_expand_tags ( void ) {
 
 void osm_processor_t::rel_resolve_type ( void ) {
 
-    osm_draw_type_t draw_type = DRAW_UNKNOWN;
+    draw_type_t draw_type = DRAW_UNKNOWN;
 
     process_building ( draw_type, osm_info.xml_tags );
 
@@ -1509,7 +1509,7 @@ void osm_processor_t::_merge_type4 ( const obj_way_t& src, obj_way_t& dst ) {
 
 //---------------------------------------------------------------------------//
 
-void osm_processor_t::process_osm_param ( osm_draw_type_t& draw_type, osm_draw_type_t new_type, const char* const name ) {
+void osm_processor_t::process_osm_param ( draw_type_t& draw_type, draw_type_t new_type, const char* const name ) {
 
     bool find_res;
 
@@ -1524,7 +1524,7 @@ void osm_processor_t::process_osm_param ( osm_draw_type_t& draw_type, osm_draw_t
 
 }
 
-void osm_processor_t::process_building ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info ) {
+void osm_processor_t::process_building ( draw_type_t& draw_type, const osm_tag_ctx_t& node_info ) {
 
     bool find_res;
 
@@ -1545,7 +1545,7 @@ void osm_processor_t::process_building ( osm_draw_type_t& draw_type, const osm_t
     draw_type = DRAW_BUILDING;
 }
 
-void osm_processor_t::process_unused ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor ) {
+void osm_processor_t::process_unused ( draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor ) {
 
     bool find_res;
     int  type;

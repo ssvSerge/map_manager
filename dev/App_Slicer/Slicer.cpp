@@ -7,40 +7,35 @@
 #include <future>
 #include <cassert>
 #include <mutex>
+#include <algorithm>
 
 #include "thread_pool.h"
 
-#include <geo/geo_types.h>
-#include <geo/geo_lex.h>
-#include <geo/geo_obj.h>
-#include <geo/geo_param.h>
-#include <geo/geo_line.h>
-#include <geo/geo_parser.h>
-
 #include "MemMapper.h"
 
-#include "..\common\lex_keys.h"
+#include <geo_types.h>
+#include <lex_keys.h>
 
 #define CNT(x)   ( sizeof(x) / sizeof(x[0]) )
 
-geo_obj_map_t   g_geo_obj;
-std::mutex      g_pages_mutex;
+std::mutex          g_pages_mutex;
 
-geo_offset_t    g_file_offset       = 0;
-geo_parser_t    g_geo_parser;
+geo_offset_t        g_file_offset       = 0;
+geo_parser_t        g_geo_parser;
 
-int             g_geo_scale         = 500;
-double          g_x_min             = 0;
-double          g_x_max             = 0;
-double          g_y_min             = 0;
-double          g_y_max             = 0;
-bool            g_geo_dir           = false;
-double          g_step_ver          = 0;
-double          g_step_hor          = 0;
+int                 g_geo_scale         = 500;
+double              g_x_min             = 0;
+double              g_x_max             = 0;
+double              g_y_min             = 0;
+double              g_y_max             = 0;
+bool                g_geo_dir           = false;
+double              g_step_ver          = 0;
+double              g_step_hor          = 0;
 
-std::atomic<size_t>  g_pending_cnt  = 0;
-list_geo_objs_t      g_geo_obj_list;
-
+std::atomic<size_t>         g_pending_cnt  = 0;
+geo_record_t                g_geo_record;
+list_geo_record_t           g_geo_record_list;
+vector_vector_geo_offset_t  g_scan_result;
 
 static void _log_pair ( const char* const key, const char* const val, bool cr ) {
 
@@ -82,87 +77,78 @@ static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
 
 static void _find_box ( void ) {
 
-    bool first_entry  = true;
+    bool first_entry = true;
 
-    auto it_obj = g_geo_obj_list.begin();
-    while ( it_obj != g_geo_obj_list.end() ) {
-
-        auto it_line = it_obj->m_lines.begin();
-        while ( it_line != it_obj->m_lines.end() ) {
-
-            auto it_coord = it_line->coords.begin();
-            while ( it_coord != it_line->coords.end() ) {
-
-                if ( first_entry ) {
-
-                    first_entry = false;
-
-                    g_x_min = g_x_max = it_coord->x;
-                    g_y_min = g_y_max = it_coord->y;
-
-                } else {
-
-                    g_x_min = min ( g_x_min, it_coord->x );
-                    g_x_max = max ( g_x_max, it_coord->x );
-
-                    g_y_min = min ( g_y_min, it_coord->y );
-                    g_y_max = max ( g_y_max, it_coord->y );
-                }
-
-                it_coord++;
-
-            }
-
-            it_line++;
+    auto enum_coords = [&first_entry] ( const geo_coords_t& coord ) {
+        if (first_entry) {
+            first_entry = false;
+            g_x_min = g_x_max = coord.x;
+            g_y_min = g_y_max = coord.y;
+        } else {
+            g_x_min = std::min(g_x_min, coord.x);
+            g_x_max = std::max(g_x_max, coord.x);
+            g_y_min = std::min(g_y_min, coord.y);
+            g_y_max = std::max(g_y_max, coord.y);
         }
+    };
 
-        it_obj++;
+    auto enum_lines = [enum_coords] ( const geo_path_t& geo_path ) {
+        std::for_each(geo_path.cbegin(), geo_path.cend(), enum_coords);
+    };
 
-    }
+    auto enum_geo_records = [enum_lines] ( const geo_record_t& geo_record ) {
+        std::for_each (geo_record.m_child_lines.cbegin(), geo_record.m_child_lines.cend(), enum_lines );
+    };
 
+    std::for_each ( g_geo_record_list.cbegin(), g_geo_record_list.cend(), enum_geo_records );
 }
 
 static void _find_scale ( void ) {
 
     {   double  len_left   =  _delta ( g_x_min, g_y_min, g_x_min, g_y_max );
         double  len_right  =  _delta ( g_x_max, g_y_min, g_x_max, g_y_max );
-        double  len_ver    =  min ( len_left, len_right );
+        double  len_ver    =  std::min ( len_left, len_right );
         double  ver_cnt    =  len_ver / g_geo_scale;
-        double  delta_ver  =  max ( g_y_max, g_y_min ) - min ( g_y_max, g_y_min );
+        double  delta_ver  =  std::max ( g_y_max, g_y_min ) - std::min ( g_y_max, g_y_min );
 
         g_step_ver = delta_ver / ver_cnt;
     }
 
     {   double  len_bottom =  _delta ( g_x_min, g_y_min, g_x_max, g_y_min );
         double  len_top    =  _delta ( g_x_min, g_y_max, g_x_max, g_y_max );
-        double  len_hor    =  min ( len_bottom, len_top );
+        double  len_hor    =  std::min ( len_bottom, len_top );
         double  hor_cnt    =  len_hor / g_geo_scale;
-        double  delta_hor  =  max ( g_x_max, g_x_min ) - min ( g_x_max, g_x_min );
+        double  delta_hor  =  std::max ( g_x_max, g_x_min ) - std::min ( g_x_max, g_x_min );
 
         g_step_hor = delta_hor / hor_cnt;
     }
 
 }
 
-static void _log_index ( const geo_set_t& in_rect, const list_offset_t& items_list ) {
+static void _log_index ( const vector_geo_path_t& in_rect, size_t id ) {
 
     char tmp[80];
 
-    if ( items_list.size() == 0 ) {
+    vector_geo_offset_t*  res_ptr = nullptr;
+
+    res_ptr = &g_scan_result[id];
+
+    if ( res_ptr->size() == 0 ) {
         return;
     }
 
-    sprintf_s ( tmp, sizeof(tmp), "%lf %lf %lf %lf", in_rect[0][3].x, in_rect[0][3].y, in_rect[0][1].x, in_rect[0][1].y );
+    sprintf_s(tmp, sizeof(tmp), "%lf %lf %lf %lf", in_rect[0][3].x, in_rect[0][3].y, in_rect[0][1].x, in_rect[0][1].y);
 
     _log_pair ( KEYNAME_INDEX,    KEYPARAM_RECT,  true );
     _log_pair ( KEYNAME_POSITION, tmp,            true );
     _log_pair ( KEYNAME_OFFSETS,  KEYPARAM_BEGIN, false );
 
-        auto item_ptr = items_list.begin();
-        while ( item_ptr != items_list.end() ) {
-            _log_pair( KEYNAME_MEMBER, *item_ptr, false);
-            item_ptr++;
-        }
+
+    auto item_ptr = res_ptr->cbegin();
+    while ( item_ptr != res_ptr->cend() ) {
+        _log_pair(KEYNAME_MEMBER, *item_ptr, false);
+        item_ptr++;
+    }
 
     _log_pair ( KEYNAME_OFFSETS, KEYPARAM_END, true );
     _log_pair ( KEYNAME_INDEX,   KEYPARAM_END, true );
@@ -170,39 +156,22 @@ static void _log_index ( const geo_set_t& in_rect, const list_offset_t& items_li
     std::cout << std::endl;
 }
 
-static void _scan_rect ( const geo_set_t& in_rect, list_offset_t& res ) {
+static void _scan_rect ( const vector_geo_path_t& in_rect, size_t id ) {
 
-    list_offset_t   out_list;
+    vector_geo_path_t  tmp;
 
-    geo_set_t       in_area;
-    geo_set_t       out_res;
-    int             item_id = 0;
+    auto it_ptr = g_geo_record_list.cbegin();
 
-    res.clear();
+    while ( it_ptr != g_geo_record_list.cend() ) {
 
-    auto geo_obj_it = g_geo_obj_list.begin();
+        tmp = Clipper2Lib::Intersect(it_ptr->m_child_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13);
 
-    while ( geo_obj_it != g_geo_obj_list.end() ) {
-
-        in_area.clear();
-
-        auto geo_path_it = geo_obj_it->m_lines.begin();
-        while ( geo_path_it != geo_obj_it->m_lines.end() ) {
-            in_area.push_back(geo_path_it->coords);
-            geo_path_it++;
+        if ( tmp.size() > 0 ) {
+            g_scan_result[id].push_back(it_ptr->m_prime_off);
         }
 
-        out_res = Clipper2Lib::Intersect ( in_area, in_rect, Clipper2Lib::FillRule::NonZero, 13 );
-        if ( out_res.size() > 0 ) {
-            out_list.push_back ( geo_obj_it->m_off );
-        }
-
-        item_id++;
-
-        geo_obj_it++;
+        it_ptr++;
     }
-
-    res = out_list;
 
     g_pending_cnt--;
 
@@ -213,57 +182,51 @@ static void _scan_rect ( const geo_set_t& in_rect, list_offset_t& res ) {
 
 static void _slicing ( void ) {
 
-    geo_coords_t      pt;
-    geo_path_t        path;
-    geo_set_t         rect;
-    geo_set_t         res;
+    double      x_min   = g_x_min;
+    double      x_max   = g_x_max - g_step_hor;
+    double      x_step  = g_step_hor;
 
-    double  x_min   = g_x_min;
-    double  x_max   = g_x_max - g_step_hor;
-    double  x_step  = g_step_hor;
+    double      y_min   = g_y_min;
+    double      y_max   = g_y_max - g_step_ver;
+    double      y_step  = g_step_ver;
 
-    double  y_min   = g_y_min;
-    double  y_max   = g_y_max - g_step_ver;
-    double  y_step  = g_step_ver;
+    geo_coords_t        pt;
+    vector_geo_path_t   rect;
 
-    geo_map_t               map_pages;
-    vector_list_offset_t    list_res;
+    vector_vector_geo_path_t   slicer_rects;
 
-    for ( double y = y_min; y <= y_max; y += y_step ) {
+    rect.clear();
+    rect.resize(1);
+    rect[0].resize(5);
 
-        for ( double x = x_min; x <= x_max; x += x_step ) {
+    for (double y = y_min; y <= y_max; y += y_step) {
+        for (double x = x_min; x <= x_max; x += x_step) {
 
-            rect.clear();
-            path.clear();
+            pt.x = x + x_step; pt.y = y;               rect[0][0] = pt;
+                                                       rect[0][4] = pt;
+            pt.x = x + x_step; pt.y = y + g_step_ver;  rect[0][1] = pt;
+            pt.x = x;          pt.y = y + g_step_ver;  rect[0][2] = pt;
+            pt.x = x;          pt.y = y;               rect[0][3] = pt;
 
-            pt.x = x + x_step; pt.y = y;               path.push_back(pt);
-            pt.x = x + x_step; pt.y = y + g_step_ver;  path.push_back(pt);
-            pt.x = x;          pt.y = y + g_step_ver;  path.push_back(pt);
-            pt.x = x;          pt.y = y;               path.push_back(pt);
-            pt.x = x + x_step; pt.y = y;               path.push_back(pt);
-
-            rect.push_back ( path );
-
-            map_pages.push_back(rect);
+            slicer_rects.push_back ( rect );
         }
-
     }
 
-    g_pending_cnt = map_pages.size();
-    list_res.resize(g_pending_cnt);
+    g_pending_cnt = slicer_rects.size();
+
+    g_scan_result.resize ( g_pending_cnt );
 
     thread_pool pool;
 
-    for (int id = 0; id < map_pages.size(); id++ ) {
-        pool.push_task([map_pages, &list_res, id] { _scan_rect( map_pages[id], list_res[id] ); });
+    for (int id = 0; id < slicer_rects.size(); id++) {
+        pool.push_task( [slicer_rects, id] { _scan_rect ( slicer_rects[id], id ); });
     }
 
     pool.wait_for_tasks();
 
-    for ( size_t i = 0; i < list_res.size(); i++ ) {
-        _log_index ( map_pages[i], list_res[i] );
+    for (size_t i = 0; i < slicer_rects.size(); i++) {
+        _log_index ( slicer_rects[i], i );
     }
-
 }
 
 int main ( int argc, char* argv[] ) {
@@ -271,13 +234,14 @@ int main ( int argc, char* argv[] ) {
     file_mapper     file;
     uint64_t        file_size;
 
-    char            ch;
-    geo_obj_map_t   geo_obj;
-    bool            eor;
-    bool            eoc;
+    char            ch  = 0;
+    bool            eor = false;
+    bool            eoc = false;
 
-    if (argc != 2) {
-        return -1;
+    geo_record_t    geo_record;
+
+    if ( argc != 2 ) {
+        return (-1);
     }
 
     file.Init ( argv[1] );
@@ -290,10 +254,9 @@ int main ( int argc, char* argv[] ) {
         g_geo_parser.load_param ( ch, eoc, g_file_offset );
 
         if ( eoc ) {
-            g_geo_parser.process_map ( geo_obj, eor );
+            g_geo_parser.process_map ( geo_record, eor );
             if (eor) {
-                g_geo_obj_list.push_back(geo_obj);
-                geo_obj.clear();
+                g_geo_record_list.push_back(geo_record);
             }
         }
 

@@ -1,7 +1,7 @@
 #ifndef __OSM_PROCESSOR_H__
 #define __OSM_PROCESSOR_H__
 
-#include "..\types\osm_types.h"
+#include "..\types\osm_types_idx.h"
 #include "..\common\ssearch.h"
 #include "..\common\libhpxml.h"
 
@@ -49,7 +49,7 @@ class osm_processor_t {
         void test_and_add ( const char* const key );
         void key_cmp ( const char* const key, const char* const val, bool& r1, bool& r2 );
         bool find_key ( const osm_tag_ctx_t& node_info, osm_str_t k, osm_str_t v1 = nullptr, osm_str_t v2 = nullptr, osm_str_t v3 = nullptr );
-        void map_type ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor );
+        void map_type ( draw_type_t& draw_type, const osm_tag_ctx_t& node_info, const ssearcher& bor );
         bool is_area ( const osm_tag_ctx_t& xml_tags );
         void map_ref ( const hpx_attr_t* attr, ref_type_t& ref );
         void map_role ( const hpx_attr_t* attr, ref_role_t& role );
@@ -74,9 +74,9 @@ class osm_processor_t {
         void process_rel_member ( int attr_cnt, const hpx_attr_t* attr_list );
         void process_rel_tag ( int attr_cnt, const hpx_attr_t* attr_list );
 
-        void process_osm_param ( osm_draw_type_t& draw_type, osm_draw_type_t new_type, const char* const name );
-        void process_building ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& node_info );
-        void process_unused ( osm_draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor );
+        void process_osm_param ( draw_type_t& draw_type, draw_type_t new_type, const char* const name );
+        void process_building ( draw_type_t& draw_type, const osm_tag_ctx_t& node_info );
+        void process_unused ( draw_type_t& draw_type, const osm_tag_ctx_t& xml_tags, const ssearcher& bor );
         void log_node ( const char* const name, osm_id_t id, const osm_tag_ctx_t& node_info );
 
         void nodes_init ( void );

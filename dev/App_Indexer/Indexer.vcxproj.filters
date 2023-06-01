@@ -13,6 +13,9 @@
     <Filter Include="tools\processor">
       <UniqueIdentifier>{cf12492e-e4f2-4a5e-bd96-5bf49a7468af}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tools\types">
+      <UniqueIdentifier>{4ac1c682-36b1-477f-8840-a905948c1a22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\ssearch.cpp">
@@ -24,10 +27,10 @@
     <ClCompile Include="..\common\libhpxml.c">
       <Filter>tools\xml</Filter>
     </ClCompile>
-    <ClCompile Include="1_Indexer.cpp" />
     <ClCompile Include="..\common\osm_processor.cpp">
       <Filter>tools\processor</Filter>
     </ClCompile>
+    <ClCompile Include="Indexer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\ssearch.h">
@@ -44,6 +47,9 @@
     </ClInclude>
     <ClInclude Include="..\common\osm_processor.h">
       <Filter>tools\processor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\types\osm_types_idx.h">
+      <Filter>tools\types</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

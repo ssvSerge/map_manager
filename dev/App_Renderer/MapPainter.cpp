@@ -7,8 +7,7 @@
 
 #include <GeographicLib/Geodesic.hpp>
 
-#include <geo/geo_idx.h>
-#include <geo/geo_file.h>
+#include <idx_file.h>
 
 IMPLEMENT_DYNAMIC ( CMapPainter, CStatic )
 
@@ -22,10 +21,9 @@ BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
     ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
-static geo_idx_record_t g_geo_idx;
-static geo_indexer_t    g_geo_idx_file;
-static geo_parser_t     g_geo_parser;
-static geo_file_t       g_geo_file;
+static    vector_geo_idx_rec_t   g_idx_list;
+static    vector_uint_t          g_rects_list;
+
 
 static std::string      g_idx_name;
 static std::string      g_map_name;
@@ -46,28 +44,77 @@ CMapPainter::CMapPainter () {
 
     g_idx_name = "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt";
     g_map_name = "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt";
-
-    g_geo_file.set_name ( g_map_name.c_str() );
-
-    g_geo_idx_file.set_idx_name ( g_idx_name.c_str() );
-    g_geo_idx_file.set_map_name ( g_map_name.c_str() );
-    g_geo_idx_file.load_idx_file();
 }
 
 CMapPainter::~CMapPainter () {
 }
 
+void CMapPainter::_load_idx ( void ) {
+
+    geo_parser_t    parser;
+    std::ifstream   idx_file;
+    geo_idx_rec_t   geo_idx;
+    geo_offset_t    file_offset = 0;
+    char            ch;
+    bool            eoc;
+    bool            eor;
+
+    idx_file.open(g_idx_name, std::ios_base::binary);
+
+    while (idx_file.read(&ch, 1)) {
+
+        parser.load_param(ch, eoc, file_offset);
+        file_offset++;
+
+        if (!eoc) {
+            continue;
+        }
+
+        parser.process_idx(geo_idx, eor);
+
+        if (!eor) {
+            continue;
+        }
+
+        g_idx_list.push_back(geo_idx);
+    }
+}
+
+bool CMapPainter::_is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice ) {
+
+    if (window.min_lon < slice.max_lon) {
+        return false;
+    }
+    if (window.max_lon < slice.min_lon) {
+        return false;
+    }
+    if (window.max_lat < slice.min_lat) {
+        return false;
+    }
+    if (window.min_lat < slice.max_lat) {
+        return false;
+    }
+
+    return true;
+}
+
+void CMapPainter::_find_rects ( const geo_rect_t& base_rect, vector_uint_t& out_list ) {
+
+    for (uint32_t i = 0; i < g_rects_list.size(); i++) {
+        if ( _is_overlapped(base_rect, g_idx_list[i].m_rect ) ) {
+            out_list.push_back(i);
+        }
+    }
+}
+
 void CMapPainter::test ( const geo_rect_t& rect ) {
 
-    vector_geo_off_t    geo_cache;
-    list_geo_objs_t     geo_map;
-    list_geo_objs_t     draw_map;
+    vector_uint_t  rects_list;
 
-    g_geo_idx_file.cache_region ( rect, geo_cache );
-    g_geo_file.load_by_idx ( geo_cache, geo_map );
-    g_geo_file.trim_by_rect ( rect, geo_map, draw_map );
+    _load_idx();
+    _find_rects ( rect, rects_list );
 
-    g_geo_idx_file.prepare_window ( rect );
+    (void)(rects_list);
 }
 
 void CMapPainter::OnPaint ( void ) {

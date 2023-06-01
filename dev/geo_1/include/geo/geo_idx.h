@@ -85,7 +85,7 @@ class geo_indexer_t {
         }
 
         private:
-            bool _is_verlapped ( const geo_rect_t& window, const geo_rect_t& slice ) {
+            bool _is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice ) {
                 if (window.min_lon < slice.max_lon) {
                     return false;
                 }

@@ -16,9 +16,6 @@
     <Filter Include="lib">
       <UniqueIdentifier>{1efe7dda-3ca0-4c05-8219-9c4b71e78072}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GeoLib">
-      <UniqueIdentifier>{bc5f284b-81b9-449e-9f08-d823048ca3bc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Clipper">
       <UniqueIdentifier>{f78d5546-70e4-4fb8-97ee-5d7469d6acd4}</UniqueIdentifier>
     </Filter>
@@ -44,33 +41,6 @@
     </ClInclude>
     <ClInclude Include="MapPainter.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GeoCache.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LexItem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_idx.h">
-      <Filter>GeoLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_lex.h">
-      <Filter>GeoLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_line.h">
-      <Filter>GeoLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_obj.h">
-      <Filter>GeoLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_param.h">
-      <Filter>GeoLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_parser.h">
-      <Filter>GeoLib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\geo\include\geo\geo_types.h">
-      <Filter>GeoLib</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

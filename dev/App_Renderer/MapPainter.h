@@ -2,8 +2,7 @@
 
 #define WM_MAP_UPDATE (WM_USER + 1)
 
-#include <geo/geo_idx.h>
-
+#include <geo_types.h>
 
 class CMapPainter : public CStatic {
 
@@ -30,6 +29,9 @@ class CMapPainter : public CStatic {
         afx_msg BOOL OnEraseBkgnd  ( CDC* pDC );
 
     private:
+        bool _is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice );
+        void _load_idx ( void );
+        void _find_rects ( const geo_rect_t& base_rect, vector_uint_t& out_list );
         void test ( const geo_rect_t& rect );
 
     private:
