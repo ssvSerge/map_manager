@@ -9,6 +9,11 @@
 #undef min
 #endif
 
+#include <set>
+#include <vector>
+#include <list>
+#include <string>
+
 #include <clipper2/clipper.h>
 #include <geo_types_draw.h>
 
@@ -20,6 +25,7 @@ typedef Clipper2Lib::PathD                  geo_path_t;
 typedef Clipper2Lib::PathsD                 vector_geo_path_t;
 typedef std::vector<vector_geo_path_t>      vector_vector_geo_path_t;
 typedef uint32_t                            geo_offset_t;
+typedef std::set<geo_offset_t>              set_offset_t;
 typedef std::vector<geo_offset_t>           vector_geo_offset_t;
 typedef std::vector<vector_geo_offset_t>    vector_vector_geo_offset_t;
 typedef std::list<geo_offset_t>             list_geo_offset_t;
@@ -110,6 +116,7 @@ class geo_record_t {
 };
 
 typedef std::list<geo_record_t> list_geo_record_t;
+typedef std::vector<geo_record_t> vector_geo_record_t;
 
 typedef struct tag_lex_ctx {
     const char* p;

@@ -32,6 +32,8 @@ class CMapPainter : public CStatic {
         bool _is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice );
         void _load_idx ( void );
         void _find_rects ( const geo_rect_t& base_rect, vector_uint_t& out_list );
+        void _merge ( const vector_uint_t& idx_list, vector_uint_t& map_entries );
+        void _load_map ( const vector_uint_t& map_entries, list_geo_record_t& map_items );
         void test ( const geo_rect_t& rect );
 
     private:

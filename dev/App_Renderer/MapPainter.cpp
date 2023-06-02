@@ -23,6 +23,7 @@ END_MESSAGE_MAP()
 
 static    vector_geo_idx_rec_t   g_idx_list;
 static    vector_uint_t          g_rects_list;
+static    list_geo_record_t      g_map_list;
 
 
 static std::string      g_idx_name;
@@ -82,16 +83,18 @@ void CMapPainter::_load_idx ( void ) {
 
 bool CMapPainter::_is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice ) {
 
-    if (window.min_lon < slice.max_lon) {
+    if ( window.min_lon > slice.max_lon ) {
         return false;
     }
-    if (window.max_lon < slice.min_lon) {
+    if ( window.max_lon < slice.min_lon ) {
         return false;
     }
-    if (window.max_lat < slice.min_lat) {
+
+    if ( window.min_lat > slice.max_lat ) {
         return false;
     }
-    if (window.min_lat < slice.max_lat) {
+
+    if ( window.max_lat < slice.min_lat ) {
         return false;
     }
 
@@ -100,21 +103,80 @@ bool CMapPainter::_is_overlapped ( const geo_rect_t& window, const geo_rect_t& s
 
 void CMapPainter::_find_rects ( const geo_rect_t& base_rect, vector_uint_t& out_list ) {
 
-    for (uint32_t i = 0; i < g_rects_list.size(); i++) {
+    for (uint32_t i = 0; i < g_idx_list.size(); i++) {
         if ( _is_overlapped(base_rect, g_idx_list[i].m_rect ) ) {
             out_list.push_back(i);
         }
     }
 }
 
+void CMapPainter::_merge ( const vector_uint_t& in_list, vector_uint_t& map_entries ) {
+
+    set_offset_t tmp_map;
+    size_t sub_idx;
+
+    map_entries.clear();
+
+    for ( size_t i = 0; i < in_list.size(); i++ ) {
+        sub_idx = in_list[i];
+        for (size_t y = 0; y < g_idx_list[sub_idx].m_list_off.size(); y++) {
+            tmp_map.insert(g_idx_list[sub_idx].m_list_off[y] );
+        }
+    }
+
+    for (auto it = tmp_map.cbegin(); it != tmp_map.cend(); it++) {
+        map_entries.push_back( *it );
+    }
+
+    std::sort ( map_entries.begin(), map_entries.end() );
+}
+
+void CMapPainter::_load_map ( const vector_uint_t& map_entries, list_geo_record_t& map_items ) {
+
+    geo_parser_t    parser;
+    geo_record_t    map_entry;
+    std::ifstream   map_file;
+    char            ch;
+    bool            eoc;
+    bool            eor;
+
+    map_file.open ( g_map_name, std::ios_base::binary );
+
+    for ( auto it = map_entries.cbegin(); it != map_entries.cend(); it++ ) {
+
+        map_file.seekg( *it, map_file.beg );
+
+        while ( map_file.read(&ch, 1) ) {
+
+            parser.load_param(ch, eoc, 0);
+            if ( !eoc ) {
+                continue;
+            }
+
+            parser.process_map (map_entry, eor );
+
+            if ( !eor ) {
+                continue;
+            }
+
+            map_items.push_back ( map_entry );
+
+            break;
+        }
+
+    }
+
+}
+
 void CMapPainter::test ( const geo_rect_t& rect ) {
 
     vector_uint_t  rects_list;
+    vector_uint_t  map_entrie;
 
     _load_idx();
     _find_rects ( rect, rects_list );
-
-    (void)(rects_list);
+    _merge ( rects_list, map_entrie );
+    _load_map ( map_entrie, g_map_list );
 }
 
 void CMapPainter::OnPaint ( void ) {
@@ -128,12 +190,12 @@ void CMapPainter::OnPaint ( void ) {
 
     CPaintDC dc ( this );
 
+    x = m_BasePosition.x;
+    y = m_BasePosition.y;
+
     if (m_DragActive) {
-        x = m_BasePosition.x + m_DeltaX;
-        y = m_BasePosition.y + m_DeltaY;
-    } else {
-        x = m_BasePosition.x;
-        y = m_BasePosition.y;
+        x += m_DeltaX;
+        y += m_DeltaY;
     }
 
     GetClientRect ( clientRect );
