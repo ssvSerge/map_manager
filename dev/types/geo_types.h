@@ -20,16 +20,20 @@
 #define CNT(x)          ( sizeof(x) / sizeof(x[0]) )
 #define MSG_LEN         ( 128 )
 
-typedef Clipper2Lib::PointD                 geo_coords_t;
-typedef Clipper2Lib::PathD                  geo_path_t;
-typedef Clipper2Lib::PathsD                 vector_geo_path_t;
-typedef std::vector<vector_geo_path_t>      vector_vector_geo_path_t;
-typedef uint32_t                            geo_offset_t;
-typedef std::set<geo_offset_t>              set_offset_t;
-typedef std::vector<geo_offset_t>           vector_geo_offset_t;
-typedef std::vector<vector_geo_offset_t>    vector_vector_geo_offset_t;
-typedef std::list<geo_offset_t>             list_geo_offset_t;
-typedef std::vector<uint32_t>               vector_uint_t;
+typedef Clipper2Lib::PointD                         geo_coord_t;
+typedef Clipper2Lib::PathD                          v_geo_coord_t;
+typedef Clipper2Lib::PathsD                         vv_geo_coords_t;
+typedef std::vector<vv_geo_coords_t>                vvv_geo_coords_t;
+typedef int32_t                                     geo_color_t;
+
+typedef uint32_t                                    geo_offset_t;
+typedef std::set<geo_offset_t>                      set_offset_t;
+typedef std::vector<geo_offset_t>                   vector_geo_offset_t;
+typedef std::vector<vector_geo_offset_t>            vector_vector_geo_offset_t;
+typedef std::list<geo_offset_t>                     list_geo_offset_t;
+typedef std::vector<uint32_t>                       vector_uint_t;
+
+#define GEO_RGB(r,g,b)                              { (r<<24) | (g<<16) | (b) }
 
 typedef enum tag_obj_type {
 
@@ -93,15 +97,15 @@ typedef std::vector<obj_type_t>   vector_geo_obj_t;
 class geo_record_t {
 
     public:
-        obj_type_t          m_geo_type;
-        obj_type_t          m_prime_type;
-        geo_offset_t        m_prime_off;
-        size_t              m_record_id;
+        obj_type_t              m_geo_type;
+        obj_type_t              m_prime_type;
+        geo_offset_t            m_prime_off;
+        size_t                  m_record_id;
 
-        vector_geo_obj_t    m_child_roles;
-        vector_geo_obj_t    m_child_types;
-        vector_uint_t       m_child_areas;
-        vector_geo_path_t   m_child_lines;
+        vector_geo_obj_t        m_child_roles;
+        vector_geo_obj_t        m_child_types;
+        vector_uint_t           m_child_areas;
+        vv_geo_coords_t         m_child_lines;
 
     public:
         void clear() {
@@ -307,11 +311,11 @@ class geo_parser_t {
 
         void process_map ( geo_record_t& geo_obj, bool& eor ) {
 
-            obj_type_t      code = OBJID_UNDEF;
-            geo_coords_t    geo_coords;
-            geo_path_t      empty_path;
-            obj_type_t      type;
-            size_t          record_id = geo_obj.m_record_id;
+            obj_type_t         code = OBJID_UNDEF;
+            geo_coord_t        geo_coords;
+            v_geo_coord_t      empty_path;
+            obj_type_t         type;
+            size_t             record_id = geo_obj.m_record_id;
 
             eor = false;
 
@@ -441,7 +445,7 @@ class geo_parser_t {
             return true;
         }
 
-        void _load ( geo_coords_t& coords ) {
+        void _load ( geo_coord_t& coords ) {
             sscanf_s ( m_geo_param.value.msg, "%lf %lf", &coords.y, &coords.x );
         }
 

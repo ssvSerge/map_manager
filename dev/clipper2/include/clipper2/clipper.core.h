@@ -583,10 +583,10 @@ namespace Clipper2Lib
   inline void CheckPrecision(int& precision, int& error_code)
   {
     
-    if (precision >= -16 && precision <= 16) return;
+    if (precision >= -24 && precision <= 24) return;
     error_code |= precision_error_i; // non-fatal error
     DoError(precision_error_i);      // unless exceptions enabled
-    precision = precision > 16 ? 16 : -16;
+    precision = precision > 24 ? 24 : -24;
   }
 
   inline void CheckPrecision(int& precision)

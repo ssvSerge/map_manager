@@ -79,20 +79,20 @@ static void _find_box ( void ) {
 
     bool first_entry = true;
 
-    auto enum_coords = [&first_entry] ( const geo_coords_t& coord ) {
-        if (first_entry) {
+    auto enum_coords = [&first_entry] ( const geo_coord_t& coord ) {
+        if ( first_entry ) {
             first_entry = false;
             g_x_min = g_x_max = coord.x;
             g_y_min = g_y_max = coord.y;
         } else {
-            g_x_min = std::min(g_x_min, coord.x);
-            g_x_max = std::max(g_x_max, coord.x);
-            g_y_min = std::min(g_y_min, coord.y);
-            g_y_max = std::max(g_y_max, coord.y);
+            g_x_min = std::min ( g_x_min, coord.x );
+            g_x_max = std::max ( g_x_max, coord.x );
+            g_y_min = std::min ( g_y_min, coord.y );
+            g_y_max = std::max ( g_y_max, coord.y );
         }
     };
 
-    auto enum_lines = [enum_coords] ( const geo_path_t& geo_path ) {
+    auto enum_lines = [enum_coords] ( const v_geo_coord_t& geo_path ) {
         std::for_each(geo_path.cbegin(), geo_path.cend(), enum_coords);
     };
 
@@ -125,7 +125,7 @@ static void _find_scale ( void ) {
 
 }
 
-static void _log_index ( const vector_geo_path_t& in_rect, size_t id ) {
+static void _log_index ( const vv_geo_coords_t& in_rect, size_t id ) {
 
     char tmp[80];
 
@@ -156,9 +156,9 @@ static void _log_index ( const vector_geo_path_t& in_rect, size_t id ) {
     std::cout << std::endl;
 }
 
-static void _scan_rect ( const vector_geo_path_t& in_rect, size_t id ) {
+static void _scan_rect ( const vv_geo_coords_t& in_rect, size_t id ) {
 
-    vector_geo_path_t  tmp;
+    vv_geo_coords_t  tmp;
 
     auto it_ptr = g_geo_record_list.cbegin();
 
@@ -190,10 +190,9 @@ static void _slicing ( void ) {
     double      y_max   = g_y_max - g_step_ver;
     double      y_step  = g_step_ver;
 
-    geo_coords_t        pt;
-    vector_geo_path_t   rect;
-
-    vector_vector_geo_path_t   slicer_rects;
+    geo_coord_t         pt;
+    vv_geo_coords_t     rect;
+    vvv_geo_coords_t    slicer_rects;
 
     rect.clear();
     rect.resize(1);
