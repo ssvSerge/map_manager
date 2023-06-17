@@ -31,9 +31,16 @@ typedef std::set<geo_offset_t>                      set_offset_t;
 typedef std::vector<geo_offset_t>                   vector_geo_offset_t;
 typedef std::vector<vector_geo_offset_t>            vector_vector_geo_offset_t;
 typedef std::list<geo_offset_t>                     list_geo_offset_t;
-typedef std::vector<uint32_t>                       vector_uint_t;
+typedef std::vector<uint32_t>                       vector_uint32_t;
+typedef std::vector<uint64_t>                       vector_uint64_t;
 
-#define GEO_RGB(r,g,b)                              { (r<<24) | (g<<16) | (b) }
+#define GEO_RGB(dst,la,lr,lg,lb)                    { dst.a=la; dst.r=lr; dst.g=lg; dst.b=lb; }
+
+class paint_rect_t {
+    public:
+        geo_coord_t min;
+        geo_coord_t max;
+};
 
 typedef enum tag_obj_type {
 
@@ -67,6 +74,7 @@ typedef enum tag_obj_type {
 
         OBJID_XTYPE,
         OBJID_XCNT,
+        OBJID_XREF,
 
         OBJID_ROLE_OUTER,
         OBJID_ROLE_INNER,
@@ -101,10 +109,13 @@ class geo_record_t {
         obj_type_t              m_prime_type;
         geo_offset_t            m_prime_off;
         size_t                  m_record_id;
+        uint64_t                m_osm_ref;
+
+        v_geo_coord_t           m_paint_pos;
 
         vector_geo_obj_t        m_child_roles;
         vector_geo_obj_t        m_child_types;
-        vector_uint_t           m_child_areas;
+        vector_uint32_t         m_child_areas;
         vv_geo_coords_t         m_child_lines;
 
     public:
@@ -240,11 +251,13 @@ class geo_idx_rec_t {
     public:
         geo_rect_t              m_rect;
         vector_geo_offset_t     m_list_off;
+        uint64_t                m_osm_id;
 
     public:
         void clear() {
             m_rect.clear();
             m_list_off.clear();
+            m_osm_id = 0;
         }
 };
 
@@ -252,51 +265,53 @@ typedef std::list<geo_idx_rec_t>    list_geo_idx_rec_t;
 typedef std::vector<geo_idx_rec_t>  vector_geo_idx_rec_t;
 
 static const lex_ctx_t g_lex_map[] = {
-    { "RECORD",     "AREA",        OBJID_RECORD_AREA },
-    { "RECORD",     "BUILDING",    OBJID_RECORD_BUILDING },
-    { "RECORD",     "HIGHWAY",     OBJID_RECORD_HIGHWAY },
-    { "XTYPE",      "",            OBJID_XTYPE },
-    { "XCNT",       "",            OBJID_XCNT },
-    { "ROLE",       "OUTER",       OBJID_ROLE_OUTER },
-    { "ROLE",       "INNER",       OBJID_ROLE_INNER },
-    { "TYPE",       "",            OBJID_TYPE },
-    { "SIZE",       "",            OBJID_SIZE },
-    { "C",          "",            OBJID_COORDS },
-    { "ROLE",       "END",         OBJID_ROLE_END },
-    { "RECORD",     "END",         OBJID_RECORD_END },
+    { "RECORD",     "AREA",         OBJID_RECORD_AREA },
+    { "RECORD",     "BUILDING",     OBJID_RECORD_BUILDING },
+    { "RECORD",     "HIGHWAY",      OBJID_RECORD_HIGHWAY },
+    { "XTYPE",      "",             OBJID_XTYPE },
+    { "XCNT",       "",             OBJID_XCNT },
+    { "ROLE",       "OUTER",        OBJID_ROLE_OUTER },
+    { "ROLE",       "INNER",        OBJID_ROLE_INNER },
+    { "TYPE",       "",             OBJID_TYPE },
+    { "SIZE",       "",             OBJID_SIZE },
+    { "C",          "",             OBJID_COORDS },
+    { "ROLE",       "END",          OBJID_ROLE_END },
+    { "RECORD",     "END",          OBJID_RECORD_END },
+    { "REF",        "",             OBJID_XREF },
 };
 
 static const lex_ctx_t g_lex_types[] = {
-    { "",  "ASPHALT",   OBJID_TYPE_ASPHALT   },
-    { "",  "WATER",     OBJID_TYPE_WATER     },
-    { "",  "FOREST",    OBJID_TYPE_FOREST    },
-    { "",  "GRASS",     OBJID_TYPE_GRASS     },
-    { "",  "GENERAL",   OBJID_TYPE_GENERAL   },
-    { "",  "MOUNTAIN",  OBJID_TYPE_MOUNTAIN  },
-    { "",  "STONE",     OBJID_TYPE_STONE     },
-    { "",  "SAND",      OBJID_TYPE_SAND      },
-    { "",  "UNDEFINED", OBJID_TYPE_UNDEFINED },
-    { "",  "BUILDING",  OBJID_TYPE_BUILDING  },
-    { "",  "FOOTWAY",   OBJID_TYPE_FOOTWAY   },
-    { "",  "ROAD",      OBJID_TYPE_ROAD      },
-    { "",  "SECONDARY", OBJID_TYPE_SECONDARY },
-    { "",  "TRUNK",     OBJID_TYPE_TRUNK     },
-    { "",  "MOTORWAY",  OBJID_TYPE_MOTORWAY  },
-    { "",  "PRIMARY",   OBJID_TYPE_PRIMARY   },
-    { "",  "TERTIARY",  OBJID_TYPE_TERTIARY  },
-    { "",  "RAILWAY",   OBJID_TYPE_RAILWAY   },
-    { "",  "RIVER",     OBJID_TYPE_RIVER     },
-    { "",  "BRIDGE",    OBJID_TYPE_BRIDGE    },
-    { "",  "TUNNEL",    OBJID_TYPE_TUNNEL    },
+    { "",  "ASPHALT",               OBJID_TYPE_ASPHALT   },
+    { "",  "WATER",                 OBJID_TYPE_WATER     },
+    { "",  "FOREST",                OBJID_TYPE_FOREST    },
+    { "",  "GRASS",                 OBJID_TYPE_GRASS     },
+    { "",  "GENERAL",               OBJID_TYPE_GENERAL   },
+    { "",  "MOUNTAIN",              OBJID_TYPE_MOUNTAIN  },
+    { "",  "STONE",                 OBJID_TYPE_STONE     },
+    { "",  "SAND",                  OBJID_TYPE_SAND      },
+    { "",  "UNDEFINED",             OBJID_TYPE_UNDEFINED },
+    { "",  "BUILDING",              OBJID_TYPE_BUILDING  },
+    { "",  "FOOTWAY",               OBJID_TYPE_FOOTWAY   },
+    { "",  "ROAD",                  OBJID_TYPE_ROAD      },
+    { "",  "SECONDARY",             OBJID_TYPE_SECONDARY },
+    { "",  "TRUNK",                 OBJID_TYPE_TRUNK     },
+    { "",  "MOTORWAY",              OBJID_TYPE_MOTORWAY  },
+    { "",  "PRIMARY",               OBJID_TYPE_PRIMARY   },
+    { "",  "TERTIARY",              OBJID_TYPE_TERTIARY  },
+    { "",  "RAILWAY",               OBJID_TYPE_RAILWAY   },
+    { "",  "RIVER",                 OBJID_TYPE_RIVER     },
+    { "",  "BRIDGE",                OBJID_TYPE_BRIDGE    },
+    { "",  "TUNNEL",                OBJID_TYPE_TUNNEL    },
 };
 
 static const lex_ctx_t g_lex_idx[] = {
-    { "IDX",        "RECT",        OBJID_IDX_BEGIN },
-    { "POSITION",   "",            OBJID_IDX_RECT },
-    { "OFF",        "BEGIN",       OBJID_IDX_MEMBERS_BEGIN },
-    { "M",          "",            OBJID_IDX_MEMBER },
-    { "OFF",        "END",         OBJID_IDX_MEMBERS_END },
-    { "IDX",        "END",         OBJID_IDX_END },
+    { "IDX",        "RECT",         OBJID_IDX_BEGIN },
+    { "POSITION",   "",             OBJID_IDX_RECT },
+    { "OFF",        "BEGIN",        OBJID_IDX_MEMBERS_BEGIN },
+    { "M",          "",             OBJID_IDX_MEMBER },
+    { "REF",        "",             OBJID_XREF },
+    { "OFF",        "END",          OBJID_IDX_MEMBERS_END },
+    { "IDX",        "END",          OBJID_IDX_END },
 };
 
 class geo_parser_t {
@@ -315,6 +330,7 @@ class geo_parser_t {
             geo_coord_t        geo_coords;
             v_geo_coord_t      empty_path;
             obj_type_t         type;
+            uint64_t           osm_id;
             size_t             record_id = geo_obj.m_record_id;
 
             eor = false;
@@ -340,13 +356,18 @@ class geo_parser_t {
                     geo_obj.m_prime_type = type;
                     break;
 
+               case OBJID_XREF:
+                    sscanf_s ( m_geo_param.value.msg, "%lld", &osm_id );
+                    geo_obj.m_osm_ref = osm_id;
+                    break;
+
                 case OBJID_XCNT:
                     uint32_t cnt;
                     sscanf_s ( m_geo_param.value.msg, "%d", &cnt );
-                    geo_obj.m_child_roles.resize(cnt);
-                    geo_obj.m_child_types.resize(cnt);
-                    geo_obj.m_child_areas.resize(cnt);
-                    geo_obj.m_child_lines.resize(cnt);
+                    geo_obj.m_child_roles.resize ( cnt );
+                    geo_obj.m_child_types.resize ( cnt );
+                    geo_obj.m_child_areas.resize ( cnt );
+                    geo_obj.m_child_lines.resize ( cnt );
                     break;
 
                 case OBJID_ROLE_OUTER:
@@ -387,6 +408,7 @@ class geo_parser_t {
 
         void process_idx ( geo_idx_rec_t& geo_idx, bool& eor ) {
 
+            uint64_t    ref;
             obj_type_t  code = OBJID_UNDEF;
 
             eor = false;
@@ -415,6 +437,11 @@ class geo_parser_t {
                     geo_offset_t off;
                     sscanf_s(m_geo_param.value.msg, "%d", &off);
                     geo_idx.m_list_off.push_back(off);
+                    break;
+
+                case OBJID_XREF:
+                    sscanf_s(m_geo_param.value.msg, "%lld", &ref);
+                    geo_idx.m_osm_id = ref;
                     break;
 
                 case OBJID_IDX_MEMBERS_END:

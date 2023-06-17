@@ -234,15 +234,16 @@ static void _log_role ( const char* const out_type, draw_type_t draw_type, doubl
     _log_key ( KEYNAME_ROLE, KEYPARAM_END, true );
 }
 
-static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt ) {
+static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt, uint64_t osm_ref ) {
 
     if (cnt != 1) {
         cnt = cnt;
     }
 
-    _log_key ( KEYNAME_RECORD, name );
-    _log_key ( KEYNAME_XTYPE,  _type_to_str(draw_type) );
-    _log_key ( KEYNAME_CONTER, cnt, true);
+    _log_key ( KEYNAME_RECORD,  name );
+    _log_key ( KEYNAME_XTYPE,   _type_to_str(draw_type) );
+    _log_key ( KEYNAME_CONTER,  cnt);
+    _log_key ( KEYNAME_OSM_REF, osm_ref, true );
 }
 
 static void _log_footer() {
@@ -253,7 +254,7 @@ static void _log_area ( const char* name, const storeway_t& way ) {
 
     double area = _calc_area<list_storeinfo_t> ( way.refs );
 
-    _log_header ( name, way.type, 1 );
+    _log_header ( name, way.type, 1, way.id );
     _log_role   ( KEYPARAM_OUTER, way.type, area, way.refs );
     _log_footer ();
     std::cout << std::endl;
@@ -267,7 +268,7 @@ static void _log_relation ( const char* name, const storerels_t& rel, const list
     cnt += out.size();
     cnt += inl.size();
 
-    _log_header ( name, rel.type, cnt );
+    _log_header ( name, rel.type, cnt, rel.id );
 
     for (auto it = out.begin(); it != out.end(); it++ ) {
         area = _calc_area<list_obj_node_t> ( it->refs );
@@ -290,7 +291,7 @@ static void _log_road ( const storeway_t& way ) {
 
     cnt += way.refs.size();
 
-    _log_header ( KEYNAME_HIGHWAY, way.type, cnt );
+    _log_header ( KEYNAME_HIGHWAY, way.type, cnt, way.id );
     _log_key ( KEYNAME_ROLE, KEYPARAM_COORDS );
 
     auto it = way.refs.begin();

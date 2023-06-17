@@ -15,6 +15,7 @@
 #define KEYNAME_COORDINATES    "C"
 #define KEYNAME_INDEX          "IDX"
 #define KEYNAME_POSITION       "POSITION"
+#define KEYNAME_OSM_REF        "REF"
 
 #define KEYPARAM_BEGIN         "BEGIN"
 #define KEYPARAM_END           "END"

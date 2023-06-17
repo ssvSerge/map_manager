@@ -23,11 +23,11 @@ BEGIN_MESSAGE_MAP(CAppRendererDlg, CDialogEx)
     ON_MESSAGE(WM_MAP_UPDATE,    &CAppRendererDlg::OnMapUpdate)
 END_MESSAGE_MAP()
 
-CAppRendererDlg::CAppRendererDlg(CWnd* pParent /*=nullptr*/) : CDialogEx(IDD_APP_REMDERER_DIALOG, pParent) {
+CAppRendererDlg::CAppRendererDlg ( CWnd* pParent /*=nullptr*/ ) : CDialogEx(IDD_APP_REMDERER_DIALOG, pParent) {
     m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-void CAppRendererDlg::DoDataExchange(CDataExchange* pDX) {
+void CAppRendererDlg::DoDataExchange ( CDataExchange* pDX ) {
     CDialogEx::DoDataExchange(pDX);
     DDX_Control ( pDX, IDC_EDIT_LON,	m_EditLon );
     DDX_Control ( pDX, IDC_EDIT_LAT,	m_EditLat );
@@ -35,7 +35,7 @@ void CAppRendererDlg::DoDataExchange(CDataExchange* pDX) {
     DDX_Control ( pDX, IDC_MAP_PAINTER,	m_MapRender );
 }
 
-BOOL CAppRendererDlg::OnInitDialog() {
+BOOL CAppRendererDlg::OnInitDialog () {
 
     CDialogEx::OnInitDialog ();
 
@@ -51,7 +51,7 @@ BOOL CAppRendererDlg::OnInitDialog() {
     return TRUE;
 }
 
-void CAppRendererDlg::UpdateParams(void) {
+void CAppRendererDlg::UpdateParams ( void ) {
 
     CString val;
 
@@ -75,7 +75,7 @@ void CAppRendererDlg::UpdateText ( double val, CEdit& edit ) {
     edit.SetWindowText(fmt_text);
 }
 
-void CAppRendererDlg::OnPaint() {
+void CAppRendererDlg::OnPaint () {
 
     if ( IsIconic() ) {
 
@@ -97,15 +97,15 @@ void CAppRendererDlg::OnPaint() {
     }
 }
 
-HCURSOR CAppRendererDlg::OnQueryDragIcon() {
+HCURSOR CAppRendererDlg::OnQueryDragIcon () {
     return static_cast<HCURSOR>(m_hIcon);
 }
 
-void CAppRendererDlg::OnBnClickedTest() {
+void CAppRendererDlg::OnBnClickedTest () {
     CDialogEx::OnCancel();
 }
 
-void CAppRendererDlg::OnBnClickedZoomIn() {
+void CAppRendererDlg::OnBnClickedZoomIn () {
 
     CString str;
     m_EditScale.GetWindowText(str);
@@ -118,7 +118,7 @@ void CAppRendererDlg::OnBnClickedZoomIn() {
     m_EditScale.SetWindowText(str);
 }
 
-void CAppRendererDlg::OnBnClickedZoomOut() {
+void CAppRendererDlg::OnBnClickedZoomOut () {
 
     CString str;
     m_EditScale.GetWindowText(str);
@@ -131,19 +131,19 @@ void CAppRendererDlg::OnBnClickedZoomOut() {
     m_EditScale.SetWindowText(str);
 }
 
-void CAppRendererDlg::OnEnUpdateEditLon() {
+void CAppRendererDlg::OnEnUpdateEditLon () {
 }
                              
-void CAppRendererDlg::OnEnUpdateEditLat() {
+void CAppRendererDlg::OnEnUpdateEditLat () {
 }
 
-void CAppRendererDlg::OnEnUpdateEditScale() {
+void CAppRendererDlg::OnEnUpdateEditScale () {
 }
 
-void CAppRendererDlg::OnBnClickedCmdMap() {
+void CAppRendererDlg::OnBnClickedCmdMap () {
 }
 
-LRESULT CAppRendererDlg::OnMapUpdate(WPARAM wParam, LPARAM lParam) {
+LRESULT CAppRendererDlg::OnMapUpdate ( WPARAM wParam, LPARAM lParam ) {
 
     double lon;
     double lat;

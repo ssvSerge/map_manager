@@ -202,6 +202,17 @@ namespace Clipper2Lib
       return Point(x - b.x, y - b.y);
     }
 
+    bool operator< (const Point& b) const {
+        bool result = false;
+        if ( b.x < x ) {
+            result = true;
+        }
+        if ( b.y < y ) {
+            result = true;
+        }
+        return result;
+    }
+
     inline void Negate() { x = -x; y = -y; }
 
   };

@@ -3,6 +3,7 @@
 #ifdef min
     #undef min
 #endif
+
 #ifdef max
     #undef max
 #endif
@@ -50,8 +51,9 @@ CMapPainter::CMapPainter () {
     m_lon		     = 0;
     m_lat		     = 0;
     m_scale		     = 0;
-    m_delta_lat      = 0;
-    m_delta_lon      = 0;
+    m_delta_hor      = 0;
+    m_delta_ver      = 0;
+    m_paint_dc       = nullptr;
 
     g_idx_name = "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt";
     g_map_name = "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt";
@@ -111,7 +113,7 @@ bool CMapPainter::_is_overlapped ( const geo_rect_t& window, const geo_rect_t& s
     return true;
 }
 
-void CMapPainter::_find_rects ( const vector_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, vector_uint_t& out_list ) {
+void CMapPainter::_find_rects ( const vector_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, vector_uint32_t& out_list ) {
 
     for (uint32_t i = 0; i < rect_list.size(); i++) {
         if ( _is_overlapped(base_rect, rect_list[i].m_rect ) ) {
@@ -120,7 +122,7 @@ void CMapPainter::_find_rects ( const vector_geo_idx_rec_t& rect_list, const geo
     }
 }
 
-void CMapPainter::_merge ( const vector_geo_idx_rec_t& rect_list, const vector_uint_t& in_list, vector_uint_t& map_entries ) {
+void CMapPainter::_merge ( const vector_geo_idx_rec_t& rect_list, const vector_uint32_t& in_list, vector_uint32_t& map_entries ) {
 
     set_offset_t tmp_map;
     size_t sub_idx;
@@ -141,7 +143,7 @@ void CMapPainter::_merge ( const vector_geo_idx_rec_t& rect_list, const vector_u
     std::sort ( map_entries.begin(), map_entries.end() );
 }
 
-void CMapPainter::_load_map ( const vector_uint_t& map_entries, list_geo_record_t& map_items ) {
+void CMapPainter::_load_map ( const vector_uint32_t& map_entries, list_geo_record_t& map_items ) {
 
     geo_parser_t    parser;
     geo_record_t    map_entry;
@@ -221,7 +223,7 @@ void CMapPainter::_ajust_plus ( const geo_rect_t& base_rect, double scale_x, dou
     #endif
 }
 
-void CMapPainter::_trim_record ( const geo_rect_t& base_rect, const geo_rect_t& window_rect, const geo_record_t& src_record, geo_record_t& dst_record, bool& trim_res ) {
+void CMapPainter::_trim_record ( const geo_rect_t& window_rect, const geo_record_t& src_record, geo_record_t& dst_record, bool& trim_res ) {
 
     geo_rect_t          trim_rect;
 
@@ -233,8 +235,6 @@ void CMapPainter::_trim_record ( const geo_rect_t& base_rect, const geo_rect_t& 
 
     static int          stop_cnt = 0;
     stop_cnt++;
-
-    (void) (base_rect);
 
     trim_res = false;
 
@@ -253,6 +253,7 @@ void CMapPainter::_trim_record ( const geo_rect_t& base_rect, const geo_rect_t& 
     dst_record.m_prime_type = src_record.m_prime_type;
     dst_record.m_prime_off  = src_record.m_prime_off;
     dst_record.m_record_id  = src_record.m_record_id;
+    dst_record.m_osm_ref    = src_record.m_osm_ref;
 
     trim_in.resize ( 1 );
 
@@ -286,7 +287,7 @@ void CMapPainter::_trim_record ( const geo_rect_t& base_rect, const geo_rect_t& 
     return;
 }
 
-void CMapPainter::_trim_map ( const geo_rect_t& base_rect, const geo_rect_t& window_rect, const list_geo_record_t& src_map, list_geo_record_t& dst_map ) {
+void CMapPainter::_trim_map ( const geo_rect_t& window_rect, const list_geo_record_t& src_map, list_geo_record_t& dst_map ) {
 
     geo_record_t out_record;
     bool trim_res;
@@ -295,7 +296,7 @@ void CMapPainter::_trim_map ( const geo_rect_t& base_rect, const geo_rect_t& win
 
     auto src_it = src_map.cbegin();
     while ( src_it != src_map.cend() ) {
-        _trim_record ( base_rect, window_rect, *src_it, out_record, trim_res );
+        _trim_record ( window_rect, *src_it, out_record, trim_res );
         if ( trim_res ) {
             dst_map.push_back(out_record);
         }
@@ -366,141 +367,202 @@ void CMapPainter::_test_range ( const list_geo_record_t& list_rec ) {
     }
 }
 
+void CMapPainter::_process_area ( geo_record_t& record ) {
+
+    paint_rect_t    draw_rect;
+
+    record.m_paint_pos.clear();
+
+    draw_rect.min.x = draw_rect.max.x = record->m_child_lines[0].x;
+
+    for (size_t i = 1; i < record.m_child_areas.size(); i++) {
+        draw_rect.min.x = std::min(draw_rect.min.x, poly_line[i].x);
+        draw_rect.max.x = std::max(draw_rect.max.x, poly_line[i].x);
+        draw_rect.min.y = std::min(draw_rect.min.y, poly_line[i].y);
+        draw_rect.max.y = std::max(draw_rect.max.y, poly_line[i].y);
+    }
+
+}
+
+void CMapPainter::_process_areas ( list_geo_record_t& geo_records ) {
+    for ( auto it = geo_records.begin(); it != geo_records.end(); it++ ) {
+        _process_area ( *it );
+    }
+}
+
 void CMapPainter::test ( const geo_rect_t& draw_rect ) {
 
-    vector_uint_t  rects_list;
-    vector_uint_t  map_entrie;
+    vector_uint32_t  rects_list;
+    vector_uint32_t  map_entrie;
 
     _load_idx       ( g_idx_list );
     _find_base_rect ( g_idx_list,   g_base_rect );
     _find_rects     ( g_idx_list,   draw_rect, rects_list );
     _merge          ( g_idx_list,   rects_list, map_entrie );
     _load_map       ( map_entrie,   g_map_list );
-    _trim_map       ( g_base_rect,  draw_rect, g_map_list, g_draw_list );
-    _geo_to_window  ( draw_rect,    m_delta_lon, m_delta_lon, g_draw_list );
+    _process_areas  ( g_map_list );
+    _trim_map       ( draw_rect,    g_map_list, g_draw_list );
+    _geo_to_window  ( draw_rect,    m_delta_hor, m_delta_ver, g_draw_list );
     _test_range     ( g_draw_list );
 }
 
-void CMapPainter::_set_pixel ( const int32_t x, const int32_t y, const geo_color_t color ) {
+void CMapPainter::_flood_fill ( int x, int y, int fill_color, int border_color ) {
 
-    CPoint pt;
+    (void) (x);
+    (void) (y);
+    (void) (fill_color);
+    (void) (border_color);
 
-    pt.x = x;
-    pt.y = y;
+    #if 0
+    int         x_left, x_right, YY, i;
+    int         XMAX, YMAX;
+    geo_color_t px_color;
 
-    m_paint_dc->SetPixel ( pt, color );
-}
+    XMAX = m_client_rect.Width();
+    YMAX = m_client_rect.Height();
 
-void CMapPainter::_draw_line ( const geo_coord_t p1, const geo_coord_t p2, const geo_color_t color ) {
+    x_left = x_right = x;
 
-    int32_t x1 = static_cast<int32_t> (p1.x); 
-    int32_t y1 = static_cast<int32_t> (p1.y); 
-    int32_t x2 = static_cast<int32_t> (p2.x); 
-    int32_t y2 = static_cast<int32_t> (p2.y);
+    while ( x_left > 0 ) {
 
-    const int deltaX = abs(x2 - x1);
-    const int deltaY = abs(y2 - y1);
-    const int signX = x1 < x2 ? 1 : -1;
-    const int signY = y1 < y2 ? 1 : -1;
-    int error = deltaX - deltaY;
-
-    _set_pixel ( x2, y2, color );
-
-    while (x1 != x2 || y1 != y2) {
-
-        _set_pixel ( x1, y1, color );
-
-        int error2 = error * 2;
-
-        if (error2 > -deltaY) {
-            error -= deltaY;
-            x1    += signX;
+        _get_pixel ( x_left, y, px_color );
+        if ( px_color != border_color ) {
+            break;
         }
 
-        if ( error2 < deltaX ) {
-            error += deltaX;
-            y1 += signY;
+        _set_pixel ( x_left, y, fill_color );
+        x_left--;
+    }
+
+    x_right++;
+    while ( x_right < XMAX ) {
+
+        _get_pixel ( x_right, y, px_color );
+        if ( px_color != border_color ) {
+            break;
+        }
+
+        _set_pixel ( x_right, y, fill_color );
+        x_right++;
+    }
+    
+    x = (x_right + x_left) >> 1;
+
+    for ( i = -1; i <= 1; i += 2 ) {
+
+        YY = y;
+
+        while (GetPixel(x, YY) != border_color && YY < YMAX && YY>0) {
+            YY += i;
+        }
+
+        YY = (y + YY) >> 1;
+
+        if ( GetPixel(x, YY) != border_color && GetPixel(x, YY) != fill_color ) {
+            _flood_fill ( x, YY, fill_color, border_color );
         }
     }
-}
 
-void CMapPainter::_draw_poly_line ( const v_geo_coord_t& poly_line, const geo_color_t color ) {
+    for (YY = y - 1; YY <= y + 1; YY += 2) {
 
-    if (poly_line.size() < 2) {
-        return;
+        x = x_left + 1;
+
+        while (x < x_right && YY>0 && YY < YMAX) {
+
+            if (GetPixel(x, YY) != border_color && GetPixel(x, YY) != fill_color) {
+                _flood_fill(x, YY, fill_color, border_color);
+            }
+
+            x++;
+        }
     }
 
-    geo_coord_t p1, p2;
-
-    auto it = poly_line.cbegin();
-
-    p1 = *it;
-
-    it++;
-    while ( it != poly_line.cend() ) {
-
-        p2 =  p1;
-        p1 = *it;
-
-        _draw_line ( p2, p1, color );
-
-        it++;
-    }
-
+    #endif
 }
 
-void CMapPainter::_map_color ( obj_type_t geo_type, geo_color_t& geo_color ) {
+void CMapPainter::_map_color ( obj_type_t geo_type, screen_pix_t& border_color, screen_pix_t& fill_color ) {
+
+    int shift = 80;
 
     switch (geo_type) {
-        case OBJID_TYPE_FOREST:       geo_color = GEO_RGB(   0, 100,   0 ); break;
-        case OBJID_TYPE_GRASS:        geo_color = GEO_RGB(   0, 200,   0 ); break;
-        case OBJID_TYPE_ASPHALT:      geo_color = GEO_RGB( 100, 100, 100 ); break;
-        case OBJID_TYPE_BUILDING:     geo_color = GEO_RGB(  80, 100, 120 ); break;
+        //----------------------------------------------//
+        //                          A    R    G    B    //
+        //----------------------------------------------//
+        case OBJID_TYPE_FOREST:       
+            GEO_RGB ( border_color, 255,   0,  80,   0 ); 
+            fill_color = border_color.Shift( shift );
+            break;
 
-        case OBJID_TYPE_WATER:        geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_GENERAL:      geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_MOUNTAIN:     geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_STONE:        geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_SAND:         geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_UNDEFINED:    geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_FOOTWAY:      geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_ROAD:         geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_SECONDARY:    geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_TRUNK:        geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_MOTORWAY:     geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_PRIMARY:      geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_TERTIARY:     geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_RAILWAY:      geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_RIVER:        geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_BRIDGE:       geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_TYPE_TUNNEL:       geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_RECORD_AREA:       geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_RECORD_BUILDING:   geo_color = GEO_RGB(0,0,0);   break;
-        case OBJID_RECORD_HIGHWAY:    geo_color = GEO_RGB(0,0,0);   break;
+        case OBJID_TYPE_GRASS:        
+            GEO_RGB ( border_color, 255,   0, 180,   0 ); 
+            fill_color = border_color.Shift( shift );
+            break;
+
+        case OBJID_TYPE_ASPHALT:      
+            GEO_RGB ( border_color, 255,  80,  80,  80 ); 
+            fill_color = border_color.Shift( shift );
+            break;
+
+        case OBJID_TYPE_BUILDING:     
+            GEO_RGB ( border_color, 255,  60, 80,  100 ); 
+            fill_color = border_color.Shift( shift );
+            break;
+
+        case OBJID_TYPE_WATER:        GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_GENERAL:      GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_MOUNTAIN:     GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_STONE:        GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_SAND:         GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_UNDEFINED:    GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_FOOTWAY:      GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_ROAD:         GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_SECONDARY:    GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_TRUNK:        GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_MOTORWAY:     GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_PRIMARY:      GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_TERTIARY:     GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_RAILWAY:      GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_RIVER:        GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_BRIDGE:       GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_TYPE_TUNNEL:       GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_RECORD_AREA:       GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_RECORD_BUILDING:   GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
+        case OBJID_RECORD_HIGHWAY:    GEO_RGB ( border_color, 0, 0, 0, 0 );   break;
 
         default:
-            geo_color = GEO_RGB(0, 0, 200);   
+            GEO_RGB(border_color, 0, 0, 0, 0);
+            fill_color = border_color.Shift( shift );
             break;
     }
 }
 
 void CMapPainter::_paint_map ( const list_geo_record_t& draw_list, CPaintDC& dc, CRect& clientRect ) {
 
-    geo_color_t color;
+    static int entry_cnt = 0;
+    int id = 0;
 
-    (void)(dc);
-    (void)(clientRect);
+    screen_pix_t border_color;
+    screen_pix_t fill_color;
 
-    color = 0;
+    (void) (dc);
+
+    m_screen.Init ( clientRect.Width(), clientRect.Height() );
 
     for ( auto geo_record = draw_list.cbegin(); geo_record != draw_list.cend(); geo_record++ ) {
-        for ( size_t i = 0; i < geo_record->m_child_lines.size(); i++ ) {
-            if ( geo_record->m_geo_type == OBJID_RECORD_AREA ) {
-                _map_color       ( geo_record->m_child_types[i], color );
-                _draw_poly_line  ( geo_record->m_child_lines[i], color );
+
+        if ( 1 ) { // ( id == entry_cnt )
+            for ( size_t i = 0; i < geo_record->m_child_lines.size(); i++ ) {
+                if ( geo_record->m_geo_type == OBJID_RECORD_AREA ) {
+                    _map_color ( geo_record->m_child_types[i], border_color, fill_color );
+                    m_screen.PolyLine ( geo_record->m_child_lines[i], border_color );
+                }
             }
         }
-    }    
+
+        id++;
+    }
+
+    entry_cnt++;
 }
 
 void CMapPainter::OnPaint ( void ) {
@@ -508,9 +570,10 @@ void CMapPainter::OnPaint ( void ) {
     int	x;
     int	y;
 
-    CRect       clientRect;
-    CRgn        clientRgn;
-    geo_rect_t  geo_rect;
+    geo_rect_t      geo_rect;
+    geo_coord_t     pos;
+    screen_pix_t    inpClr;
+    COLORREF        outClr;
 
     CPaintDC dc ( this );
 
@@ -519,18 +582,21 @@ void CMapPainter::OnPaint ( void ) {
     x = m_BasePosition.x;
     y = m_BasePosition.y;
 
-    if (m_DragActive) {
+    if ( m_DragActive ) {
         x += m_DeltaX;
         y += m_DeltaY;
     }
 
-    GetClientRect ( clientRect );
+    GetClientRect ( m_client_rect );
 
-    double geo_cache_width  = clientRect.Width();
-    double geo_cache_height = clientRect.Height();
+    m_client_rect.right  += 0;
+    m_client_rect.bottom += 0;
 
-    geo_cache_width  *= ( m_delta_lon / m_scale );
-    geo_cache_height *= ( m_delta_lat / m_scale );
+    double geo_cache_width  = m_client_rect.Width() - 1;
+    double geo_cache_height = m_client_rect.Height() - 1;
+
+    geo_cache_width  *= ( m_delta_hor / m_scale );
+    geo_cache_height *= ( m_delta_ver / m_scale );
 
     geo_rect.min_lon = m_lon;
     geo_rect.min_lat = m_lat;
@@ -539,13 +605,23 @@ void CMapPainter::OnPaint ( void ) {
 
     test ( geo_rect );
 
-    // clientRgn.CreateRectRgnIndirect ( clientRect );
-    // dc.SelectClipRgn ( &clientRgn );
-    dc.FillSolidRect ( clientRect, RGB(180, 180, 180) );
-    _paint_map ( g_draw_list, dc, clientRect );
+    CRect  draw_rect = m_client_rect;
 
-    // dc.TextOut ( x, y, TEXT("TextOut Samples") );
-    // dc.SelectClipRgn ( NULL );
+    _paint_map ( g_draw_list, dc, draw_rect );
+
+    for ( y = 0; y < m_client_rect.Height(); y++ ) {
+        for ( x = 0; x < m_client_rect.Width(); x++ ) {
+
+            pos.x = x;
+            pos.y = y;
+
+            m_screen.GetPix( pos, inpClr );
+            outClr = RGB(inpClr.r, inpClr.g, inpClr.b );
+
+            dc.SetPixel( x, y, outClr );
+            dc.SetPixel( x, y+1, RGB(0,0,0) );
+        }
+    }
 }
 
 void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {
@@ -608,21 +684,21 @@ void CMapPainter::OnLButtonUp ( UINT nFlags, CPoint point ) {
     (void)(nFlags);
     (void)(point);
 
-    double new_lon;
-    double new_lat;
+    double new_hor;
+    double new_ver;
 
     if ( m_DragActive ) {
 
         m_DragActive = false;
 
-        new_lon = m_lon + m_delta_lon * m_DeltaX;
-        new_lat = m_lat + m_delta_lat * m_DeltaY;
+        new_hor = m_lon + m_delta_hor * m_DeltaX;
+        new_ver = m_lat + m_delta_ver * m_DeltaY;
 
         m_BasePosition.x = m_BasePosition.x + m_DeltaX;
         m_BasePosition.y = m_BasePosition.y + m_DeltaY;
 
-        m_lon = new_lon;
-        m_lat = new_lat;
+        m_lon = new_hor;
+        m_lat = new_ver;
 
         Invalidate(1);
         UpdateWindow();
@@ -648,15 +724,15 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale ) {
 
     double shift_hor;
     geod.Inverse ( m_lat, m_lon, m_lat, m_lon + delta_hor, shift_hor );
-    m_delta_lon  = delta_hor / shift_hor;
-    m_delta_lon /= scale;
+    m_delta_hor  = delta_hor / shift_hor;
+    m_delta_hor /= scale;
 
     double shift_ver;
     geod.Inverse ( m_lat, m_lon, m_lat + delta_ver, m_lon, shift_ver );
-    m_delta_lat  = delta_ver / shift_ver;
-    m_delta_lat /= scale;
+    m_delta_ver  = delta_ver / shift_ver;
+    m_delta_ver /= scale;
 
-    CRect			client_rect;
+    CRect client_rect;
 
     GetClientRect ( &client_rect );
 
@@ -664,10 +740,10 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale ) {
     double delta_height;
 
     delta_width  = client_rect.Width();
-    delta_width *= m_delta_lon;
+    delta_width *= m_delta_hor;
 
     delta_height  = client_rect.Height();
-    delta_height *= m_delta_lat;
+    delta_height *= m_delta_ver;
 
     #if 1
         geod.Inverse ( m_lat, m_lon, m_lat,  m_lon + delta_width, shift_hor );
