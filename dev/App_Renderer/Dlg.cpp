@@ -156,7 +156,6 @@ LRESULT CAppRendererDlg::OnMapUpdate ( WPARAM wParam, LPARAM lParam ) {
 
     UpdateText(lon, m_EditLon);
     UpdateText(lat, m_EditLat);
-    // UpdateText(scale, m_EditScale);
 
     return 0;
 }

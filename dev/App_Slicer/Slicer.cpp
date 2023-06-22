@@ -34,8 +34,8 @@ double              g_step_hor          = 0;
 
 std::atomic<size_t>         g_pending_cnt  = 0;
 geo_record_t                g_geo_record;
-list_geo_record_t           g_geo_record_list;
-vector_vector_geo_offset_t  g_scan_result;
+l_geo_record_t              g_geo_record_list;
+vv_geo_offset_t             g_scan_result;
 
 static void _log_pair ( const char* const key, const char* const val, bool cr ) {
 
@@ -125,11 +125,11 @@ static void _find_scale ( void ) {
 
 }
 
-static void _log_index ( const vv_geo_coords_t& in_rect, size_t id ) {
+static void _log_index ( const vv_geo_coord_t& in_rect, size_t id ) {
 
     char tmp[80];
 
-    vector_geo_offset_t*  res_ptr = nullptr;
+    v_geo_offset_t*  res_ptr = nullptr;
 
     res_ptr = &g_scan_result[id];
 
@@ -156,9 +156,9 @@ static void _log_index ( const vv_geo_coords_t& in_rect, size_t id ) {
     std::cout << std::endl;
 }
 
-static void _scan_rect ( const vv_geo_coords_t& in_rect, size_t id ) {
+static void _scan_rect ( const vv_geo_coord_t& in_rect, size_t id ) {
 
-    vv_geo_coords_t  tmp;
+    vv_geo_coord_t  tmp;
 
     auto it_ptr = g_geo_record_list.cbegin();
 
@@ -191,8 +191,8 @@ static void _slicing ( void ) {
     double      y_step  = g_step_ver;
 
     geo_coord_t         pt;
-    vv_geo_coords_t     rect;
-    vvv_geo_coords_t    slicer_rects;
+    vv_geo_coord_t      rect;
+    vvv_geo_coord_t     slicer_rects;
 
     rect.clear();
     rect.resize(1);

@@ -15,32 +15,25 @@
 #include <string>
 
 #include <clipper2/clipper.h>
-#include <geo_types_draw.h>
 
 #define CNT(x)          ( sizeof(x) / sizeof(x[0]) )
 #define MSG_LEN         ( 128 )
 
 typedef Clipper2Lib::PointD                         geo_coord_t;
 typedef Clipper2Lib::PathD                          v_geo_coord_t;
-typedef Clipper2Lib::PathsD                         vv_geo_coords_t;
-typedef std::vector<vv_geo_coords_t>                vvv_geo_coords_t;
+typedef Clipper2Lib::PathsD                         vv_geo_coord_t;
+typedef std::vector<vv_geo_coord_t>                 vvv_geo_coord_t;
 typedef int32_t                                     geo_color_t;
 
 typedef uint32_t                                    geo_offset_t;
 typedef std::set<geo_offset_t>                      set_offset_t;
-typedef std::vector<geo_offset_t>                   vector_geo_offset_t;
-typedef std::vector<vector_geo_offset_t>            vector_vector_geo_offset_t;
+typedef std::vector<geo_offset_t>                   v_geo_offset_t;
+typedef std::vector<v_geo_offset_t>                 vv_geo_offset_t;
 typedef std::list<geo_offset_t>                     list_geo_offset_t;
-typedef std::vector<uint32_t>                       vector_uint32_t;
+typedef std::vector<uint32_t>                       v_uint32_t;
 typedef std::vector<uint64_t>                       vector_uint64_t;
 
 #define GEO_RGB(dst,la,lr,lg,lb)                    { dst.a=la; dst.r=lr; dst.g=lg; dst.b=lb; }
-
-class paint_rect_t {
-    public:
-        geo_coord_t min;
-        geo_coord_t max;
-};
 
 typedef enum tag_obj_type {
 
@@ -100,26 +93,37 @@ typedef enum tag_obj_type {
 
 }   obj_type_t;
 
-typedef std::vector<obj_type_t>   vector_geo_obj_t;
+typedef std::vector<obj_type_t>   v_geo_obj_t;
+
+class paint_wnd_t {
+    public:
+        int32_t   x;
+        int32_t   y;
+};
+
+typedef std::vector<paint_wnd_t>    v_paint_wnd_t;
+typedef std::vector<v_paint_wnd_t>  vv_paint_wnd_t;
 
 class geo_record_t {
 
     public:
+        uint32_t                entry_offset;
         obj_type_t              m_geo_type;
         obj_type_t              m_prime_type;
         geo_offset_t            m_prime_off;
         size_t                  m_record_id;
         uint64_t                m_osm_ref;
 
+        v_geo_obj_t             m_child_roles;
+        v_geo_obj_t             m_child_types;
+        v_uint32_t              m_child_areas;
+        vv_geo_coord_t          m_child_lines;
+        vv_paint_wnd_t          m_child_wnd_lines;
         v_geo_coord_t           m_paint_pos;
-
-        vector_geo_obj_t        m_child_roles;
-        vector_geo_obj_t        m_child_types;
-        vector_uint32_t         m_child_areas;
-        vv_geo_coords_t         m_child_lines;
 
     public:
         void clear() {
+            entry_offset   = 0;
             m_prime_off    = 0;
             m_record_id    = 0;
             m_prime_type   = OBJID_UNDEF;
@@ -128,10 +132,15 @@ class geo_record_t {
             m_child_areas.clear();
             m_child_lines.clear();
         }
+
+        bool operator==(const uint32_t rhs) const {
+            return this->entry_offset == rhs;
+        }
+
 };
 
-typedef std::list<geo_record_t> list_geo_record_t;
-typedef std::vector<geo_record_t> vector_geo_record_t;
+typedef std::list<geo_record_t>     l_geo_record_t;
+typedef std::vector<geo_record_t>   v_geo_record_t;
 
 typedef struct tag_lex_ctx {
     const char* p;
@@ -240,18 +249,43 @@ class geo_rect_t {
         }
 
     public:
-        double   min_lon;
-        double   min_lat;
-        double   max_lon;
-        double   max_lat;
+        double   min_lon = -333;
+        double   min_lat = -333;
+        double   max_lon = -333;
+        double   max_lat = -333;
+};
+
+class window_rect_t {
+
+    public:
+        window_rect_t() {
+            min_x = 0;
+            min_y = 0;
+            max_x = 0;
+            max_y = 0;
+        }
+
+        int32_t width() const {
+            return (max_x - min_x);
+        }
+
+        int32_t height() const {
+            return (max_y - min_y);
+        }
+
+    public:
+        int32_t  min_x;
+        int32_t  min_y;
+        int32_t  max_x;
+        int32_t  max_y;
 };
 
 class geo_idx_rec_t {
 
     public:
-        geo_rect_t              m_rect;
-        vector_geo_offset_t     m_list_off;
-        uint64_t                m_osm_id;
+        geo_rect_t         m_rect;
+        v_geo_offset_t     m_list_off;
+        uint64_t           m_osm_id;
 
     public:
         void clear() {

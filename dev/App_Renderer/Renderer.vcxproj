@@ -66,7 +66,7 @@
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -92,7 +92,7 @@
       <PreprocessorDefinitions>_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -111,6 +111,12 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\types\geo_processor.h" />
+    <ClInclude Include="..\types\geo_types.h" />
+    <ClInclude Include="..\types\geo_types_draw.h" />
+    <ClInclude Include="..\types\idx_file.h" />
+    <ClInclude Include="..\types\osm_types_idx.h" />
+    <ClInclude Include="..\types\types_generic.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="Dlg.h" />
     <ClInclude Include="framework.h" />
@@ -126,6 +132,7 @@
     <ClCompile Include="..\geographiclib\src\Geodesic.cpp" />
     <ClCompile Include="..\geographiclib\src\GeodesicLine.cpp" />
     <ClCompile Include="..\geographiclib\src\Math.cpp" />
+    <ClCompile Include="..\types\geo_processor.cpp" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Dlg.cpp" />
     <ClCompile Include="MapPainter.cpp" />

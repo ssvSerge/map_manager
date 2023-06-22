@@ -21,8 +21,8 @@ class geo_idx_record_t {
         }
 
     public:
-        vv_geo_coords_t         m_rect;
-        vector_geo_offset_t     m_memembers;
+        vv_geo_coord_t     m_rect;
+        v_geo_offset_t     m_memembers;
 };
 
 #endif
