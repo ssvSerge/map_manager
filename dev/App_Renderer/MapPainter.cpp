@@ -24,15 +24,7 @@ BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
     ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
-// static vector_geo_idx_rec_t   g_idx_list;
-// static geo_rect_t             g_base_rect;
-// static list_geo_record_t      g_map_list;
-// static list_geo_record_t      g_draw_list;
-// static std::string            g_idx_name;
-// static std::string            g_map_name;
-
 static geo_processor_t    g_geo_processor;
-
 
 CMapPainter::CMapPainter () {
 
@@ -49,20 +41,25 @@ CMapPainter::CMapPainter () {
     m_delta_ver      = 0;
     m_paint_dc       = nullptr;
 
-    geo_coord_t center;
-    window_rect_t wnd;
+    geo_coord_t  center;
+    paint_rect_t wnd;
+    geo_pixel_t clr;
 
     center.y = 50.0368000;
     center.x = 14.3385000;
 
-    wnd.max_x = 628;
-    wnd.max_y = 514;
+    wnd.max.x = 628;
+    wnd.max.y = 514;
+
+    clr.r = clr.g = clr.b = 180;
 
     g_geo_processor.set_names ( 
         "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt", 
         "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt" 
     ); 
 
+    g_geo_processor.alloc_buffer ( wnd.width(), wnd.height() );
+    g_geo_processor.fill_solid(clr);
     g_geo_processor.cache_init();
     g_geo_processor.set_base_params ( center, 1.0, wnd );
     g_geo_processor.set_angle(0);
@@ -91,26 +88,25 @@ void CMapPainter::OnPaint ( void ) {
 
     GetClientRect ( m_client_rect );
 
-    // _process_areas(g_map_list);
-    // _trim_map(draw_rect, g_map_list, g_draw_list);
-    // _geo_to_window(draw_rect, m_delta_hor, m_delta_ver, g_draw_list);
-    // _test_range(g_draw_list);
+    g_geo_processor.process_wnd();
 
-    // double geo_cache_width  = m_client_rect.Width()  - 1;
-    // double geo_cache_height = m_client_rect.Height() - 1;
-    // geo_cache_width        *= ( m_delta_hor / m_scale );
-    // geo_cache_height       *= ( m_delta_ver / m_scale );
+    paint_pos_t     pos;
+    geo_pixel_t     px;
+    COLORREF        outClr = 0;
 
-    #if 0
-    COLORREF outClr = 0;
-    for ( y = 0; y < m_client_rect.Height(); y++ ) {
-        for ( x = 0; x < m_client_rect.Width(); x++ ) {
-            outClr++;
-            dc.SetPixel( x, y, outClr );
-            dc.SetPixel( x, y+1, RGB(0,0,0) );
+    for (y = 0; y < m_client_rect.Height(); y++) {
+        for (x = 0; x < m_client_rect.Width(); x++) {
+
+            pos.x = x;
+            pos.y = y;
+
+            g_geo_processor.get_pix( pos, px );
+            outClr = RGB (px.r, px.g, px.b);
+
+            dc.SetPixel(x, y, outClr);
+            dc.SetPixel(x, y + 1, RGB(0, 0, 0));
         }
     }
-    #endif
 
 }
 

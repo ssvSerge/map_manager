@@ -97,7 +97,11 @@ static void _find_box ( void ) {
     };
 
     auto enum_geo_records = [enum_lines] ( const geo_record_t& geo_record ) {
-        std::for_each (geo_record.m_child_lines.cbegin(), geo_record.m_child_lines.cend(), enum_lines );
+        std::for_each (
+            geo_record.m_geo_lines.cbegin(),
+            geo_record.m_geo_lines.cend(),
+            enum_lines 
+        );
     };
 
     std::for_each ( g_geo_record_list.cbegin(), g_geo_record_list.cend(), enum_geo_records );
@@ -164,7 +168,7 @@ static void _scan_rect ( const vv_geo_coord_t& in_rect, size_t id ) {
 
     while ( it_ptr != g_geo_record_list.cend() ) {
 
-        tmp = Clipper2Lib::Intersect(it_ptr->m_child_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13);
+        tmp = Clipper2Lib::Intersect ( it_ptr->m_geo_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13 );
 
         if ( tmp.size() > 0 ) {
             g_scan_result[id].push_back(it_ptr->m_prime_off);

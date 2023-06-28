@@ -33,7 +33,7 @@ typedef std::list<geo_offset_t>                     list_geo_offset_t;
 typedef std::vector<uint32_t>                       v_uint32_t;
 typedef std::vector<uint64_t>                       vector_uint64_t;
 
-#define GEO_RGB(dst,la,lr,lg,lb)                    { dst.a=la; dst.r=lr; dst.g=lg; dst.b=lb; }
+// #define GEO_RGB(dst,la,lr,lg,lb)                    { dst.a=la; dst.r=lr; dst.g=lg; dst.b=lb; }
 
 typedef enum tag_obj_type {
 
@@ -95,14 +95,96 @@ typedef enum tag_obj_type {
 
 typedef std::vector<obj_type_t>   v_geo_obj_t;
 
-class paint_wnd_t {
+class paint_pos_t {
+    public:
+        paint_pos_t ( int32_t in_x, int32_t in_y ) {
+            x = in_x;
+            y = in_y;
+        }
+
+        paint_pos_t() {
+            x = 0;
+            y = 0;
+        }
+
     public:
         int32_t   x;
         int32_t   y;
 };
 
-typedef std::vector<paint_wnd_t>    v_paint_wnd_t;
-typedef std::vector<v_paint_wnd_t>  vv_paint_wnd_t;
+typedef std::vector<paint_pos_t>       v_paint_coord_t;
+typedef std::vector<v_paint_coord_t>   vv_paint_coord_t;
+
+class geo_rect_t {
+
+    public:
+        void clear() {
+            min.x = -333;
+            min.y = -333;
+            max.x = -333;
+            max.y = -333;
+        }
+
+        void load(const char* const val) {
+            (void)sscanf_s( val, "%lf %lf %lf %lf", &min.x, &min.y, &max.x, &max.y );
+        }
+
+    public:
+        geo_coord_t min;
+        geo_coord_t max;
+};
+
+typedef std::vector<geo_rect_t>   v_geo_rect_t;
+
+class paint_rect_t {
+
+    public:
+        paint_rect_t() {
+            min.x = 0;
+            min.y = 0;
+            max.x = 0;
+            max.y = 0;
+        }
+
+        int32_t width() const {
+            return (max.x - min.x);
+        }
+
+        int32_t height() const {
+            return (max.y - min.y);
+        }
+
+    public:
+        paint_pos_t min;
+        paint_pos_t max;
+};
+
+class geo_ctx_t {
+
+    public:
+        void resize(size_t len) {
+            m_roles.resize(len);
+            m_types.resize(len);
+            m_areas.resize(len);
+            m_fill_pt.resize(len);
+            m_rects.resize(len);
+        }
+
+        void clear() {
+            m_roles.clear();
+            m_types.clear();
+            m_areas.clear();
+            m_fill_pt.clear();
+            m_rects.clear();
+        }
+
+    public:
+        v_geo_obj_t             m_roles;
+        v_geo_obj_t             m_types;
+        v_uint32_t              m_areas;
+        v_geo_coord_t           m_fill_pt;
+        v_geo_rect_t            m_rects;
+};
 
 class geo_record_t {
 
@@ -114,12 +196,9 @@ class geo_record_t {
         size_t                  m_record_id;
         uint64_t                m_osm_ref;
 
-        v_geo_obj_t             m_child_roles;
-        v_geo_obj_t             m_child_types;
-        v_uint32_t              m_child_areas;
-        vv_geo_coord_t          m_child_lines;
-        vv_paint_wnd_t          m_child_wnd_lines;
-        v_geo_coord_t           m_paint_pos;
+        vv_geo_coord_t          m_geo_lines;
+        vv_paint_coord_t        m_wnd_lines;
+        geo_ctx_t               m_geo_ctx;
 
     public:
         void clear() {
@@ -127,10 +206,9 @@ class geo_record_t {
             m_prime_off    = 0;
             m_record_id    = 0;
             m_prime_type   = OBJID_UNDEF;
-            m_child_roles.clear();
-            m_child_types.clear();
-            m_child_areas.clear();
-            m_child_lines.clear();
+            m_geo_ctx.clear();
+            m_geo_lines.clear();
+            m_wnd_lines.clear();
         }
 
         bool operator==(const uint32_t rhs) const {
@@ -234,52 +312,6 @@ class geo_param_t {
         bool         direction;
 };
 
-class geo_rect_t {
-
-    public:
-        void clear() {
-            min_lon = -333;
-            min_lat = -333;
-            max_lon = -333;
-            max_lat = -333;
-        }
-
-        void load(const char* const val) {
-            (void)sscanf_s( val, "%lf %lf %lf %lf", &min_lon, &min_lat, &max_lon, &max_lat);
-        }
-
-    public:
-        double   min_lon = -333;
-        double   min_lat = -333;
-        double   max_lon = -333;
-        double   max_lat = -333;
-};
-
-class window_rect_t {
-
-    public:
-        window_rect_t() {
-            min_x = 0;
-            min_y = 0;
-            max_x = 0;
-            max_y = 0;
-        }
-
-        int32_t width() const {
-            return (max_x - min_x);
-        }
-
-        int32_t height() const {
-            return (max_y - min_y);
-        }
-
-    public:
-        int32_t  min_x;
-        int32_t  min_y;
-        int32_t  max_x;
-        int32_t  max_y;
-};
-
 class geo_idx_rec_t {
 
     public:
@@ -295,8 +327,8 @@ class geo_idx_rec_t {
         }
 };
 
-typedef std::list<geo_idx_rec_t>    list_geo_idx_rec_t;
-typedef std::vector<geo_idx_rec_t>  vector_geo_idx_rec_t;
+typedef std::list<geo_idx_rec_t>    l_geo_idx_rec_t;
+typedef std::vector<geo_idx_rec_t>  v_geo_idx_rec_t;
 
 static const lex_ctx_t g_lex_map[] = {
     { "RECORD",     "AREA",         OBJID_RECORD_AREA },
@@ -398,15 +430,13 @@ class geo_parser_t {
                 case OBJID_XCNT:
                     uint32_t cnt;
                     sscanf_s ( m_geo_param.value.msg, "%d", &cnt );
-                    geo_obj.m_child_roles.resize ( cnt );
-                    geo_obj.m_child_types.resize ( cnt );
-                    geo_obj.m_child_areas.resize ( cnt );
-                    geo_obj.m_child_lines.resize ( cnt );
+                    geo_obj.m_geo_ctx.resize ( cnt );
+                    geo_obj.m_geo_lines.resize ( cnt );
                     break;
 
                 case OBJID_ROLE_OUTER:
                 case OBJID_ROLE_INNER:
-                    geo_obj.m_child_roles[record_id] = code;
+                    geo_obj.m_geo_ctx.m_roles[record_id] = code;
                     break;
 
                 case OBJID_TYPE:
@@ -414,18 +444,18 @@ class geo_parser_t {
                     if ( type == OBJID_UNDEF ) {
                         type = geo_obj.m_prime_type;
                     }
-                    geo_obj.m_child_types[record_id] = type;
+                    geo_obj.m_geo_ctx.m_types[record_id] = type;
                     break;
 
                 case OBJID_SIZE:
                     uint32_t size;
                     sscanf_s(m_geo_param.value.msg, "%d", &size );
-                    geo_obj.m_child_areas[record_id] = size;
+                    geo_obj.m_geo_ctx.m_areas[record_id] = size;
                     break;
 
                 case OBJID_COORDS:
                     _load(geo_coords);
-                    geo_obj.m_child_lines[record_id].push_back(geo_coords);
+                    geo_obj.m_geo_lines[record_id].push_back(geo_coords);
                     break;
 
                 case OBJID_ROLE_END:
