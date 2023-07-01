@@ -95,16 +95,30 @@ typedef enum tag_obj_type {
 
 typedef std::vector<obj_type_t>   v_geo_obj_t;
 
-class paint_pos_t {
+class paint_coord_t {
+
     public:
-        paint_pos_t ( int32_t in_x, int32_t in_y ) {
+        paint_coord_t( int32_t in_x, int32_t in_y ) {
             x = in_x;
             y = in_y;
         }
 
-        paint_pos_t() {
+        paint_coord_t() {
             x = 0;
             y = 0;
+        }
+
+        bool operator== ( const paint_coord_t& ref ) const {
+            
+            if ( (this->x != ref.x) || (this->y != ref.y) ) {
+                return false;
+            }
+
+            return true;
+        }
+
+        bool operator!= ( const paint_coord_t& ref ) const {
+            return ! this->operator==(ref);
         }
 
     public:
@@ -112,7 +126,7 @@ class paint_pos_t {
         int32_t   y;
 };
 
-typedef std::vector<paint_pos_t>       v_paint_coord_t;
+typedef std::vector<paint_coord_t>     v_paint_coord_t;
 typedef std::vector<v_paint_coord_t>   vv_paint_coord_t;
 
 class geo_rect_t {
@@ -155,8 +169,8 @@ class paint_rect_t {
         }
 
     public:
-        paint_pos_t min;
-        paint_pos_t max;
+        paint_coord_t min;
+        paint_coord_t max;
 };
 
 class geo_ctx_t {
@@ -182,19 +196,19 @@ class geo_ctx_t {
         v_geo_obj_t             m_roles;
         v_geo_obj_t             m_types;
         v_uint32_t              m_areas;
-        v_geo_coord_t           m_fill_pt;
+        v_paint_coord_t         m_fill_pt;
         v_geo_rect_t            m_rects;
 };
 
 class geo_record_t {
 
     public:
-        uint32_t                entry_offset;
-        obj_type_t              m_geo_type;
-        obj_type_t              m_prime_type;
-        geo_offset_t            m_prime_off;
-        size_t                  m_record_id;
-        uint64_t                m_osm_ref;
+        uint32_t                entry_offset = 0;
+        obj_type_t              m_geo_type   = OBJID_UNDEF;
+        obj_type_t              m_prime_type = OBJID_UNDEF;
+        geo_offset_t            m_prime_off  = 0;
+        size_t                  m_record_id  = 0;
+        uint64_t                m_osm_ref    = 0;
 
         vv_geo_coord_t          m_geo_lines;
         vv_paint_coord_t        m_wnd_lines;

@@ -43,7 +43,7 @@ CMapPainter::CMapPainter () {
 
     geo_coord_t  center;
     paint_rect_t wnd;
-    geo_pixel_t clr;
+    geo_pixel_t  clr;
 
     center.y = 50.0368000;
     center.x = 14.3385000;
@@ -51,7 +51,9 @@ CMapPainter::CMapPainter () {
     wnd.max.x = 628;
     wnd.max.y = 514;
 
-    clr.r = clr.g = clr.b = 180;
+    clr.setR ( 180 );
+    clr.setG ( 180 );
+    clr.setB ( 180 );
 
     g_geo_processor.set_names ( 
         "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt", 
@@ -90,7 +92,7 @@ void CMapPainter::OnPaint ( void ) {
 
     g_geo_processor.process_wnd();
 
-    paint_pos_t     pos;
+    paint_coord_t   pos;
     geo_pixel_t     px;
     COLORREF        outClr = 0;
 
@@ -101,10 +103,10 @@ void CMapPainter::OnPaint ( void ) {
             pos.y = y;
 
             g_geo_processor.get_pix( pos, px );
-            outClr = RGB (px.r, px.g, px.b);
+            outClr = RGB ( px.getR(), px.getG(), px.getB() );
 
-            dc.SetPixel(x, y, outClr);
-            dc.SetPixel(x, y + 1, RGB(0, 0, 0));
+            dc.SetPixel ( x, y, outClr );
+            dc.SetPixel ( x, y + 1, RGB(0, 0, 0) );
         }
     }
 

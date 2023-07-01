@@ -7,19 +7,24 @@
 
 #include <geo_types.h>
 
-typedef struct tag_px_ili9341_t {
-    uint8_t         r : 5;
-    uint8_t         g : 6;
-    uint8_t         b : 5;
-}   px_ili9341_t;
-
 class geo_pixel_t {
-    public:
-        uint8_t     r;
-        uint8_t     g;
-        uint8_t     b;
+
+    private:
+        uint8_t r;
+        uint8_t g;
+        uint8_t b;
 
     public:
+        geo_pixel_t() {
+            r = g = b = 0;
+        }
+
+        geo_pixel_t (uint8_t in_r, uint8_t in_g, uint8_t in_b) {
+            setR(in_r);
+            setG(in_g);
+            setB(in_b);
+        }
+
         geo_pixel_t Shift ( int8_t val ) {
 
             int tmp;
@@ -29,17 +34,20 @@ class geo_pixel_t {
             tmp = r + val;
             if ( tmp < 0 )  { tmp =   0; }
             if ( tmp > 255) { tmp = 255; }
-            ret_pixel.r = static_cast<uint8_t> (tmp);
+            tmp &= ~0x07;
+            ret_pixel.r = static_cast<uint8_t>(tmp);
 
             tmp = g + val;
             if ( tmp < 0 )   { tmp =   0; }
             if ( tmp > 255 ) { tmp = 255; }
-            ret_pixel.g = static_cast<uint8_t> (tmp);
+            tmp &= ~0x03;
+            ret_pixel.g = static_cast<uint8_t>(tmp);
 
             tmp = g + val;
             if ( tmp < 0 )   { tmp =   0; }
             if ( tmp > 255 ) { tmp = 255; }
-            ret_pixel.b = static_cast<uint8_t> (tmp);
+            tmp &= ~0x07;
+            ret_pixel.b = static_cast<uint8_t>(tmp);
 
             return ret_pixel;
         }
@@ -59,32 +67,43 @@ class geo_pixel_t {
             return true;
         }
 
-        bool operator!= (const geo_pixel_t& ref) const {
+        bool operator!= ( const geo_pixel_t& ref ) const {
 
             bool cmp_res = this->operator== (ref);
 
             return ! cmp_res;
         }
+
+        void setR ( uint8_t val ) {
+            r   =  val;
+            r  &= ~0x07;
+        }
+
+        void setG ( uint8_t val ) {
+            g  =  val;
+            g &= ~0x03;
+        }
+
+        void setB ( uint8_t val ) {
+            b  =  val;
+            b &= ~0x07;
+        }
+
+        uint8_t getG() const {
+            return g;
+        }
+
+        uint8_t getR() const {
+            return r;
+        }
+
+        uint8_t getB() const {
+            return b;
+        }
+
 };
 
 typedef uint16_t geo_pixel_int_t;
-
-class geo_pos1_t {
-    public:
-        geo_pos1_t ( int32_t in_x, int32_t in_y ) {
-            x = in_x;
-            y = in_y;
-        }
-
-        geo_pos1_t() {
-            x = 0;
-            y = 0;
-        }
-
-    public:
-        int32_t   x;
-        int32_t   y;
-};
 
 class geo_processor_t {
 
@@ -96,8 +115,8 @@ class geo_processor_t {
         void alloc_buffer ( uint32_t width, uint32_t height );
         void set_base_params ( const geo_coord_t center, const double scale, const paint_rect_t wnd );
         void set_angle ( const double angle );
-        void get_pix ( const paint_pos_t& pos, geo_pixel_t& px ) const;
-        void set_pix ( const paint_pos_t& pos, const geo_pixel_t& px );
+        void get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const;
+        void set_pix ( const paint_coord_t& pos, const geo_pixel_t& px );
         void process_wnd ( void );
 
     public:
@@ -105,9 +124,11 @@ class geo_processor_t {
         void fill_solid ( const geo_pixel_t clr );
         void trim_map   ( void );
 
-    private:
+    public:
         void _px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const;
         void _px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const;
+
+    private:
         void _load_idx ( v_geo_idx_rec_t& idx_list );
         void _find_base_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_t& map_rect );
         void _set_scales ( const geo_coord_t center, double scale, const paint_rect_t wnd );
@@ -121,18 +142,23 @@ class geo_processor_t {
         void _geo_to_window ( void );
         void _validate_window_rect ( void ) const;
         void _rotate_map ( const double angle );
-        void _find_paint_locations ( void );
         void _get_rect ( const v_geo_coord_t& path, geo_rect_t& rect ) const;
         bool _pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& pt ) const;
-        bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_pos_t& pt) const;
-        void _generate_paint_points ( const v_geo_coord_t& polygon, v_geo_coord_t& coords_list ) const;
-        bool _check_paint_points ( const v_geo_coord_t& polygon, const v_geo_coord_t& coords_list, geo_coord_t& pt ) const;
-        bool _test_position ( const v_geo_coord_t& polygon, const geo_coord_t& pt ) const;
+        bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
+
         void _map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const;
-        void _line ( const paint_pos_t from, const paint_pos_t to, const geo_pixel_t color );
+        void _line ( const paint_coord_t from, const paint_coord_t to, const geo_pixel_t color );
         void _poly_line ( const v_paint_coord_t& region, const geo_pixel_t color );
-        void _fill_poly ( const v_paint_coord_t& region, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr );
-        void _paint_region ( const paint_pos_t pos, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr );
+
+        void _fill_poly ( const v_paint_coord_t& region, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr );
+        void _fill_poly ( const paint_coord_t& pos, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr );
+
+        bool _pt_in_polygon ( const v_geo_coord_t& polygon, const geo_coord_t& pt ) const;
+        bool _pt_in_polygon ( const v_paint_coord_t& polygon, const paint_coord_t& pt ) const;
+
+        void _generate_paint_pos ( const v_paint_coord_t& region, v_paint_coord_t& coords_list ) const;
+        bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
+        double _dist ( const paint_coord_t p1, const paint_coord_t p2 ) const;
 
     private:
         std::string             m_map_file_name;
