@@ -180,7 +180,6 @@ class geo_ctx_t {
             m_roles.resize(len);
             m_types.resize(len);
             m_areas.resize(len);
-            m_fill_pt.resize(len);
             m_rects.resize(len);
         }
 
@@ -188,7 +187,6 @@ class geo_ctx_t {
             m_roles.clear();
             m_types.clear();
             m_areas.clear();
-            m_fill_pt.clear();
             m_rects.clear();
         }
 
@@ -196,7 +194,6 @@ class geo_ctx_t {
         v_geo_obj_t             m_roles;
         v_geo_obj_t             m_types;
         v_uint32_t              m_areas;
-        v_paint_coord_t         m_fill_pt;
         v_geo_rect_t            m_rects;
 };
 
@@ -212,6 +209,7 @@ class geo_record_t {
 
         vv_geo_coord_t          m_geo_lines;
         vv_paint_coord_t        m_wnd_lines;
+        vv_paint_coord_t        m_fill_pt;
         geo_ctx_t               m_geo_ctx;
 
     public:
@@ -446,6 +444,7 @@ class geo_parser_t {
                     sscanf_s ( m_geo_param.value.msg, "%d", &cnt );
                     geo_obj.m_geo_ctx.resize ( cnt );
                     geo_obj.m_geo_lines.resize ( cnt );
+                    geo_obj.m_fill_pt.resize ( cnt );
                     break;
 
                 case OBJID_ROLE_OUTER:

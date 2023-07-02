@@ -13,6 +13,10 @@
 
 //---------------------------------------------------------------------------//
 
+static const geo_pixel_t   g_color_none  (180, 180, 180);
+
+//---------------------------------------------------------------------------//
+
 geo_processor_t::geo_processor_t() {
     m_video_buffer = nullptr;
     m_video_height = 0;
@@ -51,7 +55,7 @@ void geo_processor_t::alloc_buffer ( uint32_t width, uint32_t height ) {
 
     assert(m_video_buffer != nullptr);
 
-    memset ( m_video_buffer, 0, alloc_size * sizeof(geo_pixel_int_t) );
+    fill_solid (g_color_none );
 }
 
 void geo_processor_t::get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const {
@@ -133,6 +137,7 @@ void geo_processor_t::process_wnd ( void ) {
 
     static int draw_cnt = 0; // 35;
     int out_cnt = 0;
+    int stop_cnt = 0;
 
     // fill_solid ( geo_pixel_t(180, 180, 180) );
 
@@ -140,16 +145,21 @@ void geo_processor_t::process_wnd ( void ) {
 
         cnt = it->m_wnd_lines.size();
 
+        if ( cnt > 1 ) {
+            stop_cnt++;
+        }
+
         for ( size_t i = 0; i < cnt; i++ ) {
 
             if ( it->m_geo_type != OBJID_RECORD_AREA) {
                 continue;
             }
 
-            if (out_cnt == draw_cnt) {
+            // if ( out_cnt == draw_cnt ) {
+            if ( 1 ) {
                 _map_color ( it->m_geo_ctx.m_types[i], border_color, fill_color );
                 _poly_line ( it->m_wnd_lines[i], border_color );
-                _fill_poly ( it->m_wnd_lines[i], it->m_geo_ctx.m_fill_pt, border_color, fill_color );
+                _fill_poly ( it->m_wnd_lines[i], it->m_fill_pt[i], border_color, fill_color);
             }
 
             out_cnt++;
@@ -182,12 +192,17 @@ void geo_processor_t::_fill_poly ( const v_paint_coord_t& poly_line, v_paint_coo
     for ( auto paint_pt = coords_list.cbegin(); paint_pt != coords_list.cend(); paint_pt++ ) {
         _fill_poly ( *paint_pt, bk_clr, fill_clr );
     }
+
+    for (auto paint_pt = coords_list.cbegin(); paint_pt != coords_list.cend(); paint_pt++) {
+        set_pix ( *paint_pt, geo_pixel_t(255, 0, 0) );
+    }
 }
 
 void geo_processor_t::_fill_poly ( const paint_coord_t& pos, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr ) {
 
     std::queue<paint_coord_t> queue;
     paint_coord_t p;
+    paint_coord_t next;
     geo_pixel_t clr;
     int px_cnt = 0;
 
@@ -200,31 +215,52 @@ void geo_processor_t::_fill_poly ( const paint_coord_t& pos, const geo_pixel_t b
 
         get_pix ( p, clr );
 
-        if ( clr == bk_clr ) {
-            continue;
-        }
-        if ( clr == fill_clr ) {
+        // if ( clr == bk_clr ) {
+        //     continue;
+        // }
+        // if ( clr == fill_clr ) {
+        //     continue;
+        // }
+
+        if ( clr != g_color_none ) {
             continue;
         }
 
         set_pix ( p, fill_clr );
         px_cnt++;
 
-        if (px_cnt > 512) {
-            // break;
+        if (px_cnt > 4) {
+            break;
         }
 
-        if (p.x > 0) {
-            queue.push(paint_coord_t(p.x - 1, p.y));
+        if ( p.x > 0 ) {
+
+            next    = p;
+            next.x -= 1;
+
+            queue.push(next);
+
         }
         if (p.x < m_video_width-1) {
-            queue.push(paint_coord_t(p.x + 1, p.y));
+
+            next    = p;
+            next.x += 1;
+
+            queue.push(next);
         }
         if (p.y > 0) {
-            queue.push(paint_coord_t(p.x, p.y - 1));
+
+            next    = p;
+            next.y -= 1;
+
+            queue.push(next);
         }
         if (p.y < m_video_height-1) {
-            queue.push(paint_coord_t(p.x, p.y + 1));
+
+            next    = p;
+            next.y += 1;
+
+            queue.push(next);
         }
     }
 }
@@ -537,7 +573,9 @@ void geo_processor_t::_geo_to_window ( void ) {
 
     for ( auto it = m_draw_list.begin(); it != m_draw_list.end(); it++ ) {
 
-        it->m_wnd_lines.resize ( it->m_geo_lines.size() );
+        it->m_fill_pt.clear();
+        it->m_fill_pt.resize    ( it->m_geo_lines.size() );
+        it->m_wnd_lines.resize  ( it->m_geo_lines.size() );
 
         for ( size_t id=0; id < it->m_geo_lines.size(); id++ ) {
 
@@ -899,6 +937,8 @@ void geo_processor_t::_generate_paint_pos ( const v_paint_coord_t& region, v_pai
     size_t i1, i2, i3;
     paint_coord_t med;
 
+    v_paint_coord_t test;
+
     coords_list.clear();
 
     if ( region.size() < 4 ) {
@@ -913,6 +953,8 @@ void geo_processor_t::_generate_paint_pos ( const v_paint_coord_t& region, v_pai
 
         med.x = ( region[i3].x + region[i1].x ) / 2;
         med.y = ( region[i3].y + region[i1].y ) / 2;
+
+        test.push_back(med);
 
         if ( _is_pt_on_segment(region[i1], region[i2], med) ) {
             continue;

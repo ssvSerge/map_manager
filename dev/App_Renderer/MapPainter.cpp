@@ -43,17 +43,12 @@ CMapPainter::CMapPainter () {
 
     geo_coord_t  center;
     paint_rect_t wnd;
-    geo_pixel_t  clr;
 
     center.y = 50.0368000;
     center.x = 14.3385000;
 
-    wnd.max.x = 628;
-    wnd.max.y = 514;
-
-    clr.setR ( 180 );
-    clr.setG ( 180 );
-    clr.setB ( 180 );
+    wnd.max.x = 925;
+    wnd.max.y = 700;
 
     g_geo_processor.set_names ( 
         "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt", 
@@ -61,7 +56,6 @@ CMapPainter::CMapPainter () {
     ); 
 
     g_geo_processor.alloc_buffer ( wnd.width(), wnd.height() );
-    g_geo_processor.fill_solid(clr);
     g_geo_processor.cache_init();
     g_geo_processor.set_base_params ( center, 1.0, wnd );
     g_geo_processor.set_angle(0);
