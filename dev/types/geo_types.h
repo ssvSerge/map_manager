@@ -37,7 +37,7 @@ typedef std::vector<uint64_t>                       vector_uint64_t;
 
 typedef enum tag_obj_type {
 
-    OBJID_UNDEF,
+    OBJID_ERROR,
 
     OBJID_TYPE_ASPHALT,
     OBJID_TYPE_WATER,
@@ -173,29 +173,77 @@ class paint_rect_t {
         paint_coord_t max;
 };
 
-class geo_ctx_t {
-
+class geo_line_ex_t {
     public:
-        void resize(size_t len) {
-            m_roles.resize(len);
-            m_types.resize(len);
-            m_areas.resize(len);
-            m_rects.resize(len);
+        geo_line_ex_t() {
+            clear();
         }
 
         void clear() {
-            m_roles.clear();
-            m_types.clear();
-            m_areas.clear();
-            m_rects.clear();
+            m_role = OBJID_ERROR;
+            m_type = OBJID_ERROR;
+            m_area = 0;
+            m_geo_line.clear();
         }
 
     public:
-        v_geo_obj_t             m_roles;
-        v_geo_obj_t             m_types;
-        v_uint32_t              m_areas;
-        v_geo_rect_t            m_rects;
+        obj_type_t              m_role;      // ROLE:OUTER;ROLE:INNER
+        obj_type_t              m_type;      // TYPE:ASPHALT
+        uint32_t                m_area;      // SIZE:33429
+        v_geo_coord_t           m_geo_line;  // coords
 };
+
+typedef std::vector<geo_line_ex_t> v_geo_line_ex_t;
+
+class geo_entry_ex_t {
+    public:
+        geo_entry_ex_t() {
+            clear();
+        }
+
+        void clear() {
+            m_record_id    = 0;
+            m_default_type = OBJID_ERROR;
+            m_record_type  = OBJID_ERROR;
+            m_data_off     = 0;
+            m_osm_ref      = 0;
+            m_lines.clear();
+        }
+
+    public:
+        obj_type_t              m_record_type;      // RECORD:AREA
+        obj_type_t              m_default_type;     // XTYPE:ASPHALT
+        uint64_t                m_osm_ref;          // REF:8094759
+        geo_offset_t            m_data_off;         // Offset in data file.
+        uint32_t                m_record_id;        // 
+        v_geo_line_ex_t         m_lines;            // RECORDS
+};
+
+typedef std::vector<geo_entry_ex_t> v_geo_entry_ex_t;
+typedef std::list<geo_entry_ex_t>   l_geo_entry_ex_t;
+
+class paint_line_ex_t {
+    public:
+        obj_type_t              m_role;      // ROLE:OUTER; ROLE:INNER
+        obj_type_t              m_type;      // TYPE:ASPHALT
+        v_paint_coord_t         m_path;      // polyline
+        v_paint_coord_t         m_fill;      // dots to fill-in.
+};
+
+typedef std::list<paint_line_ex_t>     l_paint_line_ex_t;
+typedef std::vector<paint_line_ex_t>   v_paint_line_ex_t;
+
+class paint_entry_ex_t {
+    public:
+        v_paint_line_ex_t       m_lines;     // 
+        uint32_t                m_size;      // 
+};
+
+
+typedef std::vector<paint_entry_ex_t> v_paint_entry_ex_t;
+typedef std::list<paint_entry_ex_t>   l_paint_entry_ex_t;
+
+#if 0
 
 class geo_record_t {
 
@@ -231,6 +279,8 @@ class geo_record_t {
 
 typedef std::list<geo_record_t>     l_geo_record_t;
 typedef std::vector<geo_record_t>   v_geo_record_t;
+
+#endif
 
 typedef struct tag_lex_ctx {
     const char* p;
@@ -402,14 +452,15 @@ class geo_parser_t {
             m_geo_param._load_lex ( ch, eo_cmd, file_offset );
         }
 
-        void process_map ( geo_record_t& geo_obj, bool& eor ) {
+        void process_map ( geo_entry_ex_t& geo_obj, bool& eor ) {
 
-            obj_type_t         code = OBJID_UNDEF;
+            obj_type_t         code = OBJID_ERROR;
             geo_coord_t        geo_coords;
             v_geo_coord_t      empty_path;
             obj_type_t         type;
             uint64_t           osm_id;
             size_t             record_id = geo_obj.m_record_id;
+            static int         stop_cnt = 0;
 
             eor = false;
 
@@ -425,50 +476,51 @@ class geo_parser_t {
                 case OBJID_RECORD_BUILDING:
                 case OBJID_RECORD_HIGHWAY:
                     geo_obj.clear();
-                    geo_obj.m_geo_type = code;
-                    geo_obj.m_prime_off  = m_geo_param.param.off;
+                    geo_obj.m_record_type = code;
+                    geo_obj.m_data_off = m_geo_param.param.off;
                     break;
 
                 case OBJID_XTYPE:
                     _map_type(m_geo_param.value.msg, type);
-                    geo_obj.m_prime_type = type;
-                    break;
-
-               case OBJID_XREF:
-                    sscanf_s ( m_geo_param.value.msg, "%lld", &osm_id );
-                    geo_obj.m_osm_ref = osm_id;
+                    geo_obj.m_default_type = type;
                     break;
 
                 case OBJID_XCNT:
                     uint32_t cnt;
                     sscanf_s ( m_geo_param.value.msg, "%d", &cnt );
-                    geo_obj.m_geo_ctx.resize ( cnt );
-                    geo_obj.m_geo_lines.resize ( cnt );
-                    geo_obj.m_fill_pt.resize ( cnt );
+                    if ( cnt != 1 ) {
+                        stop_cnt++;
+                    }
+                    geo_obj.m_lines.resize ( cnt );
+                    break;
+
+                case OBJID_XREF:
+                    sscanf_s(m_geo_param.value.msg, "%lld", &osm_id);
+                    geo_obj.m_osm_ref = osm_id;
                     break;
 
                 case OBJID_ROLE_OUTER:
                 case OBJID_ROLE_INNER:
-                    geo_obj.m_geo_ctx.m_roles[record_id] = code;
+                    geo_obj.m_lines[record_id].m_role = code;
                     break;
 
                 case OBJID_TYPE:
                     _map_type(m_geo_param.value.msg, type);
-                    if ( type == OBJID_UNDEF ) {
-                        type = geo_obj.m_prime_type;
+                    if ( type == OBJID_TYPE_UNDEFINED ) {
+                        type = geo_obj.m_default_type;
                     }
-                    geo_obj.m_geo_ctx.m_types[record_id] = type;
+                    geo_obj.m_lines[record_id].m_type = type;
                     break;
 
                 case OBJID_SIZE:
                     uint32_t size;
                     sscanf_s(m_geo_param.value.msg, "%d", &size );
-                    geo_obj.m_geo_ctx.m_areas[record_id] = size;
+                    geo_obj.m_lines[record_id].m_area = size;
                     break;
 
                 case OBJID_COORDS:
                     _load(geo_coords);
-                    geo_obj.m_geo_lines[record_id].push_back(geo_coords);
+                    geo_obj.m_lines[record_id].m_geo_line.push_back(geo_coords);
                     break;
 
                 case OBJID_ROLE_END:
@@ -486,7 +538,7 @@ class geo_parser_t {
         void process_idx ( geo_idx_rec_t& geo_idx, bool& eor ) {
 
             uint64_t    ref;
-            obj_type_t  code = OBJID_UNDEF;
+            obj_type_t  code = OBJID_ERROR;
 
             eor = false;
 

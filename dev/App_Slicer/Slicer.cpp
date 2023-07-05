@@ -33,8 +33,8 @@ double              g_step_ver          = 0;
 double              g_step_hor          = 0;
 
 std::atomic<size_t>         g_pending_cnt  = 0;
-geo_record_t                g_geo_record;
-l_geo_record_t              g_geo_record_list;
+geo_entry_ex_t              g_geo_record;
+l_geo_entry_ex_t            g_geo_record_list;
 vv_geo_offset_t             g_scan_result;
 
 static void _log_pair ( const char* const key, const char* const val, bool cr ) {
@@ -79,32 +79,24 @@ static void _find_box ( void ) {
 
     bool first_entry = true;
 
-    auto enum_coords = [&first_entry] ( const geo_coord_t& coord ) {
-        if ( first_entry ) {
-            first_entry = false;
-            g_x_min = g_x_max = coord.x;
-            g_y_min = g_y_max = coord.y;
-        } else {
-            g_x_min = std::min ( g_x_min, coord.x );
-            g_x_max = std::max ( g_x_max, coord.x );
-            g_y_min = std::min ( g_y_min, coord.y );
-            g_y_max = std::max ( g_y_max, coord.y );
+    for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
+        for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
+            for ( auto coord = line->m_geo_line.cbegin(); coord != line->m_geo_line.cend(); coord++ ) {
+
+                if ( first_entry ) {
+                    first_entry = false;
+                    g_x_min = g_x_max = coord->x;
+                    g_y_min = g_y_max = coord->y;
+                } else {
+                    g_x_min = std::min ( g_x_min, coord->x );
+                    g_x_max = std::max ( g_x_max, coord->x );
+                    g_y_min = std::min ( g_y_min, coord->y );
+                    g_y_max = std::max ( g_y_max, coord->y );
+                }
+            }
         }
-    };
+    }
 
-    auto enum_lines = [enum_coords] ( const v_geo_coord_t& geo_path ) {
-        std::for_each(geo_path.cbegin(), geo_path.cend(), enum_coords);
-    };
-
-    auto enum_geo_records = [enum_lines] ( const geo_record_t& geo_record ) {
-        std::for_each (
-            geo_record.m_geo_lines.cbegin(),
-            geo_record.m_geo_lines.cend(),
-            enum_lines 
-        );
-    };
-
-    std::for_each ( g_geo_record_list.cbegin(), g_geo_record_list.cend(), enum_geo_records );
 }
 
 static void _find_scale ( void ) {
@@ -162,19 +154,22 @@ static void _log_index ( const vv_geo_coord_t& in_rect, size_t id ) {
 
 static void _scan_rect ( const vv_geo_coord_t& in_rect, size_t id ) {
 
+    vv_geo_coord_t  in_lines;
     vv_geo_coord_t  tmp;
 
-    auto it_ptr = g_geo_record_list.cbegin();
+    in_lines.resize(1);
 
-    while ( it_ptr != g_geo_record_list.cend() ) {
+    for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
+        for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
+            
+            in_lines[0] = line->m_geo_line;
+            tmp = Clipper2Lib::Intersect ( in_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13);
 
-        tmp = Clipper2Lib::Intersect ( it_ptr->m_geo_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13 );
+            if ( tmp.size() > 0 ) {
+                g_scan_result[id].push_back ( record->m_data_off );
+            }
 
-        if ( tmp.size() > 0 ) {
-            g_scan_result[id].push_back(it_ptr->m_prime_off);
         }
-
-        it_ptr++;
     }
 
     g_pending_cnt--;
@@ -241,7 +236,7 @@ int main ( int argc, char* argv[] ) {
     bool            eor = false;
     bool            eoc = false;
 
-    geo_record_t    geo_record;
+    geo_entry_ex_t  geo_record;
 
     if ( argc != 2 ) {
         return (-1);
