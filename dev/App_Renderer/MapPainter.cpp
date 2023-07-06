@@ -63,6 +63,8 @@ CMapPainter::CMapPainter () {
 }
 
 CMapPainter::~CMapPainter () {
+
+    g_geo_processor.close();
 }
 
 void CMapPainter::OnPaint ( void ) {

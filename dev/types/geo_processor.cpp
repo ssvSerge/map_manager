@@ -31,6 +31,15 @@ geo_processor_t::geo_processor_t() {
 
 //---------------------------------------------------------------------------//
 
+void geo_processor_t::close ( void ) {
+
+    m_video_height = 0;
+    m_video_width = 0;
+
+    delete m_video_buffer;
+    m_video_buffer = nullptr;
+}
+
 void geo_processor_t::set_names ( const char* const idx_file_name, const char* const map_file_name ) {
 
     m_map_file_name = map_file_name;
@@ -119,12 +128,13 @@ void geo_processor_t::set_base_params ( const geo_coord_t center, const double s
 }
 
 void geo_processor_t::set_angle ( const double angle ) {
-    _rotate_map(angle);
+    _rotate_map ( angle, false );
 }
 
 void geo_processor_t::trim_map (void) {
 
     _trim_map();
+    _rotate_map ( m_angle, true );
     _geo_to_window();
     _validate_window_rect();
 }
@@ -443,56 +453,40 @@ void geo_processor_t::_merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uin
 
     map_entries.clear();
 
-    for (size_t i = 0; i < in_list.size(); i++) {
+    for ( size_t i = 0; i < in_list.size(); i++ ) {
         sub_idx = in_list[i];
         for (size_t y = 0; y < rect_list[sub_idx].m_list_off.size(); y++) {
             tmp_map.insert(rect_list[sub_idx].m_list_off[y]);
         }
     }
 
-    for (auto it = tmp_map.cbegin(); it != tmp_map.cend(); it++) {
+    for ( auto it = tmp_map.cbegin(); it != tmp_map.cend(); it++ ) {
         map_entries.push_back(*it);
     }
 
     std::sort(map_entries.begin(), map_entries.end());
 }
 
-void geo_processor_t::_load_map ( const v_uint32_t& map_entries, l_geo_entry_ex_t& map_items ) {
+void geo_processor_t::_load_map ( const v_uint32_t& map_entries, l_geo_entry_t& map_items ) {
 
-    geo_entry_ex_t new_entry;
-
-    bool is_loaded;
+    geo_entry_t new_entry;
 
     for ( auto id = map_entries.cbegin(); id != map_entries.cend(); id++ ) {
 
-        is_loaded = false;
+        new_entry.clear();
 
-        for ( const auto map_entry : map_items ) {
-            if ( map_entry.m_data_off == *id) {
-                is_loaded = true;
-                break;
-            }
-        }
-
-        if ( is_loaded ) {
-            continue;
-        }
-
-        _load_map_entry ( *id, new_entry);
+        _load_map_entry ( *id, new_entry );
         map_items.push_back ( new_entry );
     }
-
 }
 
-void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_entry_ex_t& map_entry ) {
+void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_entry_t& map_entry ) {
 
     geo_parser_t parser;
 
-    char    ch;
-    bool    eoc;
-    bool    eor;
-
-    map_entry.m_data_off = map_entry_offset;
+    char    ch     = 0;
+    bool    eoc    = false;
+    bool    eor    = false;
 
     m_map_file.seekg ( map_entry_offset, m_map_file.beg );
 
@@ -503,33 +497,40 @@ void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_ent
             continue;
         }
 
-        parser.process_map ( map_entry, eor);
+        parser.process_map ( map_entry, eor );
 
-        if (!eor) {
+        if ( !eor ) {
             continue;
         }
 
         break;
     }
+
+    map_entry.m_data_off = map_entry_offset;
 }
 
 void geo_processor_t::_geo_to_window ( void ) {
 
     geo_coord_t      src_coord;
     paint_coord_t    dst_coord;
-    paint_line_ex_t  paint_line;
-    paint_entry_ex_t paint_entry;
+    paint_line_t     paint_line;
+    paint_entry_t    paint_entry;
 
     m_paint_list.clear ();
 
-    for ( auto it_geo_area = m_draw_list.cbegin(); it_geo_area != m_draw_list.cend(); it_geo_area++ ) {
+    for ( auto it_geo_area = m_angle_list.cbegin(); it_geo_area != m_angle_list.cend(); it_geo_area++ ) {
+
+        paint_entry.clear();
+
         for ( auto it_geo_line = it_geo_area->m_lines.cbegin(); it_geo_line != it_geo_area->m_lines.cend(); it_geo_line++ ) {
 
-            paint_line.m_fill.clear();
             paint_line.m_role = it_geo_line->m_role;
             paint_line.m_type = it_geo_line->m_type;
 
-            for ( auto it_coord = it_geo_line->m_geo_line.cbegin(); it_coord != it_geo_line->m_geo_line.cend(); it_coord++ ) {
+            paint_line.m_fill.clear();
+            paint_line.m_path.clear();
+
+            for ( auto it_coord = it_geo_line->m_coords.cbegin(); it_coord != it_geo_line->m_coords.cend(); it_coord++ ) {
 
                 src_coord = *it_coord;
 
@@ -547,42 +548,49 @@ void geo_processor_t::_geo_to_window ( void ) {
                 paint_line.m_path.push_back ( dst_coord );
             }
 
+            paint_entry.m_lines.push_back ( paint_line );
+
         }
 
+        m_paint_list.push_back ( paint_entry );
     }
 }
 
-void geo_processor_t::_trim_record ( const vv_geo_coord_t& trim_path, const geo_entry_ex_t& in_record, geo_entry_ex_t& out_record ) {
+void geo_processor_t::_trim_record ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, geo_entry_t& out_record ) {
 
     vv_geo_coord_t trim_in;
     vv_geo_coord_t trim_out;
-    geo_line_ex_t  out_path;
+    geo_line_t     out_path;
+
+    static int stop_cnt = 0;
 
     out_record.clear();
 
-    out_record.m_default_type   = in_record.m_default_type;
-    out_record.m_osm_ref        = in_record.m_osm_ref;
-    out_record.m_data_off       = in_record.m_data_off;
-    out_record.m_record_id      = in_record.m_record_id;
+    out_record.m_record_type    = geo_path.m_record_type;
+    out_record.m_default_type   = geo_path.m_default_type;
+    out_record.m_osm_ref        = geo_path.m_osm_ref;
+    out_record.m_data_off       = geo_path.m_data_off;
 
     trim_in.resize (1);
 
-    for ( auto it_in_line = in_record.m_lines.cbegin(); it_in_line != in_record.m_lines.cend(); it_in_line++ ) {
-
-        out_path.clear();
+    for ( auto it_in_line = geo_path.m_lines.cbegin(); it_in_line != geo_path.m_lines.cend(); it_in_line++ ) {
 
         out_path.m_area = it_in_line->m_area;
         out_path.m_role = it_in_line->m_role;
         out_path.m_type = it_in_line->m_type;
 
-        trim_in[0] = it_in_line->m_geo_line;
+        trim_in[0] = it_in_line->m_coords;
 
-        trim_out = Clipper2Lib::Intersect ( trim_in, trim_path, Clipper2Lib::FillRule::NonZero, 13 );
+        trim_out = Clipper2Lib::Intersect ( rect_path, trim_in, Clipper2Lib::FillRule::NonZero, 13 );
 
-        for ( size_t path = 0; path < trim_out.size(); path++ ) {
-            for ( size_t coord = 0; coord < trim_out[path].size(); coord++ ) {
-                out_path.m_geo_line.push_back ( trim_out[path][coord] );
-            }
+        if ( trim_out.size() > 1 ) {
+            stop_cnt++;
+        }
+
+        for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
+            out_path.m_coords = *it_out_line;
+            out_path.m_coords.push_back ( out_path.m_coords.front() );
+            out_record.m_lines.push_back ( out_path );
         }
 
     }
@@ -593,10 +601,7 @@ void geo_processor_t::_trim_record ( const vv_geo_coord_t& trim_path, const geo_
 void geo_processor_t::_trim_map ( void ) {
 
     vv_geo_coord_t  trim_path;
-    geo_entry_ex_t  geo_draw_item;
-
-  // geo_entry_ex_t  out_record;
-  // bool            trim_res;
+    geo_entry_t     out_record;
 
     {   geo_coord_t     pt;
         geo_rect_t      trim_rect;
@@ -606,20 +611,16 @@ void geo_processor_t::_trim_map ( void ) {
         pt.x = trim_rect.max.x;  pt.y = trim_rect.min.y;     trim_entry.push_back(pt);
         pt.x = trim_rect.max.x;  pt.y = trim_rect.max.y;     trim_entry.push_back(pt);
         pt.x = trim_rect.min.x;  pt.y = trim_rect.max.y;     trim_entry.push_back(pt);
-        pt.x = trim_rect.min.x;  pt.y = trim_rect.min.y;     trim_entry.push_back(pt);
         trim_path.push_back(trim_entry);
     }
 
     m_draw_list.clear();
 
     for ( auto it_src = m_map_cache.cbegin(); it_src != m_map_cache.cend(); it_src++ ) {
-
-        _trim_record ( trim_path, *it_src, geo_draw_item );
-
-        if ( geo_draw_item.m_lines.size() > 0 ) {
-            m_draw_list.push_back ( geo_draw_item );
+        _trim_record ( trim_path, *it_src, out_record);
+        if ( out_record.m_lines.size() > 0 ) {
+            m_draw_list.push_back(out_record);
         }
-
     }
 }
 
@@ -650,7 +651,7 @@ void geo_processor_t::_validate_window_rect ( void ) const {
     (void)(rect);
 }
 
-void geo_processor_t::_rotate_map ( const double angle ) {
+void geo_processor_t::_rotate_map ( const double angle, bool forced ) {
 
     double pi_rad_scale = 0.01745329251994329576923690768489;
     double sin_rotated  = 0;
@@ -660,11 +661,10 @@ void geo_processor_t::_rotate_map ( const double angle ) {
     double rotated_x    = 0;
     double rotated_y    = 0;
 
-    geo_entry_ex_t out_entry;
-    geo_line_ex_t  out_line;
-
-    if ( m_angle == angle ) {
-        return;
+    if ( !forced ) {
+        if ( m_angle == angle ) {
+            return;
+        }
     }
 
     m_angle = angle;
@@ -672,24 +672,14 @@ void geo_processor_t::_rotate_map ( const double angle ) {
     sin_rotated = sin ( m_angle * pi_rad_scale );
     cos_rotated = cos ( m_angle * pi_rad_scale );
 
-    m_rotate_list.clear();
+    m_angle_list.clear();
 
     for ( auto in_record = m_draw_list.cbegin(); in_record != m_draw_list.cend(); in_record++ ) {
 
-        out_entry.clear();
+        auto angle_record = *in_record;        
 
-        out_entry.m_data_off        =  in_record->m_data_off;
-        out_entry.m_osm_ref         =  in_record->m_osm_ref;
-        out_entry.m_default_type    =  in_record->m_default_type;
-        out_entry.m_record_id       =  in_record->m_record_id;
-
-        for ( auto in_line = in_record->m_lines.cbegin(); in_line != in_record->m_lines.cend(); in_line++ ) {
-
-            out_line.clear();
-
-            out_line = *in_line;
-
-            for ( auto coord = out_line.m_geo_line.begin(); coord != out_line.m_geo_line.end(); coord++ ) {
+        for ( auto line = angle_record.m_lines.begin(); line != angle_record.m_lines.cend(); line++ ) {
+            for ( auto coord = line->m_coords.begin(); coord != line->m_coords.end(); coord++ ) {
 
                 translated_x = coord->x - m_center.x;
                 translated_y = coord->y - m_center.y;
@@ -707,6 +697,7 @@ void geo_processor_t::_rotate_map ( const double angle ) {
 
         }
 
+        m_angle_list.push_back( angle_record );
     }
 
 }

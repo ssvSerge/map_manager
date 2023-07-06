@@ -33,8 +33,8 @@ double              g_step_ver          = 0;
 double              g_step_hor          = 0;
 
 std::atomic<size_t>         g_pending_cnt  = 0;
-geo_entry_ex_t              g_geo_record;
-l_geo_entry_ex_t            g_geo_record_list;
+geo_entry_t                 g_geo_record;
+l_geo_entry_t               g_geo_record_list;
 vv_geo_offset_t             g_scan_result;
 
 static void _log_pair ( const char* const key, const char* const val, bool cr ) {
@@ -81,7 +81,7 @@ static void _find_box ( void ) {
 
     for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
         for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
-            for ( auto coord = line->m_geo_line.cbegin(); coord != line->m_geo_line.cend(); coord++ ) {
+            for ( auto coord = line->m_coords.cbegin(); coord != line->m_coords.cend(); coord++ ) {
 
                 if ( first_entry ) {
                     first_entry = false;
@@ -162,7 +162,7 @@ static void _scan_rect ( const vv_geo_coord_t& in_rect, size_t id ) {
     for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
         for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
             
-            in_lines[0] = line->m_geo_line;
+            in_lines[0] = line->m_coords;
             tmp = Clipper2Lib::Intersect ( in_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13);
 
             if ( tmp.size() > 0 ) {
@@ -236,7 +236,7 @@ int main ( int argc, char* argv[] ) {
     bool            eor = false;
     bool            eoc = false;
 
-    geo_entry_ex_t  geo_record;
+    geo_entry_t     geo_record;
 
     if ( argc != 2 ) {
         return (-1);

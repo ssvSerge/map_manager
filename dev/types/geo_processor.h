@@ -118,6 +118,7 @@ class geo_processor_t {
         void get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const;
         void set_pix ( const paint_coord_t& pos, const geo_pixel_t& px );
         void process_wnd ( void );
+        void close ( void );
 
     public:
         void cache_init ( void );
@@ -135,13 +136,13 @@ class geo_processor_t {
         void _filter_rects ( const v_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, v_uint32_t& out_list );
         bool _is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice ) const;
         void _merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uint32_t& in_list, v_uint32_t& map_entries );
-        void _load_map ( const v_uint32_t& map_entries, l_geo_entry_ex_t& map_items );
-        void _load_map_entry ( const uint32_t map_entry, geo_entry_ex_t& map_record );
+        void _load_map ( const v_uint32_t& map_entries, l_geo_entry_t& map_items );
+        void _load_map_entry ( const uint32_t map_entry, geo_entry_t& map_record );
         void _trim_map ( void );
-        void _trim_record ( const vv_geo_coord_t& trim_path, const geo_entry_ex_t& in_record, geo_entry_ex_t& out_record );
+        void _trim_record ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, geo_entry_t& out_record );
         void _geo_to_window ( void );
         void _validate_window_rect ( void ) const;
-        void _rotate_map ( const double angle );
+        void _rotate_map ( const double angle, bool forced );
         void _get_rect ( const v_geo_coord_t& path, geo_rect_t& rect ) const;
         bool _pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& pt ) const;
         bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
@@ -180,11 +181,10 @@ class geo_processor_t {
         v_geo_idx_rec_t         m_map_idx;
         geo_rect_t              m_map_rect;
 
-        l_geo_entry_ex_t        m_map_cache;
-        l_geo_entry_ex_t        m_draw_list;
-        l_geo_entry_ex_t        m_rotate_list;
-        l_paint_entry_ex_t      m_paint_list;
-
+        l_geo_entry_t           m_map_cache;
+        l_geo_entry_t           m_draw_list;
+        l_geo_entry_t           m_angle_list;
+        l_paint_entry_t         m_paint_list;
 };
 
 #endif
