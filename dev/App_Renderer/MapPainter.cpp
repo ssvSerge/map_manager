@@ -102,7 +102,7 @@ void CMapPainter::OnPaint ( void ) {
             outClr = RGB ( px.getR(), px.getG(), px.getB() );
 
             dc.SetPixel ( x, y, outClr );
-            dc.SetPixel ( x, y + 1, RGB(0, 0, 0) );
+            // dc.SetPixel ( x, y + 1, RGB(0, 0, 0) );
         }
     }
 

@@ -130,6 +130,8 @@ class geo_processor_t {
         void _px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const;
 
     private:
+        void _process_area ( void );
+        void _process_building ( void );
         void _load_idx ( v_geo_idx_rec_t& idx_list );
         void _find_base_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_t& map_rect );
         void _set_scales ( const geo_coord_t center, double scale, const paint_rect_t wnd );
@@ -140,9 +142,12 @@ class geo_processor_t {
         void _load_map_entry ( const uint32_t map_entry, geo_entry_t& map_record );
         void _trim_map ( void );
         void _trim_record ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, geo_entry_t& out_record );
-        void _geo_to_window ( void );
+        void _process_window ( void );
         void _validate_window_rect ( void ) const;
-        void _rotate_map ( const double angle, bool forced );
+        void _rotate_coord ( geo_coord_t& coord ) const;
+        void _win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const;
+        void _process_line ( geo_line_t& geo_line, bool mark_up=false );
+
         void _get_rect ( const v_geo_coord_t& path, geo_rect_t& rect ) const;
         bool _pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& pt ) const;
         bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
@@ -151,7 +156,7 @@ class geo_processor_t {
         void _line ( const paint_coord_t from, const paint_coord_t to, const geo_pixel_t color );
         void _poly_line ( const v_paint_coord_t& region, const geo_pixel_t color );
 
-        void _fill_poly ( const v_paint_coord_t& region, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr );
+        void _fill_poly ( const v_paint_coord_t& region, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, bool mark_up = false  );
         void _fill_poly ( const paint_coord_t& pos, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr );
 
         bool _pt_in_polygon ( const v_geo_coord_t& polygon, const geo_coord_t& pt ) const;
@@ -177,14 +182,16 @@ class geo_processor_t {
         double                  m_step_x;
         double                  m_step_y;
         double                  m_angle;
+        double                  m_angle_sin;
+        double                  m_angle_cos;
 
         v_geo_idx_rec_t         m_map_idx;
         geo_rect_t              m_map_rect;
 
         l_geo_entry_t           m_map_cache;
         l_geo_entry_t           m_draw_list;
-        l_geo_entry_t           m_angle_list;
-        l_paint_entry_t         m_paint_list;
+     // l_geo_entry_t           m_angle_list;
+     // l_paint_entry_t         m_paint_list;
 };
 
 #endif

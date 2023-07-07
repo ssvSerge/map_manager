@@ -189,6 +189,10 @@ class geo_line_t {
         obj_type_t              m_type;      // TYPE:ASPHALT
         uint32_t                m_area;      // SIZE:33429
         v_geo_coord_t           m_coords;    // coords
+        v_geo_coord_t           m_angle;     // angled coords
+        v_paint_coord_t         m_fill;      // fill-in coords
+        v_paint_coord_t         m_paint;     // paint coords
+
 };
 
 typedef std::vector<geo_line_t>       v_geo_line_t;
@@ -212,17 +216,16 @@ class geo_entry_t {
         obj_type_t              m_default_type;     // XTYPE:ASPHALT
         uint64_t                m_osm_ref;          // REF:8094759
         geo_offset_t            m_data_off;         // Offset in data file.
-//      uint32_t                m_record_id;        // 
         v_geo_line_t            m_lines;            // RECORDS
 };
 
 typedef std::vector<geo_entry_t>      v_geo_entry_t;
 typedef std::list<geo_entry_t>        l_geo_entry_t;
 
-class paint_line_t {
+class paint_line_ex_t {
 
     public:
-        paint_line_t() {
+        paint_line_ex_t() {
             clear();
         }
 
@@ -230,20 +233,20 @@ class paint_line_t {
             m_role = OBJID_ERROR;   // ROLE:OUTER; ROLE:INNER
             m_type = OBJID_ERROR;   // TYPE:ASPHALT
             m_path.clear();         // polyline
-            m_fill.clear();         // dots to fill-in.
+//          m_fill.clear();         // dots to fill-in.
         }
 
     public:
         obj_type_t              m_role;      // ROLE:OUTER; ROLE:INNER
         obj_type_t              m_type;      // TYPE:ASPHALT
         v_paint_coord_t         m_path;      // polyline
-        v_paint_coord_t         m_fill;      // dots to fill-in.
+     // v_paint_coord_t         m_fill;      // dots to fill-in.
 };
 
-typedef std::list<paint_line_t>       l_paint_line_t;
-typedef std::vector<paint_line_t>     v_paint_line_t;
+typedef std::list<paint_line_ex_t>       l_paint_line_ex_t;
+typedef std::vector<paint_line_ex_t>     v_paint_line_ex_t;
 
-class paint_entry_t {
+class paint_entry_ex_t {
     public:
         void clear() {
             m_lines.clear();
@@ -251,12 +254,12 @@ class paint_entry_t {
         }
 
     public:
-        v_paint_line_t          m_lines;
+        v_paint_line_ex_t       m_lines;
         uint32_t                m_size;
 };
 
-typedef std::vector<paint_entry_t>    v_paint_entry_t;
-typedef std::list<paint_entry_t>      l_paint_entry_t;
+typedef std::vector<paint_entry_ex_t>    v_paint_entry_ex_t;
+typedef std::list<paint_entry_ex_t>      l_paint_entry_ex_t;
 
 typedef struct tag_lex_ctx {
     const char* p;
