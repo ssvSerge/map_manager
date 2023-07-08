@@ -232,8 +232,6 @@ class geo_line_t {
         uint32_t                m_area;      // SIZE:33429
         v_geo_coord_t           m_coords;    // coords
         v_geo_coord_t           m_angle;     // angled coords
-        v_paint_coord_t         m_fill;      // fill-in coords
-        v_paint_coord_t         m_paint;     // paint coords
 };
 
 typedef std::vector<geo_line_t>       v_geo_line_t;
