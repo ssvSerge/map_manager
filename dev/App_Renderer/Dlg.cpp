@@ -28,11 +28,14 @@ CAppRendererDlg::CAppRendererDlg ( CWnd* pParent /*=nullptr*/ ) : CDialogEx(IDD_
 }
 
 void CAppRendererDlg::DoDataExchange ( CDataExchange* pDX ) {
+
     CDialogEx::DoDataExchange(pDX);
-    DDX_Control ( pDX, IDC_EDIT_LON,	m_EditLon );
-    DDX_Control ( pDX, IDC_EDIT_LAT,	m_EditLat );
-    DDX_Control ( pDX, IDC_EDIT_SCALE,	m_EditScale );
-    DDX_Control ( pDX, IDC_MAP_PAINTER,	m_MapRender );
+
+    DDX_Control ( pDX, IDC_EDIT_LON,    m_EditLon   );
+    DDX_Control ( pDX, IDC_EDIT_LAT,    m_EditLat   );
+    DDX_Control ( pDX, IDC_EDIT_SCALE,  m_EditScale );
+    DDX_Control ( pDX, IDC_EDIT_ANGLE,  m_EditAngle );
+    DDX_Control ( pDX, IDC_MAP_PAINTER, m_MapRender );
 }
 
 BOOL CAppRendererDlg::OnInitDialog () {
@@ -45,8 +48,9 @@ BOOL CAppRendererDlg::OnInitDialog () {
     UpdateText ( 14.3385, m_EditLon   );
     UpdateText ( 50.0368, m_EditLat   );
     UpdateText ( 1.00000, m_EditScale );
+    UpdateText ( 0,       m_EditAngle );
 
-    UpdateParams();
+    // UpdateParams();
 
     return TRUE;
 }
@@ -64,7 +68,10 @@ void CAppRendererDlg::UpdateParams ( void ) {
     m_EditScale.GetWindowText(val);
     double scale = atof(val.GetBuffer());
 
-    m_MapRender.SetBaseParams(lon, lat, scale);
+    m_EditAngle.GetWindowText(val);
+    double angle = atof(val.GetBuffer());
+
+    m_MapRender.SetBaseParams ( lon, lat, scale, angle );
 }
 
 void CAppRendererDlg::UpdateText ( double val, CEdit& edit ) {
@@ -141,6 +148,29 @@ void CAppRendererDlg::OnEnUpdateEditScale () {
 }
 
 void CAppRendererDlg::OnBnClickedCmdMap () {
+
+    double lon   = 0;
+    double lat   = 0;
+    double scale = 0;
+    double angle = 0;
+
+    CString val;
+
+    m_EditLon.GetWindowText ( val );
+    lon = atof(val);
+
+    m_EditLat.GetWindowText   ( val );
+    lat = atof(val);
+
+    m_EditScale.GetWindowText ( val );
+    scale = atof(val);
+
+    m_EditAngle.GetWindowText ( val );
+    angle = atof(val);
+
+    m_MapRender.SetBaseParams ( lon, lat, scale, angle );
+
+    m_MapRender.Invalidate();
 }
 
 LRESULT CAppRendererDlg::OnMapUpdate ( WPARAM wParam, LPARAM lParam ) {

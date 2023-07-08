@@ -19,8 +19,8 @@ class CAppRendererDlg : public CDialogEx {
 		HICON m_hIcon;
 
 	private:
-		void   UpdateText ( double val, CEdit& edit );
-		void   UpdateParams ( void );
+		void   UpdateText    ( double val, CEdit& edit );
+		void   UpdateParams  ( void );
 
 	public:
 		DECLARE_MESSAGE_MAP()
@@ -38,5 +38,6 @@ class CAppRendererDlg : public CDialogEx {
 		CEdit			m_EditLon;
 		CEdit			m_EditLat;
 		CEdit			m_EditScale;
+		CEdit			m_EditAngle;
 		CMapPainter		m_MapRender;
 };

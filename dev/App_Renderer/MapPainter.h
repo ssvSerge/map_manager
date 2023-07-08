@@ -26,7 +26,7 @@ class CMapPainter : public CStatic {
         DECLARE_MESSAGE_MAP()
 
     public:
-        void  SetBaseParams  ( double lon, double lat, double scale );
+        void  SetBaseParams  ( double lon, double lat, double scale, double angle );
         void  GetBaseParams  ( double& lon, double& lat, double& scale );
 
     public:
@@ -37,6 +37,9 @@ class CMapPainter : public CStatic {
         afx_msg void OnLButtonUp   ( UINT nFlags, CPoint point );
         afx_msg void OnMouseMove   ( UINT nFlags, CPoint point );
         afx_msg BOOL OnEraseBkgnd  ( CDC* pDC );
+
+    private:
+        void _calc_geo ( double lon, double lat, double scale );
 
     private:
         bool			m_bMouseTracking;

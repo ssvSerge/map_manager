@@ -119,6 +119,11 @@ class paint_coord_t {
             return ! this->operator==(ref);
         }
 
+        void clear() {
+            x = 0;
+            y = 0;
+        }
+
     public:
         int32_t   x;
         int32_t   y;
@@ -139,6 +144,22 @@ class geo_rect_t {
 
         void load(const char* const val) {
             (void)sscanf_s( val, "%lf %lf %lf %lf", &min.x, &min.y, &max.x, &max.y );
+        }
+
+        bool operator== (const geo_rect_t& ref) const {
+
+            if ( ref.min != this->min ) {
+                return false;
+            }
+            if ( ref.max != this->max ) {
+                return false;
+            }
+            return true;
+        }
+
+        bool operator!= (const geo_rect_t& ref) const {
+            bool ret_val = this->operator== (ref);
+            return (!ret_val);
         }
 
     public:
@@ -164,6 +185,27 @@ class paint_rect_t {
 
         int32_t height() const {
             return (max.y - min.y);
+        }
+
+        bool operator== ( const paint_rect_t& ref ) const {
+
+            if ( ref.min != this->min ) {
+                return false;
+            }
+            if ( ref.max != this->max ) {
+                return false;
+            }
+            return true;
+        }
+
+        bool operator!= (const paint_rect_t& ref) const {
+            bool ret_val = this->operator== (ref);
+            return (!ret_val);
+        }
+
+        void clear() {
+            min.clear();
+            max.clear();
         }
 
     public:
@@ -192,10 +234,32 @@ class geo_line_t {
         v_geo_coord_t           m_angle;     // angled coords
         v_paint_coord_t         m_fill;      // fill-in coords
         v_paint_coord_t         m_paint;     // paint coords
-
 };
 
 typedef std::vector<geo_line_t>       v_geo_line_t;
+
+class paint_line_t {
+
+    public:
+        paint_line_t() {
+            clear();
+        }
+
+        void clear() {
+            m_role = OBJID_ERROR;
+            m_type = OBJID_ERROR;
+            m_fill.clear();
+            m_paint.clear();
+        }
+
+    public:
+        obj_type_t              m_role;      // ROLE:OUTER;ROLE:INNER
+        obj_type_t              m_type;      // TYPE:ASPHALT
+        v_paint_coord_t         m_fill;      // fill-in coords
+        v_paint_coord_t         m_paint;     // paint coords
+};
+
+typedef std::vector<paint_line_t>       v_paint_line_t;
 
 class geo_entry_t {
     public:
@@ -208,6 +272,7 @@ class geo_entry_t {
             m_record_type  = OBJID_ERROR;
             m_data_off     = 0;
             m_osm_ref      = 0;
+            m_to_display   = false;
             m_lines.clear();
         }
 
@@ -216,50 +281,35 @@ class geo_entry_t {
         obj_type_t              m_default_type;     // XTYPE:ASPHALT
         uint64_t                m_osm_ref;          // REF:8094759
         geo_offset_t            m_data_off;         // Offset in data file.
+        bool                    m_to_display;       // TRUE if required to draw.
         v_geo_line_t            m_lines;            // RECORDS
 };
 
 typedef std::vector<geo_entry_t>      v_geo_entry_t;
 typedef std::list<geo_entry_t>        l_geo_entry_t;
 
-class paint_line_ex_t {
+class paint_entry_t {
 
     public:
-        paint_line_ex_t() {
+        paint_entry_t () {
             clear();
         }
 
         void clear() {
-            m_role = OBJID_ERROR;   // ROLE:OUTER; ROLE:INNER
-            m_type = OBJID_ERROR;   // TYPE:ASPHALT
-            m_path.clear();         // polyline
-//          m_fill.clear();         // dots to fill-in.
-        }
-
-    public:
-        obj_type_t              m_role;      // ROLE:OUTER; ROLE:INNER
-        obj_type_t              m_type;      // TYPE:ASPHALT
-        v_paint_coord_t         m_path;      // polyline
-     // v_paint_coord_t         m_fill;      // dots to fill-in.
-};
-
-typedef std::list<paint_line_ex_t>       l_paint_line_ex_t;
-typedef std::vector<paint_line_ex_t>     v_paint_line_ex_t;
-
-class paint_entry_ex_t {
-    public:
-        void clear() {
+            m_record_type  = OBJID_ERROR;           // RECORD:AREA
+            m_default_type = OBJID_ERROR;           // XTYPE:ASPHALT
             m_lines.clear();
-            m_size = 0;
         }
 
     public:
-        v_paint_line_ex_t       m_lines;
-        uint32_t                m_size;
+        obj_type_t              m_record_type;      // RECORD:AREA
+        obj_type_t              m_default_type;     // XTYPE:ASPHALT
+        v_paint_line_t          m_lines;            // 
 };
 
-typedef std::vector<paint_entry_ex_t>    v_paint_entry_ex_t;
-typedef std::list<paint_entry_ex_t>      l_paint_entry_ex_t;
+typedef std::vector<paint_entry_t>      v_paint_entry_t;
+typedef std::list<paint_entry_t>        l_paint_entry_t;
+
 
 typedef struct tag_lex_ctx {
     const char* p;
@@ -424,7 +474,7 @@ static const lex_ctx_t g_lex_idx[] = {
 class geo_parser_t {
 
     private:
-        geo_param_t m_geo_param;
+        geo_param_t     m_geo_param;
  
     public:
         void load_param ( char ch, bool& eo_cmd, geo_offset_t file_offset ) {

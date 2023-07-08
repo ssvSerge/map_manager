@@ -177,6 +177,11 @@ namespace Clipper2Lib
     }
 #endif
 
+    void clear() {
+        x = 0;
+        y = 0;
+    }
+
     friend bool operator==(const Point& a, const Point& b)
     {
       return a.x == b.x && a.y == b.y;

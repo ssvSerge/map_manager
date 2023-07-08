@@ -14,6 +14,8 @@
 #define IDC_MAP_PAINTER                 1005
 #define IDC_BUTTON1                     1006
 #define IDC_CMD_MAP                     1006
+#define IDC_EDIT_SCALE2                 1007
+#define IDC_EDIT_ANGLE                  1007
 
 // Next default values for new objects
 // 

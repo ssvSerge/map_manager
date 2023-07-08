@@ -12,6 +12,10 @@
 
 #include <idx_file.h>
 
+#define NAME_IDX    "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt"
+#define NAME_MAP    "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt"
+
+
 IMPLEMENT_DYNAMIC ( CMapPainter, CStatic )
 
 BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
@@ -41,25 +45,24 @@ CMapPainter::CMapPainter () {
     m_delta_ver      = 0;
     m_paint_dc       = nullptr;
 
-    geo_coord_t  center;
-    paint_rect_t wnd;
+    #if 0
 
-    center.y = 50.0368000;
-    center.x = 14.3385000;
+        geo_coord_t  center;
+        paint_rect_t wnd;
 
-    wnd.max.x = 925;
-    wnd.max.y = 700;
+        center.y = 50.0368000;
+        center.x = 14.3385000;
 
-    g_geo_processor.set_names ( 
-        "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt", 
-        "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt" 
-    ); 
+        wnd.max.x = 925;
+        wnd.max.y = 700;
 
-    g_geo_processor.alloc_buffer ( wnd.width(), wnd.height() );
-    g_geo_processor.cache_init();
-    g_geo_processor.set_base_params ( center, 1.0, wnd );
-    g_geo_processor.set_angle(0);
-    g_geo_processor.trim_map();
+        g_geo_processor.alloc_buffer ( wnd.width(), wnd.height() );
+        g_geo_processor.cache_init();
+        g_geo_processor.set_base_params ( center, 1.0, wnd );
+        g_geo_processor.set_angle(0);
+        g_geo_processor.trim_map();
+
+    #endif
 }
 
 CMapPainter::~CMapPainter () {
@@ -86,8 +89,6 @@ void CMapPainter::OnPaint ( void ) {
 
     GetClientRect ( m_client_rect );
 
-    g_geo_processor.process_wnd();
-
     paint_coord_t   pos;
     geo_pixel_t     px;
     COLORREF        outClr = 0;
@@ -101,8 +102,8 @@ void CMapPainter::OnPaint ( void ) {
             g_geo_processor.get_pix( pos, px );
             outClr = RGB ( px.getR(), px.getG(), px.getB() );
 
-            dc.SetPixel ( x, y, outClr );
-            // dc.SetPixel ( x, y + 1, RGB(0, 0, 0) );
+            dc.SetPixel ( x, m_client_rect.Height() - y - 1, outClr );
+            dc.SetPixel ( x, m_client_rect.Height() - y - 2, RGB(0, 0, 0) );
         }
     }
 
@@ -195,44 +196,34 @@ BOOL CMapPainter::OnEraseBkgnd ( CDC* pDC ) {
     return CStatic::OnEraseBkgnd(pDC);
 }
 
-void CMapPainter::SetBaseParams ( double lon, double lat, double scale ) {
+void CMapPainter::_calc_geo ( double lon, double lat, double scale ) {
 
-    const double delta_hor = 0.0001;
-    const double delta_ver = 0.0001;
+    (void) (lon);
+    (void) (lat);
+    (void) (scale);
+}
 
-    m_lon   = lon;
-    m_lat   = lat;
-    m_scale = scale;
+void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double angle ) {
 
-    GeographicLib::Geodesic geod(GeographicLib::Constants::WGS84_a(), GeographicLib::Constants::WGS84_f());
+    static bool is_valid = false;
 
-    double shift_hor;
-    geod.Inverse ( m_lat, m_lon, m_lat, m_lon + delta_hor, shift_hor );
-    m_delta_hor  = delta_hor / shift_hor;
-    m_delta_hor /= scale;
+    paint_rect_t    wnd;
+    CRect           client_rect;
+    geo_coord_t     center;
 
-    double shift_ver;
-    geod.Inverse ( m_lat, m_lon, m_lat + delta_ver, m_lon, shift_ver );
-    m_delta_ver  = delta_ver / shift_ver;
-    m_delta_ver /= scale;
+    if ( !is_valid ) {
+        is_valid = true;
+        g_geo_processor.set_names ( NAME_IDX, NAME_MAP );
+    }
 
-    CRect client_rect;
+    GetClientRect ( client_rect );
 
-    GetClientRect ( &client_rect );
+    wnd.max.x   = client_rect.Width();
+    wnd.max.y   = client_rect.Height();
+    center.x    = lon;
+    center.y    = lat;
 
-    double delta_width;
-    double delta_height;
-
-    delta_width  = client_rect.Width();
-    delta_width *= m_delta_hor;
-
-    delta_height  = client_rect.Height();
-    delta_height *= m_delta_ver;
-
-    #if 1
-        geod.Inverse ( m_lat, m_lon, m_lat,  m_lon + delta_width, shift_hor );
-        geod.Inverse ( m_lat, m_lon, m_lat + delta_height, m_lon, shift_ver );
-    #endif
+    g_geo_processor.process_map ( wnd, center, scale, angle );
 }
 
 void CMapPainter::GetBaseParams ( double& lon, double& lat, double& scale ) {
