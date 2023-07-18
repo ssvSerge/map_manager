@@ -44,25 +44,6 @@ CMapPainter::CMapPainter () {
     m_delta_hor      = 0;
     m_delta_ver      = 0;
     m_paint_dc       = nullptr;
-
-    #if 0
-
-        geo_coord_t  center;
-        paint_rect_t wnd;
-
-        center.y = 50.0368000;
-        center.x = 14.3385000;
-
-        wnd.max.x = 925;
-        wnd.max.y = 700;
-
-        g_geo_processor.alloc_buffer ( wnd.width(), wnd.height() );
-        g_geo_processor.cache_init();
-        g_geo_processor.set_base_params ( center, 1.0, wnd );
-        g_geo_processor.set_angle(0);
-        g_geo_processor.trim_map();
-
-    #endif
 }
 
 CMapPainter::~CMapPainter () {
@@ -89,6 +70,13 @@ void CMapPainter::OnPaint ( void ) {
 
     GetClientRect ( m_client_rect );
 
+    CDC dcMem;
+    CBitmap bitmap;
+
+    dcMem.CreateCompatibleDC( &dc );
+    bitmap.CreateCompatibleBitmap(&dc, m_client_rect.Width(), m_client_rect.Height());
+    CBitmap* pOldBitmap = dcMem.SelectObject ( &bitmap );
+
     paint_coord_t   pos;
     geo_pixel_t     px;
     COLORREF        outClr = 0;
@@ -102,11 +90,13 @@ void CMapPainter::OnPaint ( void ) {
             g_geo_processor.get_pix( pos, px );
             outClr = RGB ( px.getR(), px.getG(), px.getB() );
 
-            dc.SetPixel ( x, m_client_rect.Height() - y - 1, outClr );
-            dc.SetPixel ( x, m_client_rect.Height() - y - 2, RGB(0, 0, 0) );
+            dcMem.SetPixel ( x, m_client_rect.Height() - y - 1, outClr );
+            // dc.SetPixel ( x, m_client_rect.Height() - y - 2, RGB(0, 0, 0) );
         }
     }
 
+    dc.BitBlt (m_client_rect.left, m_client_rect.top, m_client_rect.Width(), m_client_rect.Height(), &dcMem, 0, 0, SRCCOPY);
+    dcMem.SelectObject(pOldBitmap);
 }
 
 void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {

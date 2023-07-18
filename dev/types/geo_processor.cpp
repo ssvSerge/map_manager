@@ -10,10 +10,16 @@
 //---------------------------------------------------------------------------//
 
 #define GEO_RGB(var,in_a,in_r,in_g,in_b)     { var.setR(in_r); var.setG(in_g); var.setB(in_b); }
+#define GEO_INSIDE          (0) // 0000
+#define GEO_LEFT            (1) // 0001
+#define GEO_RIGHT           (2) // 0010
+#define GEO_BOTTOM          (4) // 0100
+#define GEO_TOP             (8) // 1000
 
 //---------------------------------------------------------------------------//
 
 static const geo_pixel_t   g_color_none  (242, 239, 233);
+// static const geo_pixel_t   g_color_none  ( 0, 0, 0);
 
 //---------------------------------------------------------------------------//
 
@@ -145,6 +151,9 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
 
     if ( update_request_angle ) {
 
+        paint_coord_t pos;
+        geo_pixel_t   clr;
+
         _fill_solid ( g_color_none );
         _set_angle ( angle );
         _reset_map ();
@@ -152,9 +161,27 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
         _trim_map_by_rect ();
 
         _draw_area ();
-        // _draw_building ();
-        // _draw_roads ();
+        _draw_building ();
+        _draw_roads ();
+
+        #if 0   
+        clr = geo_pixel_t(255, 0, 0);
+
+        _win_coord(m_paint_center, pos);
+        set_pix ( pos, clr );
+
+        pos.x -= 1;  set_pix ( pos, clr );
+        pos.x += 2;  set_pix ( pos, clr );
+
+        pos.x -= 1;
+
+        pos.y -= 1;  set_pix ( pos, clr );
+        pos.y += 2;  set_pix ( pos, clr );
+        #endif
     }
+
+    _draw_roads();
+
 }
 
 //---------------------------------------------------------------------------//
@@ -271,13 +298,13 @@ void geo_processor_t::_fill_solid ( const geo_pixel_t clr ) {
     }
 }
 
-void geo_processor_t::_set_angle(const double angle) {
+void geo_processor_t::_set_angle ( const double angle ) {
 
     constexpr double pi_rad_scale = 0.01745329251994329576923690768489;
 
     m_geo_angle = angle;
-    m_geo_angle_sin = sin(angle * pi_rad_scale);
-    m_geo_angle_cos = cos(angle * pi_rad_scale);
+    m_geo_angle_sin = sin ( angle * pi_rad_scale );
+    m_geo_angle_cos = cos ( angle * pi_rad_scale );
 }
 
 void geo_processor_t::_calc_map_rect ( const geo_coord_t center, double scale, const paint_rect_t wnd ) {
@@ -313,7 +340,7 @@ void geo_processor_t::_calc_map_rect ( const geo_coord_t center, double scale, c
     m_map_geo_rect.max.x = center.x + (geo_hor / 2);
 }
 
-void geo_processor_t::_filter_rects(const v_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, v_uint32_t& out_list) {
+void geo_processor_t::_filter_rects ( const v_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, v_uint32_t& out_list ) {
 
     for (uint32_t i = 0; i < rect_list.size(); i++) {
         if ( _is_overlapped(base_rect, rect_list[i].m_rect) ) {
@@ -460,18 +487,18 @@ void geo_processor_t::_rotate_geo_line ( const v_geo_coord_t& in_coords, v_geo_c
 
 void geo_processor_t::_rotate_coord ( geo_coord_t& coord ) const {
 
-    double translated_x = 0;
-    double translated_y = 0;
-    double rotated_x = 0;
-    double rotated_y = 0;
+    double  translated_x  =  0;
+    double  translated_y  =  0;
+    double  rotated_x     =  0;
+    double  rotated_y     =  0;
 
     translated_x = coord.x - m_map_center.x;
     translated_y = coord.y - m_map_center.y;
 
-    rotated_x = translated_x * m_geo_angle_cos - translated_y * m_geo_angle_sin;
-    rotated_y = translated_x * m_geo_angle_sin + translated_y * m_geo_angle_cos;
-
+    rotated_x  = translated_x * m_geo_angle_cos - translated_y * m_geo_angle_sin;
     rotated_x += m_map_center.x;
+
+    rotated_y  = translated_x * m_geo_angle_sin + translated_y * m_geo_angle_cos;
     rotated_y += m_map_center.y;
 
     coord.x = rotated_x;
@@ -504,20 +531,27 @@ void geo_processor_t::_trim_map_by_rect ( void ) {
             continue;
         }
 
-        _trim_record ( trim_path, *it_src, out_record );
+        if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
+            _trim_record_area ( trim_path, *it_src, out_record );
+        } else
+        if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
+            _trim_record_area ( trim_path, *it_src, out_record );
+        } else
+        if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
+            _trim_record_path ( trim_path, *it_src, out_record );
+        }
+
         if ( out_record.m_lines.size() > 0 ) {
             m_paint_list.push_back(out_record);
         }
     }
 }
 
-void geo_processor_t::_trim_record ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
+void geo_processor_t::_trim_record_area ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
 
     vv_geo_coord_t      trim_in;
     vv_geo_coord_t      trim_out;
     paint_line_t        out_path;
-
-    static int stop_cnt = 0;
 
     out_record.clear();
 
@@ -535,16 +569,58 @@ void geo_processor_t::_trim_record ( const vv_geo_coord_t& rect_path, const geo_
 
         trim_out = Clipper2Lib::Intersect ( rect_path, trim_in, Clipper2Lib::FillRule::NonZero, 13 );
 
-        if ( trim_out.size() > 1 ) {
-            stop_cnt++;
-        }
-
         for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
             _map_coords ( *it_out_line, out_path.m_paint );
             out_path.m_paint.push_back ( out_path.m_paint.front() );
             out_record.m_lines.push_back ( out_path );
         }
 
+    }
+
+    return;
+}
+
+void geo_processor_t::_trim_record_path ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
+
+    vv_geo_coord_t  trim_out;
+    paint_line_t    out_path;
+    geo_rect_t      geo_rect;
+    int in_paths_cnt  = 0;
+    int out_paths_cnt = 0;
+
+    static int stop_cnt = 0;
+
+    assert(rect_path.size()    == 1);
+    assert(rect_path[0].size() == 4);
+
+    out_record.clear();
+
+    geo_rect.min.x = rect_path[0][0].x;
+    geo_rect.min.y = rect_path[0][0].y;
+    geo_rect.max.x = rect_path[0][2].x;
+    geo_rect.max.y = rect_path[0][2].y;
+
+    out_record.m_record_type  = geo_path.m_record_type;
+    out_record.m_default_type = geo_path.m_default_type;
+
+    for ( auto it_in_line = geo_path.m_lines.cbegin(); it_in_line != geo_path.m_lines.cend(); it_in_line++ ) {
+
+        in_paths_cnt++;
+
+        out_path.m_role = it_in_line->m_role;
+        out_path.m_type = it_in_line->m_type;
+
+        _clip_poly_line ( it_in_line->m_coords, geo_rect, trim_out );
+
+        if ( trim_out.size() > 1 ) {
+            stop_cnt++;
+        }
+
+        for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
+            _map_coords ( *it_out_line, out_path.m_paint );
+            out_record.m_lines.push_back ( out_path );
+            out_paths_cnt++;
+        }
     }
 
     return;
@@ -609,6 +685,7 @@ void geo_processor_t::_draw_area ( void ) {
 
         }
 
+        // break;
     }
 }
 
@@ -618,8 +695,24 @@ void geo_processor_t::_process_area ( paint_line_t& geo_line, const bool force_c
     geo_pixel_t fill_color;
 
     _map_color ( geo_line.m_type,  border_color, fill_color );
-    _poly_line ( geo_line.m_paint, border_color );
+    _poly_area ( geo_line.m_paint, border_color );
     _fill_poly ( geo_line.m_paint, geo_line.m_fill, border_color, fill_color, force_clr, mark_up );
+
+    #if 0
+        int i = 0;
+        geo_pixel_t clr;
+
+        for ( auto it = geo_line.m_paint.cbegin(); it != geo_line.m_paint.cend()-1; it++ ) {
+
+            clr.setR ( i * 10 );
+            clr.setG ( i * 30 );
+            clr.setB ( i * 40 );
+
+            set_pix  ( *it, clr );
+
+            i++;
+        }
+    #endif
 }
 
 void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const {
@@ -776,12 +869,12 @@ void geo_processor_t::_draw_building ( void ) {
             _process_area ( it->m_lines[0], true, true );
         } else {
 
-            for (size_t i = 0; i < cnt; i++) {
+            for ( size_t i = 0; i < cnt; i++ ) {
                 if ( it->m_lines[i].m_role == OBJID_ROLE_OUTER ) {
                     _process_area ( it->m_lines[i], true, true );
                 }
             }
-            for (size_t i = 0; i < cnt; i++) {
+            for ( size_t i = 0; i < cnt; i++ ) {
                 if ( it->m_lines[i].m_role != OBJID_ROLE_OUTER ) {
                     _process_area ( it->m_lines[i], true, true );
                 }
@@ -795,10 +888,35 @@ void geo_processor_t::_draw_building ( void ) {
 
 void geo_processor_t::_draw_roads ( void ) {
 
+    static int stop_cnt = 1;
+    int out_cnt = 0;
 
+    geo_pixel_t clr (255, 0, 0);
+
+    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
+
+        if ( it->m_record_type != OBJID_RECORD_HIGHWAY ) {
+            continue;
+        }
+        if ( it->m_default_type != OBJID_TYPE_ROAD ) {
+            continue;
+        }
+
+        for ( auto road_it = it->m_lines.cbegin(); road_it != it->m_lines.cend(); road_it++ ) {
+            if ( out_cnt >= stop_cnt ) {
+                // break;
+            }
+            _poly_line ( road_it->m_paint, clr );
+            out_cnt++;
+
+        }
+
+    }
+
+    stop_cnt++;
 }
 
-void geo_processor_t::_poly_line ( const v_paint_coord_t& poly_line, const geo_pixel_t color ) {
+void geo_processor_t::_poly_area ( const v_paint_coord_t& poly_line, const geo_pixel_t color ) {
 
     if ( poly_line.size() < 2 ) {
         return;
@@ -806,6 +924,15 @@ void geo_processor_t::_poly_line ( const v_paint_coord_t& poly_line, const geo_p
 
     for ( size_t i = 0; i < poly_line.size() - 1; i++ ) {
         _line ( poly_line[i + 0], poly_line[i + 1], color );
+    }
+}
+
+void geo_processor_t::_poly_line ( const v_paint_coord_t& poly_line, const geo_pixel_t color ) {
+
+    if ( poly_line.size() >= 2 ) {
+        for ( size_t i = 0; i < poly_line.size() - 1; i++ ) {
+            _line ( poly_line[i + 0], poly_line[i + 1], color );
+        }
     }
 }
 
@@ -1023,6 +1150,173 @@ void geo_processor_t::_fill_poly ( const paint_coord_t& pos, const geo_pixel_t b
             queue.push(next);
         }
     }
+}
+
+void geo_processor_t::_map_pt_pos ( const geo_coord_t& point, const geo_rect_t& rect, pt_code_pos_t& code ) const {
+
+    if ( point.x < rect.min.x ) {
+        code = CODE_POS_LEFT;
+    } else
+    if ( point.x > rect.max.x ) {
+        code = CODE_POS_RIGHT;
+    } else
+    if ( point.y > rect.max.y ) {
+        code = CODE_POS_TOP;
+    } else
+    if ( point.y < rect.min.y ) {
+        code = CODE_POS_BOTTOM;
+    } else {
+        code = CODE_POS_IN;
+    }
+}
+
+bool geo_processor_t::_get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, geo_coord_t& point ) const {
+
+    assert ( (p3.x == p4.x)  ||  (p3.y == p4.y)  );
+    assert ( p3.x <= p4.x );
+    assert ( p3.y <= p4.y );
+
+    if ( p3.x == p4.x ) {
+
+        double y = p1.y + ((p2.y - p1.y) * (p3.x - p1.x)) / (p2.x - p1.x);
+
+        if ( y > p4.y || y < p3.y || y > p2.y || y < p1.y ) {
+            return false;
+        }
+
+        point.x = p3.x;
+        point.y = y;
+
+    } else {
+
+        double x = p1.x + ((p2.x - p1.x) * (p3.y - p1.y)) / (p2.y - p1.y);
+
+        if ( x > p4.x || x < p3.x || x > p2.x || x < p1.x ) {
+            return false;
+        }
+
+        point.x = x;
+        point.y = p3.y;
+    }
+
+    return true;
+}
+
+bool geo_processor_t::_get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, geo_coord_t& point ) const {
+
+    geo_coord_t p3, p4;
+
+    switch (border) {
+
+        case CODE_POS_LEFT:
+            p3.x = p4.x = rect.min.x;
+            p3.y = rect.min.y;
+            p4.y = rect.max.y;
+            break;
+
+        case CODE_POS_RIGHT:
+            p3.x = p4.x = rect.max.x;
+            p3.y = rect.min.y;
+            p4.y = rect.max.y;
+            break;
+
+        case CODE_POS_TOP:
+            p3.y = p4.y = rect.max.y;
+            p3.x = rect.min.x;
+            p4.x = rect.max.x;
+            break;
+
+        case CODE_POS_BOTTOM:
+            p3.y = p4.y = rect.min.y;
+            p3.x = rect.min.x;
+            p4.x = rect.max.x;
+            break;
+    }
+
+    return _get_intersection_pt ( p1, p2, p3, p4, point );
+}
+
+void geo_processor_t::_clip_poly_line ( const v_geo_coord_t& polyline, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const {
+
+    pt_code_pos_t pos_prev, pos_new;
+    v_geo_coord_t segment;
+    geo_coord_t   pt;
+
+    clippedLine.clear();
+
+    if ( polyline.size() < 2 ) {
+        return;
+    }
+
+    _map_pt_pos ( polyline[0], rect, pos_prev );
+    if ( pos_prev == CODE_POS_IN ) {
+        segment.push_back( polyline[0] );
+    }
+
+    for ( size_t i = 1; i < polyline.size(); i++ ) {
+        
+        _map_pt_pos ( polyline[i], rect, pos_new );
+
+        if ( pos_new == CODE_POS_IN ) {
+
+            if ( pos_prev != CODE_POS_IN ) {
+                if ( _get_intersection_pt(polyline[i - 1], polyline[i], pos_prev, rect, pt) ) {
+                    segment.push_back ( pt );
+                }
+            }
+
+            segment.push_back ( polyline[i] );
+
+            pos_prev = pos_new;
+            continue;
+        }
+
+        if ( pos_prev == CODE_POS_IN ) {
+
+            if ( _get_intersection_pt(polyline[i - 1], polyline[i], pos_new, rect, pt) ) {
+                segment.push_back(pt);
+                if (segment.size() >= 2) {
+                    clippedLine.push_back(segment);
+                }
+                segment.clear();
+            }
+
+            pos_prev = pos_new;
+            continue;
+        }
+
+        if ( pos_prev == pos_new ) {
+            continue;
+        }
+
+        if ( segment.size() > 0 ) {
+            clippedLine.push_back ( segment );
+            segment.clear();
+            continue;
+        }
+
+        if ( pos_prev == pos_new ) {
+            continue;
+        }
+
+        if ( _get_intersection_pt(polyline[i - 1], polyline[i], pos_prev, rect, pt) ) {
+            segment.push_back(pt);
+            if ( _get_intersection_pt(polyline[i - 1], polyline[i], pos_new, rect, pt) ) {
+                segment.push_back(pt);
+            }
+            clippedLine.push_back(segment);
+            segment.clear();
+        }
+
+        pos_prev = pos_new;
+
+    }
+
+    if ( segment.size() > 0 ) {
+        clippedLine.push_back ( segment );
+    }
+
+    return;
 }
 
 //---------------------------------------------------------------------------//

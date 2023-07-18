@@ -171,6 +171,7 @@ void CAppRendererDlg::OnBnClickedCmdMap () {
     m_MapRender.SetBaseParams ( lon, lat, scale, angle );
 
     m_MapRender.Invalidate();
+    m_MapRender.UpdateWindow();
 }
 
 LRESULT CAppRendererDlg::OnMapUpdate ( WPARAM wParam, LPARAM lParam ) {

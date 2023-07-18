@@ -105,6 +105,14 @@ class geo_pixel_t {
 
 typedef uint16_t geo_pixel_int_t;
 
+typedef enum tag_pt_code_pos {
+    CODE_POS_IN,
+    CODE_POS_LEFT,
+    CODE_POS_RIGHT,
+    CODE_POS_TOP,
+    CODE_POS_BOTTOM
+}   pt_code_pos_t;
+
 class geo_processor_t {
 
     public:
@@ -139,18 +147,24 @@ class geo_processor_t {
         void _load_map_entry ( const uint32_t map_entry, geo_entry_t& map_record );
         void _rotate_geo_line ( const v_geo_coord_t& in_coords, v_geo_coord_t& out_coords );
         void _rotate_coord ( geo_coord_t& coord ) const;
-        void _trim_record ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record );
+        void _trim_record_area ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record );
+        void _trim_record_path ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record );
         void _map_coords ( const v_geo_coord_t& geo_path, v_paint_coord_t& win_path );
         void _win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const;
         void _process_area ( paint_line_t& geo_line, const bool force_clr, const bool mark_up );
         void _map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const;
-        void _poly_line ( const v_paint_coord_t& region, const geo_pixel_t color );
+        void _poly_area ( const v_paint_coord_t& region, const geo_pixel_t color );
+        void _poly_line ( const v_paint_coord_t& line, const geo_pixel_t color );
         void _fill_poly ( const v_paint_coord_t& region, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up );
         void _fill_poly ( const paint_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk );
         void _line ( const paint_coord_t from, const paint_coord_t to, const geo_pixel_t color );
         void _generate_paint_pos ( const v_paint_coord_t& region, v_paint_coord_t& coords_list ) const;
         bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
         bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
+        void _map_pt_pos ( const geo_coord_t& point, const geo_rect_t& square, pt_code_pos_t& code ) const;
+        bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, geo_coord_t& point) const;
+        bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, geo_coord_t& point ) const;
+        void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
 
     private:
         std::string             m_idx_file_name;
