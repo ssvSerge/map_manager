@@ -89,7 +89,7 @@ typedef enum tag_obj_type {
 
     OBJID_LAST_ID
 
-}    obj_type_t;
+}   obj_type_t;
 
 typedef std::vector<obj_type_t>       v_geo_obj_t;
 

@@ -325,9 +325,13 @@ static void store_area ( const storeway_t& way ) {
 
 static void scan_child ( const storerels_t& rel ) {
 
-    for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
+    if ( rel.type == DRAW_SKIP ) {
+        return;
+    }
 
-        switch (it->ref) {
+    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
+
+        switch ( it->ref ) {
             case REF_NODE:
                 processor.mark_nodes(it->id);
                 break;
@@ -337,7 +341,7 @@ static void scan_child ( const storerels_t& rel ) {
             case REF_RELATION:
                 processor.mark_relation(it->id);
                 break;
-            }
+        }
     }
 }
 
@@ -385,11 +389,11 @@ static void store_rel_area ( const storerels_t& rel ) {
 
 static void store_building ( const storeway_t& way ) {
 
-    if (way.in_use) {
+    if ( way.in_use ) {
         return;
     }
 
-    if (way.level != 0) {
+    if ( way.level != 0 ) {
         return;
     }
 
@@ -443,6 +447,12 @@ static void store_rel_building ( const storerels_t& rel ) {
 }
 
 static void store_roads ( const storeway_t& way ) {
+
+    static int stop_cnt = 0;
+
+    if ( way.id == 177921365 ) {
+        stop_cnt++;
+    }
 
     if ( way.in_use ) {
         return;

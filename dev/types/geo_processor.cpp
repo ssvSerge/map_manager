@@ -898,8 +898,25 @@ void geo_processor_t::_draw_roads ( void ) {
         if ( it->m_record_type != OBJID_RECORD_HIGHWAY ) {
             continue;
         }
-        if ( it->m_default_type != OBJID_TYPE_ROAD ) {
-            continue;
+
+        // OBJID_TYPE_FOOTWAY,
+        // OBJID_TYPE_ROAD,
+        // OBJID_TYPE_SECONDARY,
+        // OBJID_TYPE_TRUNK,
+        // OBJID_TYPE_MOTORWAY,
+        // OBJID_TYPE_PRIMARY,
+        // OBJID_TYPE_TERTIARY,
+        // residential
+
+        switch ( it->m_default_type ) {
+            case OBJID_TYPE_ROAD:
+                break;
+
+            case OBJID_TYPE_FOOTWAY:
+                break;
+
+            default:
+                continue;
         }
 
         for ( auto road_it = it->m_lines.cbegin(); road_it != it->m_lines.cend(); road_it++ ) {
