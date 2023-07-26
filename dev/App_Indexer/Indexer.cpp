@@ -126,6 +126,30 @@ static const char* _type_to_str ( draw_type_t type ) {
         case DRAW_PATH_FOOTWAY:
             return "FOOTWAY";
             break;
+        case DRAW_PATH_SERVICE:
+            return "SERVICE";
+            break;
+        case DRAW_PATH_UNCLIASSIFIED:
+            return "UNCLIASSIFIED";
+            break;
+        case DRAW_PATH_RESIDENTIAL:
+            return "RESIDENTIAL";
+            break;
+        case DRAW_PATH_STREET:
+            return "STREET";
+            break;
+        case DRAW_PATH_PEDISTRAN:
+            return "PEDISTRAN";
+            break;
+        case DRAW_PATH_TRACK:
+            return "TRACK";
+            break;
+        case DRAW_PATH_STEPS:
+            return "STEPS";
+            break;
+        case DRAW_PATH_PATH:
+            return "PATH";
+            break;
         case DRAW_PATH_TREEROW:
             return "TREEROW";
             break;
@@ -141,6 +165,10 @@ static const char* _type_to_str ( draw_type_t type ) {
 
         case DRAW_PENDING:
             return "GENERAL";
+            break;
+
+        case DRAW_SKIP:
+            return "UNDEFINED";
             break;
 
         default:

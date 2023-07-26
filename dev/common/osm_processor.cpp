@@ -143,45 +143,45 @@ static const osm_mapper_t map_path_power[] = {
 
 static const osm_mapper_t map_path_highway[] = {
 
-    {   "highway",                     DRAW_UNKNOWN           },
+    {   "highway",                     DRAW_UNKNOWN            },
 
-    {   "motorway",                    DRAW_PATH_MOTORWAY     }, // Автомагистрали 
-    {   "motorway_link",               DRAW_PATH_MOTORWAY     }, // 
-    {   "trunk",                       DRAW_PATH_TRUNK        }, // Важные дороги
-    {   "trunk_link",                  DRAW_PATH_TRUNK        }, // 
-    {   "primary",                     DRAW_PATH_PRIMARY      }, // Дороги регионального значения
-    {   "primary_link",                DRAW_PATH_PRIMARY      }, // 
-    {   "secondary",                   DRAW_PATH_SECONDARY    }, // Дороги областного значения
-    {   "secondary_link",              DRAW_PATH_SECONDARY    }, // 
-    {   "tertiary",                    DRAW_PATH_TERTIARY     }, // Автомобильных дорог местного значения
-    {   "tertiary_link",               DRAW_PATH_TERTIARY     }, // 
-    {   "unclassified",                DRAW_PATH_ROAD         }, // Автомобильные дороги местного значения
-    {   "residential",                 DRAW_PATH_ROAD         }, // Дороги внутри жилых зон.
-    {   "living_street",               DRAW_PATH_ROAD         }, // Улицы такого же класса как residential.
-    {   "service",                     DRAW_PATH_ROAD         }, // Служебные проезды
-    {   "road",                        DRAW_SKIP              }, // Возможно дороги.
-    {   "pedestrian",                  DRAW_PATH_FOOTWAY      }, // Улицы, выделенных для пешеходов.
-    {   "track",                       DRAW_PATH_ROAD         }, // Дороги сельскохозяйственного назначения
-    {   "footway",                     DRAW_PATH_FOOTWAY      }, // Пешеходные дорожки, тротуары
-    {   "steps",                       DRAW_PATH_FOOTWAY      }, // Лестницы, лестничные пролёты.
-    {   "path",                        DRAW_PATH_FOOTWAY      }, // стихийная тропа
-    {   "bus_guideway",                DRAW_SKIP              }, // Дороги предназначенные только для автобусов.
-    {   "escape",                      DRAW_SKIP              }, // Аварийная полоса
-    {   "raceway",                     DRAW_SKIP              }, // Гоночная трасса
-    {   "bridleway",                   DRAW_SKIP              }, // Дорожки для верховой езды.
-    {   "corridor",                    DRAW_SKIP              }, // 
-    {   "via_ferrata",                 DRAW_SKIP              }, // горные тропы
-    {   "cycleway",                    DRAW_SKIP              }, // велодорожки
-    {   "services",                    DRAW_SKIP              }, // СТО, Кафе, ...
-    {   "bus_guideway",                DRAW_SKIP              },
-    {   "construction",                DRAW_SKIP              },
-    {   "proposed",                    DRAW_SKIP              },
-    {   "platform",                    DRAW_SKIP              },
-    {   "rest_area",                   DRAW_SKIP              },
-    {   "virtual",                     DRAW_SKIP              },
-    {   "bus_stop",                    DRAW_SKIP              },
-    {   "elevator",                    DRAW_SKIP              },
-    {   "emergency_bay",               DRAW_SKIP              }
+    {   "motorway",                    DRAW_PATH_MOTORWAY      }, // Автомагистрали 
+    {   "motorway_link",               DRAW_PATH_MOTORWAY      }, // 
+    {   "trunk",                       DRAW_PATH_TRUNK         }, // Важные дороги
+    {   "trunk_link",                  DRAW_PATH_TRUNK         }, // 
+    {   "primary",                     DRAW_PATH_PRIMARY       }, // Дороги регионального значения
+    {   "primary_link",                DRAW_PATH_PRIMARY       }, // 
+    {   "secondary",                   DRAW_PATH_SECONDARY     }, // Дороги областного значения
+    {   "secondary_link",              DRAW_PATH_SECONDARY     }, // 
+    {   "tertiary",                    DRAW_PATH_TERTIARY      }, // Автомобильных дорог местного значения
+    {   "tertiary_link",               DRAW_PATH_TERTIARY      }, // 
+    {   "unclassified",                DRAW_PATH_UNCLIASSIFIED }, // Автомобильные дороги местного значения
+    {   "residential",                 DRAW_PATH_RESIDENTIAL   }, // Дороги внутри жилых зон.
+    {   "living_street",               DRAW_PATH_STREET        }, // Улицы такого же класса как residential.
+    {   "service",                     DRAW_PATH_SERVICE       }, // Служебные проезды
+    {   "road",                        DRAW_PATH_ROAD          }, // Возможно дороги.
+    {   "pedestrian",                  DRAW_PATH_PEDISTRAN     }, // Улицы, выделенных для пешеходов.
+    {   "track",                       DRAW_PATH_TRACK         }, // Дороги сельскохозяйственного назначения
+    {   "footway",                     DRAW_PATH_FOOTWAY       }, // Пешеходные дорожки, тротуары
+    {   "steps",                       DRAW_PATH_STEPS         }, // Лестницы, лестничные пролёты.
+    {   "path",                        DRAW_PATH_PATH          }, // стихийная тропа
+    {   "bus_guideway",                DRAW_SKIP               }, // Дороги предназначенные только для автобусов.
+    {   "escape",                      DRAW_SKIP               }, // Аварийная полоса
+    {   "raceway",                     DRAW_SKIP               }, // Гоночная трасса
+    {   "bridleway",                   DRAW_SKIP               }, // Дорожки для верховой езды.
+    {   "corridor",                    DRAW_SKIP               }, // 
+    {   "via_ferrata",                 DRAW_SKIP               }, // горные тропы
+    {   "cycleway",                    DRAW_SKIP               }, // велодорожки
+    {   "services",                    DRAW_SKIP               }, // СТО, Кафе, ...
+    {   "bus_guideway",                DRAW_SKIP               },
+    {   "construction",                DRAW_SKIP               },
+    {   "proposed",                    DRAW_SKIP               },
+    {   "platform",                    DRAW_SKIP               },
+    {   "rest_area",                   DRAW_SKIP               },
+    {   "virtual",                     DRAW_SKIP               },
+    {   "bus_stop",                    DRAW_SKIP               },
+    {   "elevator",                    DRAW_SKIP               },
+    {   "emergency_bay",               DRAW_SKIP               }
 };
 
 static const osm_mapper_t map_path_railway[] = {

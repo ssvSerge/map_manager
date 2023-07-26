@@ -53,11 +53,22 @@ typedef enum tag_obj_type {
     OBJID_TYPE_TRUNK,
     OBJID_TYPE_MOTORWAY,
     OBJID_TYPE_PRIMARY,
+
+    OBJID_TYPE_SERVICE,
+    OBJID_TYPE_UNCLIASSIFIED,
+    OBJID_TYPE_RESIDENTIAL,
+    OBJID_TYPE_STREET,
+    OBJID_TYPE_PEDISTRAN,
+    OBJID_TYPE_TRACK,
+    OBJID_TYPE_STEPS,
+    OBJID_TYPE_PATH,
+
     OBJID_TYPE_TERTIARY,
     OBJID_TYPE_RAILWAY,
     OBJID_TYPE_RIVER,
     OBJID_TYPE_BRIDGE,
     OBJID_TYPE_TUNNEL,
+    OBJID_TYPE_TREEROW,
 
     OBJID_RECORD_AREA,
     OBJID_RECORD_BUILDING,
@@ -436,27 +447,37 @@ static const lex_ctx_t g_lex_map[] = {
 };
 
 static const lex_ctx_t g_lex_types[] = {
-    { "",  "ASPHALT",               OBJID_TYPE_ASPHALT   },
-    { "",  "WATER",                 OBJID_TYPE_WATER     },
-    { "",  "FOREST",                OBJID_TYPE_FOREST    },
-    { "",  "GRASS",                 OBJID_TYPE_GRASS     },
-    { "",  "GENERAL",               OBJID_TYPE_GENERAL   },
-    { "",  "MOUNTAIN",              OBJID_TYPE_MOUNTAIN  },
-    { "",  "STONE",                 OBJID_TYPE_STONE     },
-    { "",  "SAND",                  OBJID_TYPE_SAND      },
-    { "",  "UNDEFINED",             OBJID_TYPE_UNDEFINED },
-    { "",  "BUILDING",              OBJID_TYPE_BUILDING  },
-    { "",  "FOOTWAY",               OBJID_TYPE_FOOTWAY   },
-    { "",  "ROAD",                  OBJID_TYPE_ROAD      },
-    { "",  "SECONDARY",             OBJID_TYPE_SECONDARY },
-    { "",  "TRUNK",                 OBJID_TYPE_TRUNK     },
-    { "",  "MOTORWAY",              OBJID_TYPE_MOTORWAY  },
-    { "",  "PRIMARY",               OBJID_TYPE_PRIMARY   },
-    { "",  "TERTIARY",              OBJID_TYPE_TERTIARY  },
-    { "",  "RAILWAY",               OBJID_TYPE_RAILWAY   },
-    { "",  "RIVER",                 OBJID_TYPE_RIVER     },
-    { "",  "BRIDGE",                OBJID_TYPE_BRIDGE    },
-    { "",  "TUNNEL",                OBJID_TYPE_TUNNEL    },
+    { "",  "ASPHALT",               OBJID_TYPE_ASPHALT          },
+    { "",  "WATER",                 OBJID_TYPE_WATER            },
+    { "",  "FOREST",                OBJID_TYPE_FOREST           },
+    { "",  "GRASS",                 OBJID_TYPE_GRASS            },
+    { "",  "GENERAL",               OBJID_TYPE_GENERAL          },
+    { "",  "MOUNTAIN",              OBJID_TYPE_MOUNTAIN         },
+    { "",  "STONE",                 OBJID_TYPE_STONE            },
+    { "",  "SAND",                  OBJID_TYPE_SAND             },
+    { "",  "UNDEFINED",             OBJID_TYPE_UNDEFINED        },
+    { "",  "BUILDING",              OBJID_TYPE_BUILDING         },
+    { "",  "FOOTWAY",               OBJID_TYPE_FOOTWAY          },
+    { "",  "MOUNTAIN",              OBJID_TYPE_MOUNTAIN         },
+    { "",  "ROAD",                  OBJID_TYPE_ROAD             },
+    { "",  "SECONDARY",             OBJID_TYPE_SECONDARY        },
+    { "",  "SERVICE",               OBJID_TYPE_SERVICE          },
+    { "",  "TRUNK",                 OBJID_TYPE_TRUNK            },
+    { "",  "MOTORWAY",              OBJID_TYPE_MOTORWAY         },
+    { "",  "PRIMARY",               OBJID_TYPE_PRIMARY          },
+    { "",  "RESIDENTIAL",           OBJID_TYPE_RESIDENTIAL      },
+    { "",  "STREET",                OBJID_TYPE_STREET           },
+    { "",  "UNCLIASSIFIED",         OBJID_TYPE_UNCLIASSIFIED    },
+    { "",  "PEDISTRAN",             OBJID_TYPE_PEDISTRAN        },
+    { "",  "TRACK",                 OBJID_TYPE_TRACK            },
+    { "",  "STEPS",                 OBJID_TYPE_STEPS            },
+    { "",  "PATH",                  OBJID_TYPE_PATH             },
+    { "",  "TERTIARY",              OBJID_TYPE_TERTIARY         },
+    { "",  "RAILWAY",               OBJID_TYPE_RAILWAY          },
+    { "",  "RIVER",                 OBJID_TYPE_RIVER            },
+    { "",  "BRIDGE",                OBJID_TYPE_BRIDGE           },
+    { "",  "TUNNEL",                OBJID_TYPE_TUNNEL           },
+    { "",  "TREEROW",               OBJID_TYPE_TREEROW          },
 };
 
 static const lex_ctx_t g_lex_idx[] = {
@@ -638,12 +659,22 @@ class geo_parser_t {
         }
 
         void _map_type ( const char* const key, obj_type_t& type ) {
+
+            static int stop_cnt = 0;
+
+            type = OBJID_ERROR;
             for (size_t i = 0; i < CNT(g_lex_types); i++) {
                 if (strcmp(g_lex_types[i].v, key) == 0) {
                     type = g_lex_types[i].n;
                     break;
                 }
             }
+
+            if ( type == OBJID_ERROR ) {
+                stop_cnt++;
+            }
+
+            assert ( type != OBJID_ERROR );
         }
 
 };

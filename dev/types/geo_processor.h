@@ -154,10 +154,12 @@ class geo_processor_t {
         void _process_area ( paint_line_t& geo_line, const bool force_clr, const bool mark_up );
         void _map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const;
         void _poly_area ( const v_paint_coord_t& region, const geo_pixel_t color );
-        void _poly_line ( const v_paint_coord_t& line, const geo_pixel_t color );
+        void _poly_line ( const v_paint_coord_t& line, const int width, const geo_pixel_t color );
         void _fill_poly ( const v_paint_coord_t& region, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up );
         void _fill_poly ( const paint_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk );
         void _line ( const paint_coord_t from, const paint_coord_t to, const geo_pixel_t color );
+        void _line ( const paint_coord_t from, const paint_coord_t to, const int width, const geo_pixel_t color );
+        void _draw_ñircle ( const paint_coord_t from, const  int width, const geo_pixel_t color );
         void _generate_paint_pos ( const v_paint_coord_t& region, v_paint_coord_t& coords_list ) const;
         bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
         bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
