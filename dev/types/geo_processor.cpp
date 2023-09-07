@@ -172,21 +172,6 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
         _draw_area ();
         _draw_building ();
         _draw_roads ();
-
-        #if 0   
-        clr = geo_pixel_t(255, 0, 0);
-
-        _win_coord(m_paint_center, pos);
-        set_pix ( pos, clr );
-
-        pos.x -= 1;  set_pix ( pos, clr );
-        pos.x += 2;  set_pix ( pos, clr );
-
-        pos.x -= 1;
-
-        pos.y -= 1;  set_pix ( pos, clr );
-        pos.y += 2;  set_pix ( pos, clr );
-        #endif
     }
 
     _draw_roads();
@@ -597,8 +582,6 @@ void geo_processor_t::_trim_record_path ( const vv_geo_coord_t& rect_path, const
     int in_paths_cnt  = 0;
     int out_paths_cnt = 0;
 
-    static int stop_cnt = 0;
-
     assert(rect_path.size()    == 1);
     assert(rect_path[0].size() == 4);
 
@@ -619,11 +602,7 @@ void geo_processor_t::_trim_record_path ( const vv_geo_coord_t& rect_path, const
         out_path.m_role = it_in_line->m_role;
         out_path.m_type = it_in_line->m_type;
 
-        if ( geo_path.m_osm_ref == 4704723 ) {
-            stop_cnt++;
-        }
-
-        _clip_poly_line ( it_in_line->m_coords, geo_rect, trim_out );
+        _clip_poly_line ( it_in_line->m_angle, geo_rect, trim_out );
 
         for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
             _map_coords ( *it_out_line, out_path.m_paint );
@@ -707,22 +686,6 @@ void geo_processor_t::_process_area ( paint_line_t& geo_line, const bool force_c
     _map_color ( geo_line.m_type,  border_color, fill_color );
     _poly_area ( geo_line.m_paint, border_color );
     _fill_poly ( geo_line.m_paint, geo_line.m_fill, border_color, fill_color, force_clr, mark_up );
-
-    #if 0
-        int i = 0;
-        geo_pixel_t clr;
-
-        for ( auto it = geo_line.m_paint.cbegin(); it != geo_line.m_paint.cend()-1; it++ ) {
-
-            clr.setR ( i * 10 );
-            clr.setG ( i * 30 );
-            clr.setB ( i * 40 );
-
-            set_pix  ( *it, clr );
-
-            i++;
-        }
-    #endif
 }
 
 void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const {
@@ -848,8 +811,14 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
             break;
 
         case OBJID_RECORD_HIGHWAY:    
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
+        case OBJID_TYPE_STREET:
+        case OBJID_TYPE_SERVICE:
+        case OBJID_TYPE_RESIDENTIAL:
+            GEO_RGB ( fill_color, 255, 120, 120, 120 );
             GEO_RGB ( border_color, 0,   0,   0,   0 );
+            break;
+
+        case OBJID_TYPE_TRACK:
             break;
 
         default:
@@ -901,7 +870,9 @@ void geo_processor_t::_draw_roads ( void ) {
     static int stop_cnt = 1;
     int out_cnt = 0;
 
-    geo_pixel_t clr (255, 0, 0);
+    geo_pixel_t clr1 (255, 0, 0);
+    geo_pixel_t clr2 (255, 0, 0);
+    int         road_width_m;
 
     for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
 
@@ -911,32 +882,47 @@ void geo_processor_t::_draw_roads ( void ) {
 
         switch ( it->m_default_type ) {
 
-            case OBJID_TYPE_STREET:             // асфальтированные жилый улицы. оставляем.
-            case OBJID_TYPE_SERVICE:            // асфальтовая дорога. сотавляем.
-            case OBJID_TYPE_RESIDENTIAL:        // асфальтовая дорога. сотавляем.
-            case OBJID_TYPE_TRACK:              // асфальтовая дорожка. оставляем.
+            // асфальтированные жилый улицы. оставляем.
+            case OBJID_TYPE_STREET:
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 3;
+                break;
+
+            // асфальтовая дорога. сотавляем.
+            case OBJID_TYPE_SERVICE:            
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 3;
+                break;
+
+            // асфальтовая дорога. сотавляем.
+            case OBJID_TYPE_RESIDENTIAL:        
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 3;
+                break;
+
+            // асфальтовая дорожка. оставляем.
+            case OBJID_TYPE_TRACK:              
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 1;
                 break;
 
             case OBJID_TYPE_PATH:               // тропинки. пропускаем
-                continue;
-
             case OBJID_TYPE_FOOTWAY:            // просто возможность пройти. пропускаем.
-                continue;
-
             case OBJID_TYPE_ROAD:               // таких нет. пропускаем.
             case OBJID_TYPE_STEPS:              // таких нет. пропускаем.
-            default:
+            default:                            // 
                 continue;
 
         }
+
+        road_width_m *= 2;
 
         for ( auto road_it = it->m_lines.cbegin(); road_it != it->m_lines.cend(); road_it++ ) {
             if ( out_cnt >= stop_cnt ) {
                 // break;
             }
-            _poly_line ( road_it->m_paint, 4, clr );
+            _poly_line ( road_it->m_paint, road_width_m, clr2 );
             out_cnt++;
-
         }
 
     }
@@ -964,18 +950,19 @@ void geo_processor_t::_poly_line ( const v_paint_coord_t& poly_line, const int w
     }
 }
 
-void geo_processor_t::_draw_сircle ( const paint_coord_t center, const int width, const geo_pixel_t color ) {
+void geo_processor_t::_process_pt_list ( const paint_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color ) {
 
-    paint_coord_t p;
+    paint_coord_t pt;
 
-    for ( int x = -width; x <= width; ++x ) {
-        for ( int y = -width; y <= width; ++y ) {
-            if ( x * x + y * y <= width * width ) {
-                p.x = center.x + x;
-                p.y = center.y + y;
-                set_pix ( p, color );
-            }
-        }
+    for ( size_t i = 0; i < shift_list.size(); i++ ) {
+        
+        pt.x = base.x;
+        pt.y = base.y;
+
+        pt.x += shift_list[i].dx;
+        pt.y += shift_list[i].dy;
+
+        set_pix ( pt, color );
     }
 }
 
@@ -1019,66 +1006,72 @@ void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, 
     }
 }
 
-void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, const int width, const geo_pixel_t color ) {
+void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, int width, const geo_pixel_t color ) {
 
-    paint_coord_t p1;
-    geo_pixel_t ends;
+    paint_offset_t    pt;
+    v_paint_offset_t  offsets_list;
+    paint_coord_t     p1;
+    paint_coord_t     p2;
 
-    int circleRadius = width / 2;
-
-    int dx = abs(to.x - from.x);
-    int dy = abs(to.y - from.y);
-    int sx = (from.x < to.x) ? 1 : -1;
-    int sy = (from.y < to.y) ? 1 : -1;
-    int err = dx - dy;
-
-    double angle    = atan2( (to.y - from.y), (to.x - from.x) );
-    double cosAngle = cos(angle);
-    double sinAngle = sin(angle);
-    double val;
-
-    std::vector<int> sinValues(width + 1);
-    std::vector<int> cosValues(width + 1);
-
-    for (int i = 0; i <= width; ++i) {
-        val = (i - (width / 2)) * -sinAngle;
-        sinValues[i] = static_cast<int> ( round(val) );
-
-        val = (i - (width / 2)) * cosAngle;
-        cosValues[i] = static_cast<int> ( round(val) );
+    if ( width % 2 ) {
+        width++;
     }
 
-    int x = from.x;
-    int y = from.y;
+    int radius = width / 2;
 
-    while (true) {
+    double x2;
+    double y2;
+    double r2;
 
-        for ( int i = 0; i < width; ++i ) {
-            p1.x = x + sinValues[i];
-            p1.y = y + cosValues[i];
-            set_pix ( p1, color );
+    r2 = radius * radius - 0.5;
+
+    offsets_list.reserve ( width* width );
+    for (int y = -radius; y <= radius; ++y) {
+        y2 = y * y;
+        for (int x = -radius; x <= radius; ++x) {
+            x2 = x * x;
+            if ((x2 + y2) <= r2) {
+                pt.dx  = x;
+                pt.dy  = y;
+                offsets_list.push_back(pt);
+            }
         }
-
-        if ( (x == to.x) && (y == to.y) ) {
-            break;
-        }
-
-        int e2 = 2 * err;
-
-        if (e2 > -dy) {
-            err -= dy;
-            x += sx;
-        }
-
-        if (e2 < dx) {
-            err += dx;
-            y += sy;
-        }
-
     }
 
-    _draw_сircle ( from, circleRadius, ends );
-    _draw_сircle ( to,   circleRadius, ends );
+    p1.x = from.x;
+    p1.y = from.y;
+    p2.x = to.x;
+    p2.y = to.y;
+
+    int   error1;
+    int   error2;
+
+    const int deltaX = static_cast<int> (abs(p2.x - p1.x));
+    const int deltaY = static_cast<int> (abs(p2.y - p1.y));
+    const int signX = (p1.x < p2.x) ? 1 : -1;
+    const int signY = (p1.y < p2.y) ? 1 : -1;
+
+    error1 = deltaX - deltaY;
+
+    _process_pt_list ( p2, offsets_list, color );
+
+    while ( (p1.x != p2.x) || (p1.y != p2.y) ) {
+
+        _process_pt_list ( p1, offsets_list, color );
+
+        error2 = error1 * 2;
+
+        if (error2 > -deltaY) {
+            error1 -= deltaY;
+            p1.x += signX;
+        }
+
+        if (error2 < deltaX) {
+            error1 += deltaX;
+            p1.y += signY;
+        }
+    }
+
 }
 
 void geo_processor_t::_fill_poly ( const v_paint_coord_t& poly_line, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up ) {

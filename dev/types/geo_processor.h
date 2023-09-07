@@ -25,6 +25,10 @@ class geo_pixel_t {
             setB(in_b);
         }
 
+        void clear() {
+            r = g = b = 0;
+        }
+
         geo_pixel_t Shift ( int8_t val ) {
 
             int tmp;
@@ -113,6 +117,20 @@ typedef enum tag_pt_code_pos {
     CODE_POS_BOTTOM
 }   pt_code_pos_t;
 
+class paint_offset_t {
+    public:
+        paint_offset_t() {
+            dx = 0;
+            dy = 0;
+        }
+
+    public:
+        int         dx;
+        int         dy;
+};
+
+typedef std::vector<paint_offset_t>    v_paint_offset_t;
+
 class geo_processor_t {
 
     public:
@@ -158,8 +176,7 @@ class geo_processor_t {
         void _fill_poly ( const v_paint_coord_t& region, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up );
         void _fill_poly ( const paint_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk );
         void _line ( const paint_coord_t from, const paint_coord_t to, const geo_pixel_t color );
-        void _line ( const paint_coord_t from, const paint_coord_t to, const int width, const geo_pixel_t color );
-        void _draw_ñircle ( const paint_coord_t from, const  int width, const geo_pixel_t color );
+        void _line ( const paint_coord_t from, const paint_coord_t to, int width, const geo_pixel_t color );
         void _generate_paint_pos ( const v_paint_coord_t& region, v_paint_coord_t& coords_list ) const;
         bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
         bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
@@ -167,6 +184,7 @@ class geo_processor_t {
         bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, geo_coord_t& point) const;
         bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, geo_coord_t& point ) const;
         void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
+        void _process_pt_list ( const paint_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color );
 
     private:
         std::string             m_idx_file_name;
