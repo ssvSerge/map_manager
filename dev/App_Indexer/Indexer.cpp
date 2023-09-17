@@ -8,11 +8,24 @@
 #include "..\common\osm_processor.h"
 #include "..\common\lex_keys.h"
 
-map_storenode_t       g_nodes_list;
-map_storeway_t        g_ways_list;
-map_storerel_t        g_rels_list;
+#define M_PI                (3.14159265358979323846)
+#define DEG2RAD(a)          ( (a) / (180 / M_PI) )
+#define RAD2DEG(a)          ( (a) * (180 / M_PI) )
+#define EARTH_RADIUS        (6378137)
 
-osm_processor_t       processor;
+map_storenode_t             g_nodes_list;
+map_storeway_t              g_ways_list;
+map_storerel_t              g_rels_list;
+
+osm_processor_t             processor;
+
+static double lat2y_m(double lat) { 
+    return log ( tan ( DEG2RAD(lat) / 2 + M_PI / 4)) * EARTH_RADIUS;
+}
+
+static double lon2x_m(double lon) {
+    return DEG2RAD(lon) * EARTH_RADIUS;
+}
 
 static void _log_key ( const char* const name, const char* const value, bool cr = false ) {
 
@@ -57,9 +70,12 @@ static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
 
 static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
 
-    char position[80];
-    sprintf_s ( position, "%.7f %.7f", lat, lon );
-    _log_key ( KEYNAME_COORDINATES, position);
+    char position[ 160 ];
+    double projection_y = lat2y_m(lat);
+    double projection_x = lon2x_m(lon);
+
+    sprintf_s ( position, "%.7f %.7f %.1f %.1f", lat, lon, projection_y, projection_x );
+    _log_key ( KEYNAME_COORDINATES, position );
 }
 
 static const char* _type_to_str ( draw_type_t type ) {

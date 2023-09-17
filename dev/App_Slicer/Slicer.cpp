@@ -14,9 +14,12 @@
 #include "MemMapper.h"
 
 #include <geo_types.h>
+#include <geo_tools.h>
 #include <lex_keys.h>
+#include <geo_projection.h>
 
-#define CNT(x)   ( sizeof(x) / sizeof(x[0]) )
+
+#define CNT(x)      ( sizeof(x) / sizeof(x[0]) )
 
 std::mutex          g_pages_mutex;
 
@@ -36,6 +39,7 @@ std::atomic<size_t>         g_pending_cnt  = 0;
 geo_entry_t                 g_geo_record;
 l_geo_entry_t               g_geo_record_list;
 vv_geo_offset_t             g_scan_result;
+
 
 static void _log_pair ( const char* const key, const char* const val, bool cr ) {
 
@@ -60,7 +64,7 @@ static double toRadians ( double val ) {
     return val / 57.295779513082325;
 }
 
-static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
+static double _gps_distance ( double lon1, double lat1, double lon2, double lat2 ) {
 
     double R  = 6371e3;
     double f1 = toRadians(lat1);
@@ -77,21 +81,25 @@ static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
 
 static void _find_box ( void ) {
 
+    map_pos_t p_next;
+
     bool first_entry = true;
 
     for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
         for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
             for ( auto coord = line->m_coords.cbegin(); coord != line->m_coords.cend(); coord++ ) {
 
+                coord->get ( p_next, POS_TYPE_GPS );
+
                 if ( first_entry ) {
                     first_entry = false;
-                    g_x_min = g_x_max = coord->x;
-                    g_y_min = g_y_max = coord->y;
+                    g_x_min = g_x_max = p_next.x;
+                    g_y_min = g_y_max = p_next.y;
                 } else {
-                    g_x_min = std::min ( g_x_min, coord->x );
-                    g_x_max = std::max ( g_x_max, coord->x );
-                    g_y_min = std::min ( g_y_min, coord->y );
-                    g_y_max = std::max ( g_y_max, coord->y );
+                    g_x_min = std::min ( g_x_min, p_next.x );
+                    g_x_max = std::max ( g_x_max, p_next.x );
+                    g_y_min = std::min ( g_y_min, p_next.y );
+                    g_y_max = std::max ( g_y_max, p_next.y );
                 }
             }
         }
@@ -101,8 +109,8 @@ static void _find_box ( void ) {
 
 static void _find_scale ( void ) {
 
-    {   double  len_left   =  _delta ( g_x_min, g_y_min, g_x_min, g_y_max );
-        double  len_right  =  _delta ( g_x_max, g_y_min, g_x_max, g_y_max );
+    {   double  len_left   =  _gps_distance ( g_x_min, g_y_min, g_x_min, g_y_max );
+        double  len_right  =  _gps_distance ( g_x_max, g_y_min, g_x_max, g_y_max );
         double  len_ver    =  std::min ( len_left, len_right );
         double  ver_cnt    =  len_ver / g_geo_scale;
         double  delta_ver  =  std::max ( g_y_max, g_y_min ) - std::min ( g_y_max, g_y_min );
@@ -110,20 +118,22 @@ static void _find_scale ( void ) {
         g_step_ver = delta_ver / ver_cnt;
     }
 
-    {   double  len_bottom =  _delta ( g_x_min, g_y_min, g_x_max, g_y_min );
-        double  len_top    =  _delta ( g_x_min, g_y_max, g_x_max, g_y_max );
-        double  len_hor    =  std::min ( len_bottom, len_top );
-        double  hor_cnt    =  len_hor / g_geo_scale;
-        double  delta_hor  =  std::max ( g_x_max, g_x_min ) - std::min ( g_x_max, g_x_min );
+    {   double  len_bottom  =  _gps_distance ( g_x_min, g_y_min, g_x_max, g_y_min );
+        double  len_top     =  _gps_distance ( g_x_min, g_y_max, g_x_max, g_y_max );
+        double  len_hor     =  std::min ( len_bottom, len_top );
+        double  hor_cnt     =  len_hor / g_geo_scale;
+        double  delta_hor   =  std::max ( g_x_max, g_x_min ) - std::min ( g_x_max, g_x_min );
 
         g_step_hor = delta_hor / hor_cnt;
     }
-
 }
 
-static void _log_index ( const vv_geo_coord_t& in_rect, size_t id ) {
+static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
 
-    char tmp[80];
+    map_pos_t gps_min, map_min;
+    map_pos_t gps_max, map_max;
+
+    char tmp[160] = { 0 };
 
     v_geo_offset_t*  res_ptr = nullptr;
 
@@ -133,16 +143,25 @@ static void _log_index ( const vv_geo_coord_t& in_rect, size_t id ) {
         return;
     }
 
-    sprintf_s(tmp, sizeof(tmp), "%lf %lf %lf %lf", in_rect[0][3].x, in_rect[0][3].y, in_rect[0][1].x, in_rect[0][1].y);
+    in_rect.min.get ( gps_min, POS_TYPE_GPS );
+    in_rect.max.get ( gps_max, POS_TYPE_GPS );
+    in_rect.min.get ( map_min, POS_TYPE_MAP );
+    in_rect.max.get ( map_max, POS_TYPE_MAP );
+
+    sprintf_s ( 
+        tmp, sizeof(tmp)-1, 
+        "%lf %lf %lf %lf %lf %lf %lf %lf", 
+        gps_min.y, gps_min.x, gps_max.y, gps_max.x, 
+        map_min.y, map_min.x, map_max.y, map_max.x 
+    );
 
     _log_pair ( KEYNAME_INDEX,    KEYPARAM_RECT,  true );
     _log_pair ( KEYNAME_POSITION, tmp,            true );
     _log_pair ( KEYNAME_OFFSETS,  KEYPARAM_BEGIN, false );
 
-
     auto item_ptr = res_ptr->cbegin();
     while ( item_ptr != res_ptr->cend() ) {
-        _log_pair(KEYNAME_MEMBER, *item_ptr, false);
+        _log_pair ( KEYNAME_MEMBER, *item_ptr, false );
         item_ptr++;
     }
 
@@ -152,19 +171,47 @@ static void _log_index ( const vv_geo_coord_t& in_rect, size_t id ) {
     std::cout << std::endl;
 }
 
-static void _scan_rect ( const vv_geo_coord_t& in_rect, size_t id ) {
+static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
 
-    vv_geo_coord_t  in_lines;
     vv_geo_coord_t  tmp;
 
-    in_lines.resize(1);
+    geo_coord_t     dummy_pt;
+    v_geo_coord_t   dummy_rect;
+
+    #if 0
+    {   map_pos_t    pos_min, pos_max;
+        
+        in_rect.min.get ( pos_min, POS_TYPE_GPS );
+        in_rect.max.get ( pos_max, POS_TYPE_GPS );
+
+        dummy_pt.set(  );
+
+        dummy_pt.lon = in_rect.min.lon; 
+        dummy_pt.lat = in_rect.min.lat; 
+        dummy_rect.push_back(dummy_pt);
+
+        dummy_pt.lon = in_rect.min.lon; 
+        dummy_pt.lat = in_rect.max.lat; 
+        dummy_rect.push_back(dummy_pt);
+
+        dummy_pt.lon = in_rect.max.lon;
+        dummy_pt.lat = in_rect.max.lat;
+        dummy_rect.push_back(dummy_pt);
+
+        dummy_pt.lon = in_rect.max.lon;
+        dummy_pt.lat = in_rect.min.lat;
+        dummy_rect.push_back(dummy_pt);
+
+        dummy_pt.lon = in_rect.min.lon;
+        dummy_pt.lat = in_rect.min.lat;
+        dummy_rect.push_back(dummy_pt);
+    }
+    #endif
 
     for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
         for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
             
-            in_lines[0] = line->m_coords;
-            tmp = Clipper2Lib::Intersect ( in_lines, in_rect, Clipper2Lib::FillRule::NonZero, 13);
-
+            geo_intersect ( line->m_coords, in_rect, POS_TYPE_GPS, tmp );
             if ( tmp.size() > 0 ) {
                 g_scan_result[id].push_back ( record->m_data_off );
             }
@@ -181,30 +228,39 @@ static void _scan_rect ( const vv_geo_coord_t& in_rect, size_t id ) {
 
 static void _slicing ( void ) {
 
-    double      x_min   = g_x_min;
-    double      x_max   = g_x_max - g_step_hor;
-    double      x_step  = g_step_hor;
+    double  x_min   = g_x_min;
+    double  x_max   = g_x_max - g_step_hor;
+    double  x_step  = g_step_hor;
 
-    double      y_min   = g_y_min;
-    double      y_max   = g_y_max - g_step_ver;
-    double      y_step  = g_step_ver;
+    double  y_min   = g_y_min;
+    double  y_max   = g_y_max - g_step_ver;
+    double  y_step  = g_step_ver;
 
-    geo_coord_t         pt;
-    vv_geo_coord_t      rect;
-    vvv_geo_coord_t     slicer_rects;
+    map_pos_t       pos;
+    geo_rect_t      rect;
+    v_geo_rect_t    slicer_rects;
 
     rect.clear();
-    rect.resize(1);
-    rect[0].resize(5);
 
-    for (double y = y_min; y <= y_max; y += y_step) {
-        for (double x = x_min; x <= x_max; x += x_step) {
+    for ( double y = y_min; y <= y_max; y += y_step ) {
+        for ( double x = x_min; x <= x_max; x += x_step ) {
 
-            pt.x = x + x_step; pt.y = y;               rect[0][0] = pt;
-                                                       rect[0][4] = pt;
-            pt.x = x + x_step; pt.y = y + g_step_ver;  rect[0][1] = pt;
-            pt.x = x;          pt.y = y + g_step_ver;  rect[0][2] = pt;
-            pt.x = x;          pt.y = y;               rect[0][3] = pt;
+            pos.x = x;
+            pos.y = y;
+
+            rect.min.set ( pos, POS_TYPE_GPS );
+            _pt_to_projection(pos);
+            rect.min.set(pos, POS_TYPE_MAP);
+            rect.min.reset_angle();
+
+
+            pos.x = x + x_step;
+            pos.y = y + y_step;
+
+            rect.max.set ( pos, POS_TYPE_GPS );
+            _pt_to_projection(pos);
+            rect.max.set(pos, POS_TYPE_MAP);
+            rect.max.reset_angle();
 
             slicer_rects.push_back ( rect );
         }
@@ -215,13 +271,11 @@ static void _slicing ( void ) {
     g_scan_result.resize ( g_pending_cnt );
 
     thread_pool pool;
-
     for (int id = 0; id < slicer_rects.size(); id++) {
-        pool.push_task( [slicer_rects, id] { _scan_rect ( slicer_rects[id], id ); });
+        pool.push_task ( [slicer_rects, id] { _scan_rect ( slicer_rects[id], id ); });
     }
 
     pool.wait_for_tasks();
-
     for (size_t i = 0; i < slicer_rects.size(); i++) {
         _log_index ( slicer_rects[i], i );
     }

@@ -91,6 +91,7 @@
     <ClCompile Include="..\clipper2\src\clipper.engine.cpp" />
     <ClCompile Include="..\clipper2\src\clipper.offset.cpp" />
     <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp" />
+    <ClCompile Include="..\types\geo_tools.cpp" />
     <ClCompile Include="MemMapper.cpp" />
     <ClCompile Include="Slicer.cpp" />
   </ItemGroup>

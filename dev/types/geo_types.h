@@ -13,15 +13,137 @@
 #include <vector>
 #include <list>
 #include <string>
-
-#include <clipper2/clipper.h>
+#include <cassert>
 
 #define CNT(x)          ( sizeof(x) / sizeof(x[0]) )
 #define MSG_LEN         ( 128 )
 
-typedef Clipper2Lib::PointD                         geo_coord_t;
-typedef Clipper2Lib::PathD                          v_geo_coord_t;
-typedef Clipper2Lib::PathsD                         vv_geo_coord_t;
+typedef enum tag_pos_type_t {
+    POS_TYPE_GPS,
+    POS_TYPE_MAP,
+    POS_TYPE_ANGLE,    
+}   pos_type_t;
+
+class map_pos_t {
+    public:
+        map_pos_t() {
+            clear();
+        }
+
+        void clear() {
+            x = y = 0;
+        }
+
+    public:
+        double x;
+        double y;
+};
+
+class geo_point_t {
+
+    private:
+        map_pos_t   gps;
+        map_pos_t   map;
+        map_pos_t   ang;
+
+    public:
+        geo_point_t() {
+            clear();
+        }
+
+        void clear() {
+            gps.clear();
+            map.clear();
+            ang.clear();
+        }
+
+        void reset_angle() {
+            ang = map;
+        }
+
+        void set ( const map_pos_t& _pos, const pos_type_t _type ) {
+
+            switch (_type) {
+                case POS_TYPE_GPS:
+                    gps.x = _pos.x;
+                    gps.y = _pos.y;
+                    break;
+                case POS_TYPE_MAP:
+                    map.x = _pos.x;
+                    map.y = _pos.y;
+                    break;
+                case POS_TYPE_ANGLE:
+                    ang.x = _pos.x;
+                    ang.y = _pos.y;
+                    break;
+            }
+        }
+
+        void get ( map_pos_t& _pos, const pos_type_t _type) const {
+            
+            switch ( _type ) {
+                case POS_TYPE_GPS:
+                    _pos.x = gps.x;
+                    _pos.y = gps.y;
+                    break;
+                case POS_TYPE_MAP:
+                    _pos.x = map.x;
+                    _pos.y = map.y;
+                    break;
+                case POS_TYPE_ANGLE:
+                    _pos.x = ang.x;
+                    _pos.y = ang.y;
+                    break;
+            }
+        }
+
+        double x ( pos_type_t pos_type ) const {
+
+            switch (pos_type) {
+                case POS_TYPE_GPS:
+                    return gps.x;
+                    break;
+                case POS_TYPE_MAP:
+                    return map.x;
+                    break;
+                case POS_TYPE_ANGLE:
+                    return ang.x;
+                    break;
+            }
+        }
+
+        double y ( pos_type_t pos_type ) const {
+            switch (pos_type) {
+                case POS_TYPE_GPS:
+                    return gps.y;
+                    break;
+                case POS_TYPE_MAP:
+                    return map.y;
+                    break;
+                case POS_TYPE_ANGLE:
+                    return ang.y;
+                    break;
+            }
+        }
+
+        bool operator== ( const geo_point_t& ref ) const {
+            if ( this->gps.x != ref.gps.x ) {
+                return false;
+            }
+            if ( this->gps.y != ref.gps.y ) {
+                return false;
+            }
+            return true;
+        }
+
+        bool operator!= (const geo_point_t& ref) const {
+            return ! this->operator==(ref);
+        };
+};
+
+typedef geo_point_t                                 geo_coord_t;
+typedef std::vector<geo_coord_t>                    v_geo_coord_t;
+typedef std::vector<v_geo_coord_t>                  vv_geo_coord_t;
 typedef std::vector<vv_geo_coord_t>                 vvv_geo_coord_t;
 typedef int32_t                                     geo_color_t;
 
@@ -147,14 +269,13 @@ class geo_rect_t {
 
     public:
         void clear() {
-            min.x = -333;
-            min.y = -333;
-            max.x = -333;
-            max.y = -333;
+            min.clear();
+            max.clear();
         }
 
         void load(const char* const val) {
-            (void)sscanf_s( val, "%lf %lf %lf %lf", &min.x, &min.y, &max.x, &max.y );
+            (void) (val);
+            // (void)sscanf_s( val, "%lf %lf %lf %lf", &min.x, &min.y, &max.x, &max.y );
         }
 
         bool operator== (const geo_rect_t& ref) const {
@@ -171,6 +292,26 @@ class geo_rect_t {
         bool operator!= (const geo_rect_t& ref) const {
             bool ret_val = this->operator== (ref);
             return (!ret_val);
+        }
+
+        bool is_overlapped ( const geo_rect_t& slice, const pos_type_t src ) const {
+
+            if ( this->min.x(src) > slice.max.x(src) ) {
+                return false;
+            }
+            if ( this->max.x(src) < slice.min.x(src) ) {
+                return false;
+            }
+
+            if ( this->min.y(src) > slice.max.y(src) ) {
+                return false;
+            }
+            if ( this->max.y(src) < slice.min.y(src) ) {
+                return false;
+            }
+
+            return true;
+
         }
 
     public:
@@ -242,7 +383,6 @@ class geo_line_t {
         obj_type_t              m_type;      // TYPE:ASPHALT
         uint32_t                m_area;      // SIZE:33429
         v_geo_coord_t           m_coords;    // coords
-        v_geo_coord_t           m_angle;     // angled coords
 };
 
 typedef std::vector<geo_line_t>       v_geo_line_t;
@@ -651,11 +791,15 @@ class geo_parser_t {
         }
 
         void _load ( geo_coord_t& coords ) {
-            sscanf_s ( m_geo_param.value.msg, "%lf %lf", &coords.y, &coords.x );
-        }
 
-        void _load ( uint32_t& geo_coords ) {
-            sscanf_s ( m_geo_param.value.msg, "%d", &geo_coords );
+            map_pos_t gps;
+            map_pos_t map;
+
+            sscanf_s ( m_geo_param.value.msg,  "%lf %lf %lf %lf",  &gps.y, &gps.x, &map.y, &map.x  ); 
+
+            coords.set ( gps, POS_TYPE_GPS );
+            coords.set ( map, POS_TYPE_MAP );
+            coords.reset_angle();
         }
 
         void _map_type ( const char* const key, obj_type_t& type ) {

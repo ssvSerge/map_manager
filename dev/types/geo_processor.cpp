@@ -2,10 +2,12 @@
 #include <fstream>
 #include <algorithm>
 #include <stack>
+#include <queue>
 
 #include <GeographicLib/Geodesic.hpp>
-
 #include <geo_processor.h>
+#include <geo_tools.h>
+#include <geo_projection.h>
 
 //---------------------------------------------------------------------------//
 
@@ -172,9 +174,9 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
         _draw_area ();
         _draw_building ();
         _draw_roads ();
+        _draw_roads ();
     }
 
-    _draw_roads();
 
 }
 
@@ -213,18 +215,53 @@ void geo_processor_t::_load_idx ( v_geo_idx_rec_t& idx_list ) {
 
 void geo_processor_t::_find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_t& map_rect ) {
 
+    map_pos_t  rect_geo_min;
+    map_pos_t  rect_geo_max;
+    map_pos_t  rect_map_min;
+    map_pos_t  rect_map_max;
+
+    map_pos_t  geo_min;
+    map_pos_t  geo_max;
+    map_pos_t  map_min;
+    map_pos_t  map_max;
+
     for ( size_t i = 0; i < map_idx.size(); i++ ) {
     
+        map_idx[i].m_rect.min.get ( geo_min, POS_TYPE_GPS );
+        map_idx[i].m_rect.max.get ( geo_max, POS_TYPE_GPS );
+        map_idx[i].m_rect.min.get ( map_min, POS_TYPE_MAP );
+        map_idx[i].m_rect.max.get ( map_max, POS_TYPE_MAP );
+
         if ( i == 0 ) {
-            map_rect = map_idx[i].m_rect;
+
+            rect_geo_min = geo_min;
+            rect_geo_max = geo_max;
+
+            rect_map_min = rect_map_min;
+            rect_map_max = rect_map_max;
+
         } else {
-            map_rect.min.x = std::min ( map_rect.min.x, map_idx[i].m_rect.min.x );
-            map_rect.min.y = std::min ( map_rect.min.y, map_idx[i].m_rect.min.y );
-            map_rect.max.x = std::max ( map_rect.max.x, map_idx[i].m_rect.max.x );
-            map_rect.max.y = std::max ( map_rect.max.y, map_idx[i].m_rect.max.y );
+
+            rect_geo_min.x = std::min ( rect_geo_min.x, geo_min.x );
+            rect_geo_min.y = std::min ( rect_geo_min.y, geo_min.y );
+
+            rect_map_min.x = std::min ( rect_map_min.x, map_min.x );
+            rect_map_min.y = std::min ( rect_map_min.y, map_min.y );
+
+            rect_geo_max.x = std::max ( rect_geo_max.x, geo_max.x );
+            rect_geo_max.y = std::max ( rect_geo_max.y, geo_max.y );
+
+            rect_map_max.x = std::max ( rect_map_max.x, map_max.x );
+            rect_map_max.y = std::max ( rect_map_max.y, map_max.y );
+
         }
 
     }
+
+    map_rect.min.set ( rect_geo_min, POS_TYPE_GPS );
+    map_rect.min.set ( rect_map_min, POS_TYPE_MAP );
+    map_rect.max.set ( rect_geo_max, POS_TYPE_GPS );
+    map_rect.max.set ( rect_map_max, POS_TYPE_MAP );
 }
 
 void geo_processor_t::_px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const {
@@ -305,33 +342,56 @@ void geo_processor_t::_calc_map_rect ( const geo_coord_t center, double scale, c
 
     const double geo_delta = 0.0001;
 
-    double  shift_hor = 0;
-    double  shift_ver = 0;
     double  geo_hor;
     double  geo_ver;
+    double  shift_hor;
+    double  shift_ver;
 
-    m_map_scale    = scale;
-    m_map_center   = center;
+    map_pos_t gps_center;
+    map_pos_t step_hor;
+    map_pos_t step_ver;
 
-    m_map_geo_rect.min.y = m_map_geo_rect.max.y = center.y;
-    m_map_geo_rect.min.x = m_map_geo_rect.max.x = center.x;
+    center.get ( gps_center, POS_TYPE_GPS );
+
+    step_hor    = gps_center;
+    step_hor.x += geo_delta;
+
+    step_ver    = gps_center;
+    step_hor.y += geo_delta;
 
     GeographicLib::Geodesic geod(GeographicLib::Constants::WGS84_a(), GeographicLib::Constants::WGS84_f());
 
-    geod.Inverse ( center.y, center.x,   center.y, center.x + geo_delta,   shift_hor );
-    geod.Inverse ( center.y, center.x,   center.y + geo_delta, center.x,   shift_ver );
+    geod.Inverse ( gps_center.y, gps_center.x, step_hor.y, step_hor.x, shift_hor );
+    geod.Inverse ( gps_center.y, gps_center.x, step_ver.y, step_ver.x, shift_ver );
 
-    m_map_step_x  = geo_delta / shift_hor / scale;
-    m_map_step_y  = geo_delta / shift_ver / scale;
+    m_map_step_x = geo_delta / shift_hor / scale;
+    m_map_step_y = geo_delta / shift_ver / scale;
 
-    geo_hor = m_map_step_x * (wnd.width()  - 1);
-    geo_ver = m_map_step_y * (wnd.height() - 1);
+    geo_hor = m_map_step_x * ( wnd.width()  - 1 );
+    geo_ver = m_map_step_y * ( wnd.height() - 1 );
 
-    m_map_geo_rect.min.y = center.y - (geo_ver / 2);
-    m_map_geo_rect.max.y = center.y + (geo_ver / 2);
+    map_pos_t  left_bottom;
+    map_pos_t  right_top;
 
-    m_map_geo_rect.min.x = center.x - (geo_hor / 2);
-    m_map_geo_rect.max.x = center.x + (geo_hor / 2);
+    center.get ( left_bottom, pos_type_t::POS_TYPE_GPS );
+    center.get ( right_top,   pos_type_t::POS_TYPE_GPS );
+
+    left_bottom.x -= geo_hor / 2;
+    left_bottom.y -= geo_ver / 2;
+
+    right_top.x   += geo_hor / 2;
+    right_top.y   += geo_ver / 2;
+
+    m_map_geo_rect.min.set ( left_bottom, pos_type_t::POS_TYPE_GPS );
+    _pt_to_projection ( left_bottom );
+    m_map_geo_rect.min.set ( left_bottom, pos_type_t::POS_TYPE_MAP );
+
+    m_map_geo_rect.max.set ( right_top,   pos_type_t::POS_TYPE_GPS );
+    _pt_to_projection ( right_top );
+    m_map_geo_rect.min.set ( right_top, pos_type_t::POS_TYPE_MAP );
+
+    
+
 }
 
 void geo_processor_t::_filter_rects ( const v_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, v_uint32_t& out_list ) {
@@ -345,21 +405,7 @@ void geo_processor_t::_filter_rects ( const v_geo_idx_rec_t& rect_list, const ge
 
 bool geo_processor_t::_is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice ) const {
 
-    if ( window.min.x > slice.max.x ) {
-        return false;
-    }
-    if ( window.max.x < slice.min.x ) {
-        return false;
-    }
-
-    if ( window.min.y > slice.max.y ) {
-        return false;
-    }
-    if ( window.max.y < slice.min.y ) {
-        return false;
-    }
-
-    return true;
+    return window.is_overlapped ( slice, pos_type_t::POS_TYPE_GPS );
 }
 
 void geo_processor_t::_merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uint32_t& in_list, v_uint32_t& map_entries ) {
@@ -425,12 +471,11 @@ void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_ent
     while ( m_map_file.read(&ch, 1) ) {
 
         parser.load_param(ch, eoc, 0);
-        if (!eoc) {
+        if ( !eoc ) {
             continue;
         }
 
         parser.process_map ( map_entry, eor );
-
         if ( !eor ) {
             continue;
         }
@@ -445,7 +490,9 @@ void geo_processor_t::_reset_map ( void ) {
 
     for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
         for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            it_geo_line->m_angle.clear ();
+            for ( auto it_coord = it_geo_line->m_coords.begin(); it_coord != it_geo_line->m_coords.end(); it_coord++ ) {
+                it_coord->reset_angle();
+            }
         }
     }
 
@@ -461,61 +508,51 @@ void geo_processor_t::_apply_angle ( void ) {
         }
 
         for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            _rotate_geo_line ( it_geo_line->m_coords, it_geo_line->m_angle );
+            _rotate_geo_line ( it_geo_line->m_coords );
         }
     }
 
 }
 
-void geo_processor_t::_rotate_geo_line ( const v_geo_coord_t& in_coords, v_geo_coord_t& out_coords ) {
+void geo_processor_t::_rotate_geo_line ( v_geo_coord_t& coords ) {
 
-    geo_coord_t src_coord;
-
-    out_coords.clear();
-    for (auto it_coord = in_coords.cbegin(); it_coord != in_coords.cend(); it_coord++) {
-        src_coord = *it_coord;
-        _rotate_coord ( src_coord );
-        out_coords.push_back ( src_coord );
+    for (auto it_coord = coords.begin(); it_coord != coords.end(); it_coord++) {
+        _rotate_coord ( *it_coord );
     }
 }
 
 void geo_processor_t::_rotate_coord ( geo_coord_t& coord ) const {
+
+    map_pos_t  pt;
+    map_pos_t  center;
+    map_pos_t  rotated;
 
     double  translated_x  =  0;
     double  translated_y  =  0;
     double  rotated_x     =  0;
     double  rotated_y     =  0;
 
-    translated_x = coord.x - m_map_center.x;
-    translated_y = coord.y - m_map_center.y;
+    coord.get ( pt, pos_type_t::POS_TYPE_MAP );
+    m_map_center.get ( center, pos_type_t::POS_TYPE_MAP );
+
+    translated_x = pt.x - center.x;
+    translated_y = pt.y - center.y;
 
     rotated_x  = translated_x * m_geo_angle_cos - translated_y * m_geo_angle_sin;
-    rotated_x += m_map_center.x;
+    rotated_x += center.x;
 
     rotated_y  = translated_x * m_geo_angle_sin + translated_y * m_geo_angle_cos;
-    rotated_y += m_map_center.y;
+    rotated_y += center.y;
 
-    coord.x = rotated_x;
-    coord.y = rotated_y;
+    rotated.x = rotated_x;
+    rotated.y = rotated_y;
+
+    coord.set ( rotated, pos_type_t::POS_TYPE_ANGLE );
 }
 
 void geo_processor_t::_trim_map_by_rect ( void ) {
 
-    vv_geo_coord_t      trim_path;
     paint_entry_t       out_record;
-
-    {   geo_coord_t     pt;
-        geo_rect_t      trim_rect;
-        v_geo_coord_t   trim_entry;
-
-        trim_rect = m_map_geo_rect;
-
-        pt.x = trim_rect.min.x;  pt.y = trim_rect.min.y;     trim_entry.push_back(pt);
-        pt.x = trim_rect.max.x;  pt.y = trim_rect.min.y;     trim_entry.push_back(pt);
-        pt.x = trim_rect.max.x;  pt.y = trim_rect.max.y;     trim_entry.push_back(pt);
-        pt.x = trim_rect.min.x;  pt.y = trim_rect.max.y;     trim_entry.push_back(pt);
-        trim_path.push_back(trim_entry);
-    }
 
     m_paint_list.clear();
 
@@ -526,13 +563,13 @@ void geo_processor_t::_trim_map_by_rect ( void ) {
         }
 
         if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
-            _trim_record_area ( trim_path, *it_src, out_record );
+            _trim_record_area ( m_map_geo_rect, *it_src, out_record );
         } else
         if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
-            _trim_record_area ( trim_path, *it_src, out_record );
+            _trim_record_area ( m_map_geo_rect, *it_src, out_record );
         } else
         if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
-            _trim_record_path ( trim_path, *it_src, out_record );
+            _trim_record_path ( m_map_geo_rect, *it_src, out_record );
         }
 
         if ( out_record.m_lines.size() > 0 ) {
@@ -541,27 +578,22 @@ void geo_processor_t::_trim_map_by_rect ( void ) {
     }
 }
 
-void geo_processor_t::_trim_record_area ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
+void geo_processor_t::_trim_record_area ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
 
-    vv_geo_coord_t      trim_in;
     vv_geo_coord_t      trim_out;
     paint_line_t        out_path;
 
     out_record.clear();
 
-    out_record.m_record_type    = geo_path.m_record_type;
-    out_record.m_default_type   = geo_path.m_default_type;
-
-    trim_in.resize (1);
+    out_record.m_record_type  = geo_path.m_record_type;
+    out_record.m_default_type = geo_path.m_default_type;
 
     for ( auto it_in_line = geo_path.m_lines.cbegin(); it_in_line != geo_path.m_lines.cend(); it_in_line++ ) {
 
         out_path.m_role = it_in_line->m_role;
         out_path.m_type = it_in_line->m_type;
 
-        trim_in[0] = it_in_line->m_angle;
-
-        trim_out = Clipper2Lib::Intersect ( rect_path, trim_in, Clipper2Lib::FillRule::NonZero, 13 );
+        geo_intersect ( it_in_line->m_coords, rect_path, POS_TYPE_GPS, trim_out );
 
         for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
             _map_coords ( *it_out_line, out_path.m_paint );
@@ -574,23 +606,15 @@ void geo_processor_t::_trim_record_area ( const vv_geo_coord_t& rect_path, const
     return;
 }
 
-void geo_processor_t::_trim_record_path ( const vv_geo_coord_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
+void geo_processor_t::_trim_record_path ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
 
     vv_geo_coord_t  trim_out;
     paint_line_t    out_path;
-    geo_rect_t      geo_rect;
+
     int in_paths_cnt  = 0;
     int out_paths_cnt = 0;
 
-    assert(rect_path.size()    == 1);
-    assert(rect_path[0].size() == 4);
-
     out_record.clear();
-
-    geo_rect.min.x = rect_path[0][0].x;
-    geo_rect.min.y = rect_path[0][0].y;
-    geo_rect.max.x = rect_path[0][2].x;
-    geo_rect.max.y = rect_path[0][2].y;
 
     out_record.m_record_type  = geo_path.m_record_type;
     out_record.m_default_type = geo_path.m_default_type;
@@ -602,7 +626,7 @@ void geo_processor_t::_trim_record_path ( const vv_geo_coord_t& rect_path, const
         out_path.m_role = it_in_line->m_role;
         out_path.m_type = it_in_line->m_type;
 
-        _clip_poly_line ( it_in_line->m_angle, geo_rect, trim_out );
+        _clip_poly_line ( it_in_line->m_coords, rect_path, trim_out );
 
         for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
             _map_coords ( *it_out_line, out_path.m_paint );
@@ -628,18 +652,22 @@ void geo_processor_t::_map_coords ( const v_geo_coord_t& geo_path, v_paint_coord
 
 void geo_processor_t::_win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const {
 
-    geo_coord_t geo_coord = geo_pos;
+    map_pos_t pos_pt;
+    map_pos_t pos_min;
 
-    geo_coord.x -= m_map_geo_rect.min.x;
-    geo_coord.x /= m_map_step_x;
-    geo_coord.x += 0.5;
+    geo_pos.get ( pos_pt, pos_type_t::POS_TYPE_ANGLE );
+    m_map_geo_rect.min.get ( pos_min, pos_type_t::POS_TYPE_ANGLE );
 
-    geo_coord.y -= m_map_geo_rect.min.y;
-    geo_coord.y /= m_map_step_y;
-    geo_coord.y += 0.5;
+    pos_pt.x -= pos_min.x;
+    pos_pt.x /= m_map_step_x;
+    pos_pt.x += 0.5;
 
-    win_pos.x = static_cast<int32_t> (geo_coord.x);
-    win_pos.y = static_cast<int32_t> (geo_coord.y);
+    pos_pt.y -= pos_min.y;
+    pos_pt.y /= m_map_step_y;
+    pos_pt.y += 0.5;
+
+    win_pos.x = static_cast<int32_t> (pos_pt.x);
+    win_pos.y = static_cast<int32_t> (pos_pt.y);
 }
 
 void geo_processor_t::_draw_area ( void ) {
@@ -814,8 +842,8 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
         case OBJID_TYPE_STREET:
         case OBJID_TYPE_SERVICE:
         case OBJID_TYPE_RESIDENTIAL:
-            GEO_RGB ( fill_color, 255, 120, 120, 120 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color,   255, 174, 174, 179 );
+            GEO_RGB ( border_color, 255, 221, 221, 232 );
             break;
 
         case OBJID_TYPE_TRACK:
@@ -836,9 +864,19 @@ void geo_processor_t::_draw_building ( void ) {
 
     size_t cnt;
 
+    int  start_cnt = 15;
+    int  end_cnt   = 20;
+    int  out_cnt   =  0;
+
     for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
 
         if ( it->m_record_type != OBJID_RECORD_BUILDING ) {
+            continue;
+        }
+
+        out_cnt++;
+
+        if (out_cnt < start_cnt || out_cnt > end_cnt) {
             continue;
         }
 
@@ -1250,71 +1288,71 @@ void geo_processor_t::_fill_poly ( const paint_coord_t& pos, const geo_pixel_t b
     }
 }
 
-void geo_processor_t::_map_pt_pos ( const geo_coord_t& point, const geo_rect_t& rect, pt_code_pos_t& code ) const {
+void geo_processor_t::_map_pt_pos ( const geo_coord_t& point, const geo_rect_t& rect, const pos_type_t src, pt_code_pos_t& code ) const {
 
-    if ( point.x < rect.min.x ) {
+    if ( point.x(src) < rect.min.x(src) ) {
         code = CODE_POS_LEFT;
     } else
-    if ( point.x > rect.max.x ) {
+    if ( point.x(src) > rect.max.x(src) ) {
         code = CODE_POS_RIGHT;
     } else
-    if ( point.y > rect.max.y ) {
+    if ( point.y(src) > rect.max.y(src) ) {
         code = CODE_POS_TOP;
     } else
-    if ( point.y < rect.min.y ) {
+    if ( point.y(src) < rect.min.y(src) ) {
         code = CODE_POS_BOTTOM;
     } else {
         code = CODE_POS_IN;
     }
 }
 
-bool geo_processor_t::_get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, geo_coord_t& point ) const {
+bool geo_processor_t::_get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, const pos_type_t src, geo_coord_t& point ) const {
 
-    assert ( (p3.x == p4.x)  ||  (p3.y == p4.y)  );
-    assert ( p3.x <= p4.x );
-    assert ( p3.y <= p4.y );
+    assert ( (p3.x(src) == p4.x(src) ) || (p3.y(src) == p4.y(src) ));
+    assert ( p3.x(src) <= p4.x(src) );
+    assert ( p3.y(src) <= p4.y(src) );
 
-    if ( p3.x == p4.x ) {
+    if ( p3.x(src) == p4.x(src)) {
 
-        double y = p1.y + ((p2.y - p1.y) * (p3.x - p1.x)) / (p2.x - p1.x);
+        double y = p1.y(src) + ((p2.y(src) - p1.y(src)) * (p3.x(src) - p1.x(src))) / (p2.x(src) - p1.x(src));
 
-        if ( (y > p4.y) || (y < p3.y) ) {
+        if ( (y > p4.y(src)) || (y < p3.y(src)) ) {
             return false;
         }
 
-        if ( p1.y < p2.y ) {
-            if ( (y < p1.y) || (y > p2.y) ) {
+        if ( p1.y(src) < p2.y(src)) {
+            if ( (y < p1.y(src)) || (y > p2.y(src)) ) {
                 return false;
             }
         } else {
-            if ( (y < p2.y) || (y > p1.y) ) {
+            if ( (y < p2.y(src)) || (y > p1.y(src)) ) {
                 return false;
             }
         }
 
-        point.x = p3.x;
+        point.x = p3.x(src);
         point.y = y;
 
     } else {
 
-        double x = p1.x + ((p2.x - p1.x) * (p3.y - p1.y)) / (p2.y - p1.y);
+        double x = p1.x(src) + ((p2.x(src) - p1.x(src)) * (p3.y(src) - p1.y(src))) / (p2.y(src) - p1.y(src) );
 
-        if ( (x > p4.x) || (x < p3.x) ) {
+        if ( (x > p4.x(src)) || (x < p3.x(src)) ) {
             return false;
         }
 
-        if ( p1.x < p2.x ) {
-            if ( (x < p1.x) || (x > p2.x) ) {
+        if ( p1.x(src) < p2.x(src)) {
+            if ( (x < p1.x(src)) || (x > p2.x(src)) ) {
                 return false;
             }
         } else {
-            if ( (x < p2.x) || (x > p1.x) ) {
+            if ( (x < p2.x(src)) || (x > p1.x(src)) ) {
                 return false;
             }
         }
 
         point.x = x;
-        point.y = p3.y;
+        point.y = p3.y(src);
     }
 
     return true;

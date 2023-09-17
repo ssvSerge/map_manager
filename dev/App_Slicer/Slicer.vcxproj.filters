@@ -23,6 +23,9 @@
       <Filter>Clipper</Filter>
     </ClCompile>
     <ClCompile Include="Slicer.cpp" />
+    <ClCompile Include="..\types\geo_tools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MemMapper.h">
