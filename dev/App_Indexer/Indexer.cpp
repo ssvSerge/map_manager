@@ -5,78 +5,13 @@
 #include <limits>
 #include <vector>
 
-#include "..\common\osm_processor.h"
-#include "..\common\lex_keys.h"
-
-#define M_PI                (3.14159265358979323846)
-#define DEG2RAD(a)          ( (a) / (180 / M_PI) )
-#define RAD2DEG(a)          ( (a) * (180 / M_PI) )
-#define EARTH_RADIUS        (6378137)
-
-map_storenode_t             g_nodes_list;
-map_storeway_t              g_ways_list;
-map_storerel_t              g_rels_list;
+#include <osm_processor.h>
+#include <geo_projection.h>
+#include <lex_keys.h>
 
 osm_processor_t             processor;
 
-static double lat2y_m(double lat) { 
-    return log ( tan ( DEG2RAD(lat) / 2 + M_PI / 4)) * EARTH_RADIUS;
-}
-
-static double lon2x_m(double lon) {
-    return DEG2RAD(lon) * EARTH_RADIUS;
-}
-
-static void _log_key ( const char* const name, const char* const value, bool cr = false ) {
-
-    std::cout << name;
-    std::cout << ":";
-    std::cout << value;
-    std::cout << ";";
-
-    if (cr) {
-        std::cout << std::endl;
-    }
-}
-
-static void _log_key ( const char* const name, size_t value, bool cr = false ) {
-
-    char tmp[32];
-
-    sprintf_s ( tmp, sizeof(tmp), "%zd", value );
-
-    _log_key ( name, tmp, cr );
-}
-
-static double toRadians ( double val ) {
-
-    return val / 57.295779513082325;
-}
-
-static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
-
-    double R  = 6371e3;
-    double f1 = toRadians(lat1);
-    double f2 = toRadians(lat2);
-    double dF = toRadians(lat2 - lat1);
-    double dL = toRadians(lon2 - lon1);
-
-    double a = sin(dF/2)*sin(dF/2) + cos(f1)*cos(f2) * sin(dL/2)*sin(dL/2);
-    double c = 2 * atan2 ( sqrt(a), sqrt(1-a) );
-    double d = R * c;
-
-    return d;
-}
-
-static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
-
-    char position[ 160 ];
-    double projection_y = lat2y_m(lat);
-    double projection_x = lon2x_m(lon);
-
-    sprintf_s ( position, "%.7f %.7f %.1f %.1f", lat, lon, projection_y, projection_x );
-    _log_key ( KEYNAME_COORDINATES, position );
-}
+//-----------------------------------------------------------------//
 
 static const char* _type_to_str ( draw_type_t type ) {
 
@@ -193,6 +128,93 @@ static const char* _type_to_str ( draw_type_t type ) {
     }
 }
 
+//-----------------------------------------------------------------//
+
+static void _log_key ( const char* const name, const char* const value, bool cr = false ) {
+
+    std::cout << name;
+    std::cout << ":";
+    std::cout << value;
+    std::cout << ";";
+
+    if (cr) {
+        std::cout << std::endl;
+    }
+}
+
+static void _log_key ( const char* const name, size_t value, bool cr = false ) {
+
+    char tmp[32];
+
+    sprintf_s ( tmp, sizeof(tmp), "%zd", value );
+
+    _log_key ( name, tmp, cr );
+}
+
+static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
+
+    char position[ 160 ];
+    double projection_y = lat2y_m(lat);
+    double projection_x = lon2x_m(lon);
+
+    sprintf_s ( position, "%.7f %.7f %.1f %.1f", lat, lon, projection_y, projection_x );
+    _log_key ( KEYNAME_COORDINATES, position );
+}
+
+static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt, uint64_t osm_ref ) {
+
+    if (cnt != 1) {
+        cnt = cnt;
+    }
+
+    _log_key(KEYNAME_RECORD, name);
+    _log_key(KEYNAME_XTYPE, _type_to_str(draw_type));
+    _log_key(KEYNAME_CONTER, cnt);
+    _log_key(KEYNAME_OSM_REF, osm_ref, true);
+}
+
+static void _log_footer() {
+    _log_key(KEYNAME_RECORD, KEYPARAM_END, true);
+}
+
+template<typename Type>
+static void _log_role(const char* const out_type, draw_type_t draw_type, double area, const Type& refs) {
+
+    _log_key(KEYNAME_ROLE, out_type);
+    _log_key(KEYNAME_OTYPE, _type_to_str(draw_type));
+    _log_key(KEYNAME_SIZE, (int)(area));
+
+    auto it = refs.begin();
+    while (it != refs.end()) {
+        _log_position(it->lat, it->lon);
+        it++;
+    }
+
+    _log_key(KEYNAME_ROLE, KEYPARAM_END, true);
+}
+
+//-----------------------------------------------------------------//
+
+static double toRadians ( double val ) {
+
+    return val / 57.295779513082325;
+}
+
+static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
+
+    double R = 6371e3;
+    double f1 = toRadians(lat1);
+    double f2 = toRadians(lat2);
+    double dF = toRadians(lat2 - lat1);
+    double dL = toRadians(lon2 - lon1);
+
+    double a = sin(dF / 2) * sin(dF / 2) + cos(f1) * cos(f2) * sin(dL / 2) * sin(dL / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    double d = R * c;
+
+    return d;
+}
+
 template<typename Type>
 double _calc_area ( const Type& refs ) {
 
@@ -262,45 +284,16 @@ double _calc_area ( const Type& refs ) {
     return res;
 }
 
-template<typename Type>
-static void _log_role ( const char* const out_type, draw_type_t draw_type, double area, const Type& refs ) {
 
-    _log_key ( KEYNAME_ROLE,  out_type );
-    _log_key ( KEYNAME_OTYPE, _type_to_str(draw_type) );
-    _log_key ( KEYNAME_SIZE,  (int)(area) );
-
-    auto it = refs.begin();
-    while (it != refs.end()) {
-        _log_position(it->lat, it->lon);
-        it++;
-    }
-
-    _log_key ( KEYNAME_ROLE, KEYPARAM_END, true );
-}
-
-static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt, uint64_t osm_ref ) {
-
-    if (cnt != 1) {
-        cnt = cnt;
-    }
-
-    _log_key ( KEYNAME_RECORD,  name );
-    _log_key ( KEYNAME_XTYPE,   _type_to_str(draw_type) );
-    _log_key ( KEYNAME_CONTER,  cnt);
-    _log_key ( KEYNAME_OSM_REF, osm_ref, true );
-}
-
-static void _log_footer() {
-    _log_key ( KEYNAME_RECORD, KEYPARAM_END, true );
-}
+//-----------------------------------------------------------------//
 
 static void _log_area ( const char* name, const storeway_t& way ) {
 
-    double area = _calc_area<list_storeinfo_t> ( way.refs );
+    double area = _calc_area<list_storeinfo_t>(way.refs);
 
-    _log_header ( name, way.type, 1, way.id );
-    _log_role   ( KEYPARAM_OUTER, way.type, area, way.refs );
-    _log_footer ();
+    _log_header(name, way.type, 1, way.id);
+    _log_role(KEYPARAM_OUTER, way.type, area, way.refs);
+    _log_footer();
     std::cout << std::endl;
 }
 
@@ -350,43 +343,45 @@ static void _log_road ( const storeway_t& way ) {
     std::cout << std::endl;
 }
 
-static void store_area ( const storeway_t& way ) {
-
-    if ( way.in_use ) {
-        return;
-    }
-
-    if ( way.level != 0 ) {
-        return;
-    }
-
-    if ( (way.type <= DRAW_AREA_BEGIN) || (way.type >= DRAW_AREA_END) ) {
-        return;
-    }
-
-    _log_area ( KEYNAME_AREA, way );
-}
+//-----------------------------------------------------------------//
 
 static void scan_child ( const storerels_t& rel ) {
 
-    if ( rel.type == DRAW_SKIP ) {
+    if (rel.type == DRAW_SKIP) {
         return;
     }
 
-    for ( auto it = rel.refs.begin(); it != rel.refs.end(); it++ ) {
+    for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
 
-        switch ( it->ref ) {
-            case REF_NODE:
-                processor.mark_nodes(it->id);
-                break;
-            case REF_WAY:
-                processor.mark_way(it->id);
-                break;
-            case REF_RELATION:
-                processor.mark_relation(it->id);
-                break;
+        switch (it->ref) {
+        case REF_NODE:
+            processor.mark_nodes(it->id);
+            break;
+        case REF_WAY:
+            processor.mark_way(it->id);
+            break;
+        case REF_RELATION:
+            processor.mark_relation(it->id);
+            break;
         }
     }
+}
+
+static void store_area ( const storeway_t& way ) {
+
+    if (way.in_use) {
+        return;
+    }
+
+    if (way.level != 0) {
+        return;
+    }
+
+    if ((way.type <= DRAW_AREA_BEGIN) || (way.type >= DRAW_AREA_END)) {
+        return;
+    }
+
+    _log_area(KEYNAME_AREA, way);
 }
 
 static void store_rel_area ( const storerels_t& rel ) {
@@ -494,24 +489,26 @@ static void store_roads ( const storeway_t& way ) {
 
     static int stop_cnt = 0;
 
-    if ( way.id == 177921365 ) {
+    if (way.id == 177921365) {
         stop_cnt++;
     }
 
-    if ( way.in_use ) {
+    if (way.in_use) {
         return;
     }
 
-    if ( way.level != 0 ) {
+    if (way.level != 0) {
         return;
     }
 
-    if ( (way.type <= DRAW_PATH_BEGIN) || (way.type >= DRAW_PATH_END) ) {
+    if ((way.type <= DRAW_PATH_BEGIN) || (way.type >= DRAW_PATH_END)) {
         return;
     }
 
-    _log_road ( way );
+    _log_road(way);
 }
+
+//-----------------------------------------------------------------//
 
 int main ( int argc, char* argv[] ) {
 
