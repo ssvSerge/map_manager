@@ -195,25 +195,12 @@ static void _log_role(const char* const out_type, draw_type_t draw_type, double 
 
 //-----------------------------------------------------------------//
 
-static double toRadians ( double val ) {
-
-    return val / 57.295779513082325;
-}
+#if 0
 
 static double _delta ( double lon1, double lat1, double lon2, double lat2 ) {
-
-    double R = 6371e3;
-    double f1 = toRadians(lat1);
-    double f2 = toRadians(lat2);
-    double dF = toRadians(lat2 - lat1);
-    double dL = toRadians(lon2 - lon1);
-
-    double a = sin(dF / 2) * sin(dF / 2) + cos(f1) * cos(f2) * sin(dL / 2) * sin(dL / 2);
-    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    double d = R * c;
-
-    return d;
 }
+
+#endif
 
 template<typename Type>
 double _calc_area ( const Type& refs ) {
@@ -247,8 +234,8 @@ double _calc_area ( const Type& refs ) {
         in_ptr++;
     }
 
-    double lon_m     = _delta ( minLon, minLat, maxLon, minLat );
-    double lat_m     = _delta ( minLon, minLat, minLon, maxLat );
+    double lon_m     = gps_distance ( minLon, minLat, maxLon, minLat );
+    double lat_m     = gps_distance ( minLon, minLat, minLon, maxLat );
     double scale_lon = lon_m / (maxLon-minLon);
     double scale_lat = lat_m / (maxLat-minLat);
     

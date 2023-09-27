@@ -1,38 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Clipper">
-      <UniqueIdentifier>{4064c7de-d8ff-4afb-9e60-95be313da98c}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="MemMapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\clipper2\src\clipper.engine.cpp">
-      <Filter>Clipper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\clipper2\src\clipper.offset.cpp">
-      <Filter>Clipper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp">
-      <Filter>Clipper</Filter>
-    </ClCompile>
     <ClCompile Include="Slicer.cpp" />
-    <ClCompile Include="..\types\geo_tools.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\lib\MemMapper.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tools\geo_projection.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tools\geo_processor.cpp">
+      <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MemMapper.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="thread_pool.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
+    <Filter Include="lib">
+      <UniqueIdentifier>{1ba7975e-ca29-4728-be6f-ba6b483356fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

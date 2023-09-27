@@ -19,5 +19,8 @@
     <ClCompile Include="..\lib\libhpxml.c">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\tools\geo_projection.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

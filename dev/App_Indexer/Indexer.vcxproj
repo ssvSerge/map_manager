@@ -97,6 +97,7 @@
     <ClCompile Include="..\lib\libhpxml.c" />
     <ClCompile Include="..\lib\osm_processor.cpp" />
     <ClCompile Include="..\lib\ssearch.cpp" />
+    <ClCompile Include="..\tools\geo_projection.cpp" />
     <ClCompile Include="Indexer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

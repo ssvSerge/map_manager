@@ -46,12 +46,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)clipper2\include;$(SolutionDir)types;$(SolutionDir)common;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tools;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)clipper2\include;$(SolutionDir)types;$(SolutionDir)common;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tools;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -88,16 +88,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\clipper2\src\clipper.engine.cpp" />
-    <ClCompile Include="..\clipper2\src\clipper.offset.cpp" />
-    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp" />
-    <ClCompile Include="..\types\geo_tools.cpp" />
-    <ClCompile Include="MemMapper.cpp" />
+    <ClCompile Include="..\lib\MemMapper.cpp" />
+    <ClCompile Include="..\tools\geo_processor.cpp" />
+    <ClCompile Include="..\tools\geo_projection.cpp" />
     <ClCompile Include="Slicer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="MemMapper.h" />
-    <ClInclude Include="thread_pool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
