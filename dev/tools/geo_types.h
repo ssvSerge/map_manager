@@ -43,8 +43,8 @@ class map_pos_t {
 class geo_point_t {
 
     private:
-        map_pos_t   map;
         map_pos_t   gps;
+        map_pos_t   map;
         map_pos_t   ang;
         pos_type_t  src;
 
@@ -822,12 +822,11 @@ class geo_parser_t {
         void _load ( geo_coord_t& coords ) {
 
             map_pos_t gps;
-            map_pos_t map;
-
-            sscanf_s ( m_geo_param.value.msg,  "%lf %lf %lf %lf",  &gps.y, &gps.x, &map.y, &map.x  ); 
+            // map_pos_t map;
+            // sscanf_s ( m_geo_param.value.msg,  "%lf %lf %lf %lf",  &gps.y, &gps.x, &map.y, &map.x  ); 
+            sscanf_s(m_geo_param.value.msg, "%lf %lf", &gps.y, &gps.x );
 
             coords.set ( POS_TYPE_GPS, gps );
-            coords.set ( POS_TYPE_MAP, map );
             coords.reset_angle();
         }
 

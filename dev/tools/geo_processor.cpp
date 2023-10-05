@@ -190,11 +190,6 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, geo_rect_t&
     v_geo_coord_t   segment;
     geo_coord_t     pt;
 
-    rect.min.set_x ( pos_type_t::POS_TYPE_MAP, 1595450 );
-    rect.min.set_y ( pos_type_t::POS_TYPE_MAP, 6452000 );
-    rect.max.set_x ( pos_type_t::POS_TYPE_MAP, 1595930 );
-    rect.max.set_y ( pos_type_t::POS_TYPE_MAP, 6452640 );
-
     {   map_pos_t     dummy_pt1, dummy_pt2, dummy_pt3;
         geo_coord_t   dummy;
         v_geo_coord_t dummy_rect;
