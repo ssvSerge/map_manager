@@ -153,15 +153,32 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
     geo_coord_t     dummy_pt;
     v_geo_coord_t   dummy_rect;
     geo_rect_t      in_rect_tmp = in_rect;
+    bool            close_area;
 
     for (auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++) {
+
+        switch (record->m_record_type) {
+            case OBJID_RECORD_AREA:
+                close_area = true;
+                break;
+            case OBJID_RECORD_BUILDING:
+                close_area = true;
+                break;
+            case OBJID_RECORD_HIGHWAY:
+                close_area = false;
+                break;
+            default:
+                close_area = false;
+                break;
+        }
+
         for (auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++) {
 
             if ( line->m_coords.size() == 0 ) {
                 continue;
             }
 
-            g_geo_processor.geo_intersect ( line->m_coords, in_rect_tmp, POS_TYPE_GPS, tmp );
+            g_geo_processor.geo_intersect ( line->m_coords, in_rect_tmp, POS_TYPE_GPS, close_area, tmp );
             if (tmp.size() > 0) {
                 g_scan_result[id].push_back(record->m_data_off);
             }
@@ -249,7 +266,7 @@ static void _slicing ( void ) {
     g_pending_cnt = slicer_rects.size();
     g_scan_result.resize(g_pending_cnt);
 
-    thread_pool pool(1);
+    thread_pool pool( std::thread::hardware_concurrency() );
     for (int id = 0; id < slicer_rects.size(); id++) {
         pool.push_task([slicer_rects, id] { _scan_rect(slicer_rects[id], id); });
     }

@@ -142,7 +142,7 @@ class geo_processor_t {
         void get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const;
         void set_pix ( const paint_coord_t& pos, const geo_pixel_t& px );
         void process_map ( const paint_rect_t wnd, const geo_coord_t center, const double scale, const double angle );
-        void geo_intersect ( const v_geo_coord_t& polyline, geo_rect_t& in_rect, const pos_type_t src, vv_geo_coord_t& clippedLine ) const;
+        void geo_intersect ( const v_geo_coord_t& polyline, geo_rect_t& in_rect, const pos_type_t coord_type, bool is_area, vv_geo_coord_t& clippedLine ) const;
 
     private:
         void _load_idx ( v_geo_idx_rec_t& idx_list );
@@ -186,6 +186,7 @@ class geo_processor_t {
         bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, const pos_type_t src, geo_coord_t& point ) const;
         void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
         void _process_pt_list ( const paint_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color );
+        void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
 
     private:
         std::string             m_idx_file_name;
