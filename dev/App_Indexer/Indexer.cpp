@@ -154,11 +154,12 @@ static void _log_key ( const char* const name, size_t value, bool cr = false ) {
 static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
 
     char position[ 160 ];
-    // double projection_y = lat2y_m(lat);
-    // double projection_x = lon2x_m(lon);
-    // sprintf_s ( position, "%.7f %.7f %.1f %.1f", lat, lon, projection_y, projection_x );
 
-    sprintf_s(position, "%.7f %.7f", lat, lon );
+    double projection_y = lat2y_m(lat);
+    double projection_x = lon2x_m(lon);
+    sprintf_s ( position, "%.7f %.7f %.1f %.1f", lat, lon, projection_y, projection_x );
+    // sprintf_s(position, "%.7f %.7f", lat, lon );
+
     _log_key ( KEYNAME_COORDINATES, position );
 }
 

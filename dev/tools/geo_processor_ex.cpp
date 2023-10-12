@@ -57,7 +57,7 @@ v_geo_coord_t g_dummy_rect;
 v_geo_coord_t g_dummy_line;
 
 
-void __format ( geo_rect_t& rect, const pos_type_t coord_type, const v_geo_coord_t& polyline ) {
+void __format ( const geo_rect_t& rect, const pos_type_t coord_type, const v_geo_coord_t& polyline ) {
 
     map_pos_t     dummy_pt1, dummy_pt2, dummy_pt3;
     geo_coord_t   dummy;
@@ -107,7 +107,7 @@ static void _reset (gpc_polygon& res ) {
     res.contour = nullptr;
 }
 
-void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, geo_rect_t& rect, const pos_type_t coord_type, bool is_area, vv_geo_coord_t& clippedLine ) const {
+void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, const geo_rect_t& rect, const pos_type_t coord_type, bool is_area, vv_geo_coord_t& clippedLine ) const {
 
     gpc_allocator_t subject, clip;
 
@@ -118,14 +118,14 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, geo_rect_t&
     map_pos_t   coord_src;
     size_t      poly_cnt;
 
+    __format ( rect, coord_type, polyline );
+
     clippedLine.clear();
     _reset(result);
 
     if ( polyline.size() < 2 ) {
         return;
     }
-
-    // __format ( rect, coord_type, polyline );
 
     clip.alloc(4);
     rect.min.get ( coord_type, coord_min );

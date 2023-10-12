@@ -22,6 +22,8 @@ geo_processor_t         g_geo_processor;
 
 map_pos_t               g_gps_min;
 map_pos_t               g_gps_max;
+map_pos_t               g_map_min;
+map_pos_t               g_map_max;
 
 
 #if 0
@@ -152,10 +154,10 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
 
     geo_coord_t     dummy_pt;
     v_geo_coord_t   dummy_rect;
-    geo_rect_t      in_rect_tmp = in_rect;
     bool            close_area;
+    int             item_id = 0;
 
-    for (auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++) {
+    for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
 
         switch (record->m_record_type) {
             case OBJID_RECORD_AREA:
@@ -172,18 +174,20 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
                 break;
         }
 
-        for (auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++) {
+        for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
 
             if ( line->m_coords.size() == 0 ) {
                 continue;
             }
 
-            g_geo_processor.geo_intersect ( line->m_coords, in_rect_tmp, POS_TYPE_GPS, close_area, tmp );
+            g_geo_processor.geo_intersect ( line->m_coords, in_rect, POS_TYPE_MAP, close_area, tmp );
             if (tmp.size() > 0) {
                 g_scan_result[id].push_back(record->m_data_off);
             }
 
         }
+
+        item_id++;
     }
 
     g_pending_cnt--;
@@ -196,6 +200,7 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
 static void _find_box ( void ) {
 
     map_pos_t next_gps;
+    map_pos_t next_map;
 
     bool first_entry = true;
 
@@ -204,11 +209,14 @@ static void _find_box ( void ) {
             for ( auto coord = line->m_coords.cbegin(); coord != line->m_coords.cend(); coord++ ) {
 
                 coord->get ( POS_TYPE_GPS, next_gps );
+                coord->get ( POS_TYPE_MAP, next_map );
 
                 if ( first_entry ) {
 
                     first_entry = false;
+
                     g_gps_min = g_gps_max = next_gps;
+                    g_map_min = g_map_max = next_map;
 
                 } else {
 
@@ -216,6 +224,11 @@ static void _find_box ( void ) {
                     g_gps_min.y = min ( g_gps_min.y, next_gps.y );
                     g_gps_max.x = max ( g_gps_max.x, next_gps.x );
                     g_gps_max.y = max ( g_gps_max.y, next_gps.y );
+
+                    g_map_min.x = min ( g_map_min.x, next_map.x );
+                    g_map_min.y = min ( g_map_min.y, next_map.y );
+                    g_map_max.x = max ( g_map_max.x, next_map.x );
+                    g_map_max.y = max ( g_map_max.y, next_map.y );
 
                 }
             }
@@ -226,23 +239,30 @@ static void _find_box ( void ) {
 
 static void _find_scale ( void ) {
 
-    {   double  len_left    =  gps_distance ( g_gps_min.x, g_gps_min.y, g_gps_min.x, g_gps_max.y );
-        double  len_right   =  gps_distance ( g_gps_max.x, g_gps_min.y, g_gps_max.x, g_gps_max.y );
-        double  len_ver     =  min ( len_left, len_right );
-        double  ver_cnt     =  len_ver / g_geo_scale;
-        double  delta_ver   =  max ( g_gps_max.y, g_gps_min.y ) - min ( g_gps_max.y, g_gps_min.y );
+    #if 0
+        {   double  len_left    =  gps_distance ( g_gps_min.x, g_gps_min.y, g_gps_min.x, g_gps_max.y );
+            double  len_right   =  gps_distance ( g_gps_max.x, g_gps_min.y, g_gps_max.x, g_gps_max.y );
+            double  len_ver     =  min ( len_left, len_right );
+            double  ver_cnt     =  len_ver / g_geo_scale;
+            double  delta_ver   =  max ( g_gps_max.y, g_gps_min.y ) - min ( g_gps_max.y, g_gps_min.y );
 
-        g_step_ver = delta_ver / ver_cnt;
-    }
+            g_step_ver = delta_ver / ver_cnt;
+        }
 
-    {   double  len_bottom  =  gps_distance ( g_gps_min.x, g_gps_min.y, g_gps_max.x, g_gps_min.y );
-        double  len_top     =  gps_distance ( g_gps_min.x, g_gps_max.y, g_gps_max.x, g_gps_max.y );
-        double  len_hor     =  min ( len_bottom, len_top );
-        double  hor_cnt     =  len_hor / g_geo_scale;
-        double  delta_hor   =  max ( g_gps_max.x, g_gps_min.x ) - min ( g_gps_max.x, g_gps_min.x );
+        {   double  len_bottom  =  gps_distance ( g_gps_min.x, g_gps_min.y, g_gps_max.x, g_gps_min.y );
+            double  len_top     =  gps_distance ( g_gps_min.x, g_gps_max.y, g_gps_max.x, g_gps_max.y );
+            double  len_hor     =  min ( len_bottom, len_top );
+            double  hor_cnt     =  len_hor / g_geo_scale;
+            double  delta_hor   =  max ( g_gps_max.x, g_gps_min.x ) - min ( g_gps_max.x, g_gps_min.x );
 
-        g_step_hor = delta_hor / hor_cnt;
-    }
+            g_step_hor = delta_hor / hor_cnt;
+        }
+    #else
+
+        g_step_ver = 2 * 320;
+        g_step_hor = 2 * 240;
+
+    #endif
 }
 
 static void _slicing ( void ) {
@@ -250,13 +270,13 @@ static void _slicing ( void ) {
     geo_rect_t      map_rect;
     v_geo_rect_t    slicer_rects;
 
-    for ( double y = g_gps_min.y; y <= g_gps_max.y; y += g_step_ver ) {
-        for ( double x = g_gps_min.x; x <= g_gps_max.x; x += g_step_hor ) {
+    for ( double y = g_map_min.y; y <= g_map_max.y; y += g_step_ver ) {
+        for ( double x = g_map_min.x; x <= g_map_max.x; x += g_step_hor ) {
 
-            map_rect.min.set_x ( pos_type_t::POS_TYPE_GPS, x );
-            map_rect.min.set_y ( pos_type_t::POS_TYPE_GPS, y );
-            map_rect.max.set_x ( pos_type_t::POS_TYPE_GPS, x + g_step_hor );
-            map_rect.max.set_y ( pos_type_t::POS_TYPE_GPS, y + g_step_ver );
+            map_rect.min.set_x ( pos_type_t::POS_TYPE_MAP, x );
+            map_rect.min.set_y ( pos_type_t::POS_TYPE_MAP, y );
+            map_rect.max.set_x ( pos_type_t::POS_TYPE_MAP, x + g_step_hor );
+            map_rect.max.set_y ( pos_type_t::POS_TYPE_MAP, y + g_step_ver );
 
             slicer_rects.push_back ( map_rect );
 
@@ -266,7 +286,10 @@ static void _slicing ( void ) {
     g_pending_cnt = slicer_rects.size();
     g_scan_result.resize(g_pending_cnt);
 
-    thread_pool pool( std::thread::hardware_concurrency() );
+    int cnt = 1; // std::thread::hardware_concurrency()
+
+    thread_pool pool ( cnt );
+
     for (int id = 0; id < slicer_rects.size(); id++) {
         pool.push_task([slicer_rects, id] { _scan_rect(slicer_rects[id], id); });
     }

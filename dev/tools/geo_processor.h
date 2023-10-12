@@ -142,7 +142,7 @@ class geo_processor_t {
         void get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const;
         void set_pix ( const paint_coord_t& pos, const geo_pixel_t& px );
         void process_map ( const paint_rect_t wnd, const geo_coord_t center, const double scale, const double angle );
-        void geo_intersect ( const v_geo_coord_t& polyline, geo_rect_t& in_rect, const pos_type_t coord_type, bool is_area, vv_geo_coord_t& clippedLine ) const;
+        void geo_intersect ( const v_geo_coord_t& polyline, const geo_rect_t& in_rect, const pos_type_t coord_type, bool is_area, vv_geo_coord_t& clippedLine ) const;
 
     private:
         void _load_idx ( v_geo_idx_rec_t& idx_list );
