@@ -4,9 +4,7 @@
 #include <stack>
 #include <queue>
 
-// #include <GeographicLib/Geodesic.hpp>
 #include <geo_processor.h>
-// #include <geo_tools.h>
 #include <geo_projection.h>
 
 //---------------------------------------------------------------------------//
@@ -31,6 +29,117 @@ geo_processor_t::geo_processor_t() {
 
 //---------------------------------------------------------------------------//
 
+void geo_processor_t::set_names ( const char* const idx_file_name, const char* const map_file_name ) {
+
+    m_map_file_name = map_file_name;
+    m_idx_file_name = idx_file_name;
+
+    m_map_idx.clear();
+
+    m_map_file.open(m_map_file_name, std::ios_base::binary);
+
+    _load_idx(m_map_idx);
+
+    #if 0
+    _find_idx_rect(m_map_idx, m_idx_map_rect);
+    #endif
+}
+
+void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t center, const double scale, const double angle ) {
+
+    (void)(wnd);
+    (void)(center);
+    (void)(scale);
+    (void)(angle);
+
+    #if 0
+    const double delta_angle = 0.5;
+
+    bool update_request_rect = false;
+    bool update_request_center = false;
+    bool update_request_scale = false;
+    bool update_request_angle = false;
+    bool update_request_map = false;
+
+    if (m_paint_rect != wnd) {
+        update_request_rect = true;
+        m_paint_rect = wnd;
+    }
+
+    if (m_paint_center != center) {
+        update_request_center = true;
+        m_paint_center = center;
+    }
+
+    if (m_paint_scale != scale) {
+        update_request_scale = true;
+        m_paint_scale = scale;
+    }
+
+    if (std::abs(m_paint_angle - angle) > delta_angle) {
+        update_request_angle = true;
+        m_paint_angle = angle;
+    }
+
+    if (update_request_rect) {
+        _alloc_buffer(m_paint_rect.width(), m_paint_rect.height());
+    }
+
+    if (update_request_center || update_request_scale) {
+
+        v_uint32_t  rects_list;
+        v_uint32_t  map_entrie;
+
+        update_request_map = true;
+
+        _calc_map_rect(center, scale, wnd);
+        _filter_rects(m_map_idx, m_map_geo_rect, rects_list);
+        _merge_idx(m_map_idx, rects_list, map_entrie);
+        _load_map_by_idx(map_entrie, m_map_cache);
+    }
+
+    if (update_request_map) {
+        update_request_angle = true;
+        // _trim_map_by_rect ();
+    }
+
+    if (update_request_angle) {
+
+        paint_coord_t pos;
+        geo_pixel_t   clr;
+
+        _fill_solid(g_color_none);
+        _set_angle(angle);
+        _reset_map();
+        _apply_angle();
+        _trim_map_by_rect();
+
+        _draw_area();
+        _draw_building();
+        _draw_roads();
+        _draw_roads();
+    }
+    #endif
+}
+
+void geo_processor_t::get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const {
+
+    geo_pixel_int_t tmp;
+
+    int32_t offset = 0;
+    int32_t width = m_paint_rect.width();
+    int32_t height = m_paint_rect.height();
+
+    if ((pos.x >= width) || (pos.y >= height)) {
+        tmp = 0;
+    } else {
+        offset = (pos.y * width) + pos.x;
+        tmp = m_video_buffer[offset];
+    }
+
+    _px_conv(tmp, px);
+}
+
 void geo_processor_t::close ( void ) {
     
     m_geo_angle     = 0;
@@ -53,8 +162,6 @@ void geo_processor_t::close ( void ) {
 }
 
 //---------------------------------------------------------------------------//
-
-#if 0
 
 void geo_processor_t::_load_idx ( v_geo_idx_rec_t& idx_list ) {
 
@@ -86,6 +193,8 @@ void geo_processor_t::_load_idx ( v_geo_idx_rec_t& idx_list ) {
         idx_list.push_back(geo_idx);
     }
 }
+
+#if 0
 
 void geo_processor_t::_find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_t& map_rect ) {
 
@@ -136,38 +245,6 @@ void geo_processor_t::_find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_
     map_rect.min.set ( rect_map_min, POS_TYPE_MAP );
     map_rect.max.set ( rect_geo_max, POS_TYPE_GPS );
     map_rect.max.set ( rect_map_max, POS_TYPE_MAP );
-}
-
-void geo_processor_t::_px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const {
-
-    uint8_t tmp = 0;
-
-    tmp = static_cast<uint8_t> (from >> 8);
-    tmp &= 0xF8;
-    to.setR(tmp);
-
-    tmp = static_cast<uint8_t> (from >> 3);
-    tmp &= 0xFC;
-    to.setG(tmp);
-
-    tmp = static_cast<uint8_t> (from << 3);
-    tmp &= 0xF8;
-    to.setB(tmp);
-}
-
-void geo_processor_t::_px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const {
-            
-    uint16_t val = 0;
-
-    val  |= (from.getR() >> 3);
-
-    val <<= 6;
-    val  |= (from.getG() >> 2);
-
-    val <<= 5;
-    val |= (from.getB() >> 3);
-
-    to = val;
 }
 
 void geo_processor_t::_alloc_buffer ( uint32_t width, uint32_t height ) {
@@ -1359,5 +1436,36 @@ bool geo_processor_t::_get_intersection_pt ( const geo_coord_t& p1, const geo_co
     return _get_intersection_pt ( p1, p2, p3, p4, src, point );
 }
 
+void geo_processor_t::_px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const {
+
+    uint8_t tmp = 0;
+
+    tmp = static_cast<uint8_t> (from >> 8);
+    tmp &= 0xF8;
+    to.setR(tmp);
+
+    tmp = static_cast<uint8_t> (from >> 3);
+    tmp &= 0xFC;
+    to.setG(tmp);
+
+    tmp = static_cast<uint8_t> (from << 3);
+    tmp &= 0xF8;
+    to.setB(tmp);
+}
+
+void geo_processor_t::_px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const {
+
+    uint16_t val = 0;
+
+    val |= (from.getR() >> 3);
+
+    val <<= 6;
+    val |= (from.getG() >> 2);
+
+    val <<= 5;
+    val |= (from.getB() >> 3);
+
+    to = val;
+}
 
 //---------------------------------------------------------------------------//

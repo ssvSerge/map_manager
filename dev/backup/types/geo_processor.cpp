@@ -4,7 +4,6 @@
 #include <stack>
 #include <queue>
 
-#include <GeographicLib/Geodesic.hpp>
 #include <geo_processor.h>
 #include <geo_tools.h>
 #include <geo_projection.h>

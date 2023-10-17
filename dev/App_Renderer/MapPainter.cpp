@@ -8,9 +8,8 @@
 
 #include "MapPainter.h"
 
-#include <GeographicLib/Geodesic.hpp>
-
-#include <idx_file.h>
+// #include <GeographicLib/Geodesic.hpp>
+// #include <idx_file.h>
 
 #define NAME_IDX    "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt"
 #define NAME_MAP    "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt"
@@ -210,8 +209,8 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     wnd.max.x   = client_rect.Width();
     wnd.max.y   = client_rect.Height();
-    center.x    = lon;
-    center.y    = lat;
+    // center.x    = lon;
+    // center.y    = lat;
 
     g_geo_processor.process_map ( wnd, center, scale, angle );
 }

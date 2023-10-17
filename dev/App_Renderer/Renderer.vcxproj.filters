@@ -16,12 +16,6 @@
     <Filter Include="lib">
       <UniqueIdentifier>{1efe7dda-3ca0-4c05-8219-9c4b71e78072}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Clipper">
-      <UniqueIdentifier>{f78d5546-70e4-4fb8-97ee-5d7469d6acd4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="geo">
-      <UniqueIdentifier>{5dae1ac9-3fd2-45e0-b1bb-eb4f98666791}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -45,24 +39,6 @@
     <ClInclude Include="MapPainter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\types\geo_processor.h">
-      <Filter>geo</Filter>
-    </ClInclude>
-    <ClInclude Include="..\types\geo_types.h">
-      <Filter>geo</Filter>
-    </ClInclude>
-    <ClInclude Include="..\types\geo_types_draw.h">
-      <Filter>geo</Filter>
-    </ClInclude>
-    <ClInclude Include="..\types\idx_file.h">
-      <Filter>geo</Filter>
-    </ClInclude>
-    <ClInclude Include="..\types\osm_types_idx.h">
-      <Filter>geo</Filter>
-    </ClInclude>
-    <ClInclude Include="..\types\types_generic.h">
-      <Filter>geo</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp">
@@ -77,28 +53,7 @@
     <ClCompile Include="MapPainter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\geographiclib\src\Geodesic.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\geographiclib\src\Math.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\geographiclib\src\GeodesicLine.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\clipper2\src\clipper.engine.cpp">
-      <Filter>Clipper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\clipper2\src\clipper.offset.cpp">
-      <Filter>Clipper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp">
-      <Filter>Clipper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\types\geo_processor.cpp">
-      <Filter>geo</Filter>
-    </ClCompile>
-    <ClCompile Include="..\types\geo_tools.cpp">
+    <ClCompile Include="..\tools\geo_processor.cpp">
       <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>

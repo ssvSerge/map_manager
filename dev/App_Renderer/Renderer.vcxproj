@@ -50,13 +50,13 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)types;$(SolutionDir)clipper2\include;$(SolutionDir)common;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tools;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)geographiclib\include;$(SolutionDir)types;$(SolutionDir)clipper2\include;$(SolutionDir)common;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tools;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -111,12 +111,6 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\types\geo_processor.h" />
-    <ClInclude Include="..\types\geo_types.h" />
-    <ClInclude Include="..\types\geo_types_draw.h" />
-    <ClInclude Include="..\types\idx_file.h" />
-    <ClInclude Include="..\types\osm_types_idx.h" />
-    <ClInclude Include="..\types\types_generic.h" />
     <ClInclude Include="App.h" />
     <ClInclude Include="Dlg.h" />
     <ClInclude Include="framework.h" />
@@ -126,14 +120,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\clipper2\src\clipper.engine.cpp" />
-    <ClCompile Include="..\clipper2\src\clipper.offset.cpp" />
-    <ClCompile Include="..\clipper2\src\clipper.rectclip.cpp" />
-    <ClCompile Include="..\geographiclib\src\Geodesic.cpp" />
-    <ClCompile Include="..\geographiclib\src\GeodesicLine.cpp" />
-    <ClCompile Include="..\geographiclib\src\Math.cpp" />
-    <ClCompile Include="..\types\geo_processor.cpp" />
-    <ClCompile Include="..\types\geo_tools.cpp" />
+    <ClCompile Include="..\tools\geo_processor.cpp" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Dlg.cpp" />
     <ClCompile Include="MapPainter.cpp" />
