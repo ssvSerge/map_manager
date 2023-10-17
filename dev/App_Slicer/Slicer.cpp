@@ -15,10 +15,12 @@ int                     g_geo_scale     = 500;
 double                  g_step_ver      =   0;
 double                  g_step_hor      =   0;
 geo_offset_t            g_file_offset   =   0;
-std::atomic<size_t>     g_pending_cnt   =   0;
-vv_geo_offset_t         g_scan_result;
-std::mutex              g_pages_mutex;
 geo_processor_t         g_geo_processor;
+
+std::mutex              g_pages_mutex;
+v_geo_rect_t            g_slicer_rects;
+vv_geo_offset_t         g_scan_result;
+size_t                  g_scan_id = 0;
 
 map_pos_t               g_gps_min;
 map_pos_t               g_gps_max;
@@ -148,7 +150,7 @@ static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
     std::cout << std::endl;
 }
 
-static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
+static void _scan_rect ( const geo_rect_t& in_rect, v_geo_offset_t& result ) {
 
     vv_geo_coord_t  tmp;
 
@@ -156,6 +158,8 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
     v_geo_coord_t   dummy_rect;
     bool            close_area;
     int             item_id = 0;
+
+    result.clear();
 
     for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
 
@@ -182,7 +186,7 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
 
             g_geo_processor.geo_intersect ( line->m_coords, in_rect, POS_TYPE_MAP, close_area, tmp );
             if (tmp.size() > 0) {
-                g_scan_result[id].push_back(record->m_data_off);
+                result.push_back(record->m_data_off);
             }
 
         }
@@ -190,10 +194,38 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
         item_id++;
     }
 
-    g_pending_cnt--;
+}
 
-    {   std::lock_guard<std::mutex> guard(g_pages_mutex);
-        std::cerr << "Pendging cnt: " << g_pending_cnt << "    \r";
+static void _workder_func ( void ) {
+
+    for ( ; ; ) {
+
+        size_t          scan_id = 0;
+        geo_rect_t      rect;
+        v_geo_offset_t  result;
+
+        {   // Load next Object
+            std::lock_guard<std::mutex> guard(g_pages_mutex);
+            if ( g_scan_id >= g_slicer_rects.size()) {
+                break;
+            }
+            scan_id = g_scan_id;
+            rect = g_slicer_rects[scan_id];
+            g_scan_id++;
+        }
+
+        _scan_rect ( rect, result );
+
+        {   // Load next Object
+            std::lock_guard<std::mutex> guard(g_pages_mutex);
+            g_scan_result[scan_id] = result;
+        }
+
+        {   // Report progres
+            std::lock_guard<std::mutex> guard(g_pages_mutex);
+            std::cerr << "Pendging cnt: " << g_slicer_rects.size() - scan_id - 1 << "    \r";
+        }
+
     }
 }
 
@@ -259,8 +291,9 @@ static void _find_scale ( void ) {
         }
     #else
 
-        g_step_ver = 2 * 320;
-        g_step_hor = 2 * 240;
+        const int scale = 1;
+        g_step_ver = scale * 320;
+        g_step_hor = scale * 240;
 
     #endif
 }
@@ -268,7 +301,6 @@ static void _find_scale ( void ) {
 static void _slicing ( void ) {
 
     geo_rect_t      map_rect;
-    v_geo_rect_t    slicer_rects;
 
     for ( double y = g_map_min.y; y <= g_map_max.y; y += g_step_ver ) {
         for ( double x = g_map_min.x; x <= g_map_max.x; x += g_step_hor ) {
@@ -278,26 +310,46 @@ static void _slicing ( void ) {
             map_rect.max.set_x ( pos_type_t::POS_TYPE_MAP, x + g_step_hor );
             map_rect.max.set_y ( pos_type_t::POS_TYPE_MAP, y + g_step_ver );
 
-            slicer_rects.push_back ( map_rect );
+            map_rect.min.map_to_geo();
+            map_rect.max.map_to_geo();
+
+            g_slicer_rects.push_back ( map_rect );
 
         }
     }
 
-    g_pending_cnt = slicer_rects.size();
-    g_scan_result.resize(g_pending_cnt);
+    g_scan_result.resize ( g_slicer_rects.size() );
 
-    int cnt = 1; // std::thread::hardware_concurrency()
+    int max_workers_cnt = std::thread::hardware_concurrency();
 
-    thread_pool pool ( cnt );
+    std::vector<std::thread*>  workders_list;
 
-    for (int id = 0; id < slicer_rects.size(); id++) {
-        pool.push_task([slicer_rects, id] { _scan_rect(slicer_rects[id], id); });
+    for ( int worker = 0; worker < max_workers_cnt; worker++ ) {
+        std::thread* th = nullptr;
+        th = new std::thread ( _workder_func );
+        workders_list.push_back ( th );
     }
 
-    pool.wait_for_tasks();
-    for (size_t i = 0; i < slicer_rects.size(); i++) {
-        _log_index ( slicer_rects[i], i );
+    for ( size_t id = 0; id < workders_list.size(); id++ ) {
+        workders_list[id]->join();
     }
+
+    for ( size_t i = 0; i < workders_list.size(); i++ ) {
+        delete workders_list[i];
+    }
+
+    #if 0
+        thread_pool pool ( 2 );
+        for (int id = 0; id < g_slicer_rects.size(); id++) {
+            pool.push_task([g_slicer_rects, id] { _scan_rect(g_slicer_rects[id], id); });
+        }
+        pool.wait_for_tasks();
+    #endif
+
+    for (size_t i = 0; i < g_slicer_rects.size(); i++) {
+        _log_index ( g_slicer_rects[i], i );
+    }
+
 }
 
 int main ( int argc, char* argv[] ) {

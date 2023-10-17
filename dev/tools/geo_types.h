@@ -15,6 +15,8 @@
 #include <string>
 #include <cassert>
 
+#include <geo_projection.h>
+
 #define CNT(x)          ( sizeof(x) / sizeof(x[0]) )
 #define MSG_LEN         ( 128 )
 
@@ -116,6 +118,10 @@ class geo_point_t {
 
         void set_y ( double _y ) {
             set_y ( src, _y );
+        }
+
+        void map_to_geo ( void ) {
+            proj_2_geo ( map.x, map.y, gps.x, gps.y );
         }
 
         bool operator== ( const geo_point_t& _ref ) const {

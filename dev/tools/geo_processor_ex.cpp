@@ -118,7 +118,7 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, const geo_r
     map_pos_t   coord_src;
     size_t      poly_cnt;
 
-    __format ( rect, coord_type, polyline );
+    // __format ( rect, coord_type, polyline );
 
     clippedLine.clear();
     _reset(result);
