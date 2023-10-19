@@ -31,28 +31,22 @@ geo_processor_t::geo_processor_t() {
 
 void geo_processor_t::set_names ( const char* const idx_file_name, const char* const map_file_name ) {
 
+    l_geo_idx_rec_t  idx;
+
     m_map_file_name = map_file_name;
     m_idx_file_name = idx_file_name;
 
-    m_map_idx.clear();
+    m_idx_map.clear();
 
-    m_map_file.open(m_map_file_name, std::ios_base::binary);
+    m_map_file.open ( m_map_file_name, std::ios_base::binary );
 
-    _load_idx(m_map_idx);
-
-    #if 0
-    _find_idx_rect(m_map_idx, m_idx_map_rect);
-    #endif
+    _load_idx ( idx );
+    _find_idx_rect ( idx, m_idx_rect, m_idx_x_step, m_idx_y_step );
+    _map_idx ( m_idx_rect, m_idx_x_step, m_idx_y_step, idx );
 }
 
 void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t center, const double scale, const double angle ) {
 
-    (void)(wnd);
-    (void)(center);
-    (void)(scale);
-    (void)(angle);
-
-    #if 0
     const double delta_angle = 0.5;
 
     bool update_request_rect = false;
@@ -82,7 +76,7 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
     }
 
     if (update_request_rect) {
-        _alloc_buffer(m_paint_rect.width(), m_paint_rect.height());
+        _alloc_buffer ( m_paint_rect.width(), m_paint_rect.height() );
     }
 
     if (update_request_center || update_request_scale) {
@@ -93,9 +87,9 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
         update_request_map = true;
 
         _calc_map_rect(center, scale, wnd);
-        _filter_rects(m_map_idx, m_map_geo_rect, rects_list);
-        _merge_idx(m_map_idx, rects_list, map_entrie);
-        _load_map_by_idx(map_entrie, m_map_cache);
+        // _filter_rects ( m_map_idx, m_map_geo_rect, rects_list );
+        // _merge_idx ( m_map_idx, rects_list, map_entrie );
+        _load_map_by_idx(map_entrie, m_map_cache );
     }
 
     if (update_request_map) {
@@ -119,7 +113,6 @@ void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t ce
         _draw_roads();
         _draw_roads();
     }
-    #endif
 }
 
 void geo_processor_t::get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const {
@@ -163,7 +156,7 @@ void geo_processor_t::close ( void ) {
 
 //---------------------------------------------------------------------------//
 
-void geo_processor_t::_load_idx ( v_geo_idx_rec_t& idx_list ) {
+void geo_processor_t::_load_idx ( l_geo_idx_rec_t& idx_list ) {
 
     geo_parser_t    parser;
     std::ifstream   idx_file;
@@ -184,7 +177,7 @@ void geo_processor_t::_load_idx ( v_geo_idx_rec_t& idx_list ) {
             continue;
         }
 
-        parser.process_idx(geo_idx, eor);
+        parser.process_idx ( geo_idx, eor );
 
         if (!eor) {
             continue;
@@ -194,9 +187,7 @@ void geo_processor_t::_load_idx ( v_geo_idx_rec_t& idx_list ) {
     }
 }
 
-#if 0
-
-void geo_processor_t::_find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_t& map_rect ) {
+void geo_processor_t::_find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, int& x_step, int& y_step ) {
 
     map_pos_t  rect_geo_min;
     map_pos_t  rect_geo_max;
@@ -208,20 +199,27 @@ void geo_processor_t::_find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_
     map_pos_t  map_min;
     map_pos_t  map_max;
 
-    for ( size_t i = 0; i < map_idx.size(); i++ ) {
-    
-        map_idx[i].m_rect.min.get ( geo_min, POS_TYPE_GPS );
-        map_idx[i].m_rect.max.get ( geo_max, POS_TYPE_GPS );
-        map_idx[i].m_rect.min.get ( map_min, POS_TYPE_MAP );
-        map_idx[i].m_rect.max.get ( map_max, POS_TYPE_MAP );
+    bool       is_first = true;
 
-        if ( i == 0 ) {
+    for ( auto it = map_idx.cbegin(); it != map_idx.cend(); it++ ) {
+        
+        it->m_rect.min.get ( POS_TYPE_GPS, geo_min );
+        it->m_rect.max.get ( POS_TYPE_GPS, geo_max );
+        it->m_rect.min.get ( POS_TYPE_MAP, map_min );
+        it->m_rect.max.get ( POS_TYPE_MAP, map_max );
+
+        if ( is_first ) {
+
+            is_first = false;
 
             rect_geo_min = geo_min;
             rect_geo_max = geo_max;
 
-            rect_map_min = rect_map_min;
-            rect_map_max = rect_map_max;
+            rect_map_min = map_min;
+            rect_map_max = map_max;
+
+            x_step = static_cast<int> (rect_map_max.x - rect_map_min.x);
+            y_step = static_cast<int> (rect_map_max.y - rect_map_min.y);
 
         } else {
 
@@ -241,17 +239,55 @@ void geo_processor_t::_find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_
 
     }
 
-    map_rect.min.set ( rect_geo_min, POS_TYPE_GPS );
-    map_rect.min.set ( rect_map_min, POS_TYPE_MAP );
-    map_rect.max.set ( rect_geo_max, POS_TYPE_GPS );
-    map_rect.max.set ( rect_map_max, POS_TYPE_MAP );
+    map_rect.min.set ( POS_TYPE_GPS, rect_geo_min );
+    map_rect.min.set ( POS_TYPE_MAP, rect_map_min );
+    map_rect.max.set ( POS_TYPE_GPS, rect_geo_max );
+    map_rect.max.set ( POS_TYPE_MAP, rect_map_max );
+}
+
+void geo_processor_t::_map_idx ( const geo_rect_t rect, const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx ) {
+
+    int  y_cnt;
+    int  x_cnt;
+    int  y;
+    int  x;
+    double delta;
+
+    delta  = rect.max.y(pos_type_t::POS_TYPE_MAP) - rect.min.y(pos_type_t::POS_TYPE_MAP);
+    y_cnt  = static_cast<int> (delta / y_step);
+
+    delta  = rect.max.x(pos_type_t::POS_TYPE_MAP) - rect.min.x(pos_type_t::POS_TYPE_MAP);
+    x_cnt  = static_cast<int> (delta / x_step);
+
+    m_idx_map.resize(y_cnt);
+
+    for ( size_t i = 0; i < y_cnt; i++ ) {
+        m_idx_map[i].resize(x_cnt);
+    }
+
+    auto it = map_idx.begin();
+    while ( it != map_idx.end() ) {
+        
+        delta  = it->m_rect.min.y ( pos_type_t::POS_TYPE_MAP ) - rect.min.y ( pos_type_t::POS_TYPE_MAP );
+        y      = static_cast<int> (delta / y_step);
+
+        delta  = it->m_rect.min.x ( pos_type_t::POS_TYPE_MAP ) - rect.min.x ( pos_type_t::POS_TYPE_MAP );
+        x      = static_cast<int> (delta / x_step);
+
+        m_idx_map[y][x] = it->m_list_off;
+
+        map_idx.pop_front();          
+        it = map_idx.begin();        
+    }
+
+    return;
 }
 
 void geo_processor_t::_alloc_buffer ( uint32_t width, uint32_t height ) {
 
     const uint32_t alloc_size = width * height;
 
-    if (m_video_buffer != nullptr) {
+    if ( m_video_buffer != nullptr ) {
         delete (m_video_buffer);
         m_video_buffer = nullptr;
     }
@@ -260,11 +296,11 @@ void geo_processor_t::_alloc_buffer ( uint32_t width, uint32_t height ) {
     m_paint_rect.max.x = width;
     m_paint_rect.max.y = height;
 
-    m_video_buffer = new geo_pixel_int_t[alloc_size];
+    m_video_buffer = new geo_pixel_int_t [ alloc_size ];
 
-    assert ( m_video_buffer != nullptr );
+    assert(m_video_buffer != nullptr);
 
-    _fill_solid ( g_color_none );
+    _fill_solid(g_color_none);
 }
 
 void geo_processor_t::_fill_solid ( const geo_pixel_t clr ) {
@@ -285,9 +321,216 @@ void geo_processor_t::_set_angle ( const double angle ) {
     constexpr double pi_rad_scale = 0.01745329251994329576923690768489;
 
     m_geo_angle = angle;
-    m_geo_angle_sin = sin ( angle * pi_rad_scale );
-    m_geo_angle_cos = cos ( angle * pi_rad_scale );
+    m_geo_angle_sin = sin(angle * pi_rad_scale);
+    m_geo_angle_cos = cos(angle * pi_rad_scale);
 }
+
+void geo_processor_t::_calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd ) {
+
+    map_pos_t map_center;
+
+    int x_shift_1;
+    int x_shift_2;
+    int y_shift;
+
+    center.get ( POS_TYPE_GPS, map_center );
+
+    x_shift_1 = wnd.width() / 3;
+    x_shift_2 = wnd.width() - x_shift_1;
+
+    y_shift = wnd.height() / 2;
+
+    m_map_geo_rect.min.set_x ( POS_TYPE_MAP, map_center.x - x_shift_1 );
+    m_map_geo_rect.min.set_y ( POS_TYPE_MAP, map_center.y - y_shift   );
+
+    m_map_geo_rect.max.set_x ( POS_TYPE_MAP, map_center.x + x_shift_2 );
+    m_map_geo_rect.max.set_y ( POS_TYPE_MAP, map_center.y + y_shift   );
+}
+
+void geo_processor_t::_draw_roads ( void ) {
+
+    #if 0
+    static int stop_cnt = 1;
+    int out_cnt = 0;
+
+    geo_pixel_t clr1 (255, 0, 0);
+    geo_pixel_t clr2 (255, 0, 0);
+    int         road_width_m;
+
+    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
+
+        if ( it->m_record_type != OBJID_RECORD_HIGHWAY ) {
+            continue;
+        }
+
+        switch ( it->m_default_type ) {
+
+            // асфальтированные жилый улицы. оставляем.
+            case OBJID_TYPE_STREET:
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 3;
+                break;
+
+            // асфальтовая дорога. сотавляем.
+            case OBJID_TYPE_SERVICE:            
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 3;
+                break;
+
+            // асфальтовая дорога. сотавляем.
+            case OBJID_TYPE_RESIDENTIAL:        
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 3;
+                break;
+
+            // асфальтовая дорожка. оставляем.
+            case OBJID_TYPE_TRACK:              
+                _map_color ( it->m_default_type, clr1, clr2 );
+                road_width_m = 1;
+                break;
+
+            case OBJID_TYPE_PATH:               // тропинки. пропускаем
+            case OBJID_TYPE_FOOTWAY:            // просто возможность пройти. пропускаем.
+            case OBJID_TYPE_ROAD:               // таких нет. пропускаем.
+            case OBJID_TYPE_STEPS:              // таких нет. пропускаем.
+            default:                            // 
+                continue;
+
+        }
+
+        road_width_m *= 2;
+
+        for ( auto road_it = it->m_lines.cbegin(); road_it != it->m_lines.cend(); road_it++ ) {
+            if ( out_cnt >= stop_cnt ) {
+                // break;
+            }
+            _poly_line ( road_it->m_paint, road_width_m, clr2 );
+            out_cnt++;
+        }
+
+    }
+
+    stop_cnt++;
+
+    #endif
+}
+
+void geo_processor_t::_draw_area ( void ) {
+
+    #if 0
+    geo_pixel_t border_color;
+    geo_pixel_t fill_color;
+
+    size_t cnt;
+
+    for (auto it = m_paint_list.begin(); it != m_paint_list.end(); it++) {
+
+        if (it->m_record_type != OBJID_RECORD_AREA) {
+            continue;
+        }
+
+        cnt = it->m_lines.size();
+
+        if (cnt == 1) {
+            _process_area(it->m_lines[0], false, false);
+        }
+        else {
+
+            for (size_t i = 0; i < cnt; i++) {
+                if (it->m_lines[i].m_role == OBJID_ROLE_OUTER) {
+                    _process_area(it->m_lines[i], false, false);
+                }
+            }
+            for (size_t i = 0; i < cnt; i++) {
+                if (it->m_lines[i].m_role == OBJID_ROLE_INNER) {
+                    _process_area(it->m_lines[i], false, false);
+                }
+            }
+
+        }
+
+        // break;
+    }
+    #endif
+}
+
+void geo_processor_t::_draw_building ( void ) {
+
+    #if 0
+    geo_pixel_t border_color;
+    geo_pixel_t fill_color;
+
+    size_t cnt;
+
+    int  start_cnt = 15;
+    int  end_cnt   = 20;
+    int  out_cnt   =  0;
+
+    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
+
+        if ( it->m_record_type != OBJID_RECORD_BUILDING ) {
+            continue;
+        }
+
+        out_cnt++;
+
+        if (out_cnt < start_cnt || out_cnt > end_cnt) {
+            continue;
+        }
+
+        cnt = it->m_lines.size();
+
+        if ( cnt == 1 ) {
+            _process_area ( it->m_lines[0], true, true );
+        } else {
+
+            for ( size_t i = 0; i < cnt; i++ ) {
+                if ( it->m_lines[i].m_role == OBJID_ROLE_OUTER ) {
+                    _process_area ( it->m_lines[i], true, true );
+                }
+            }
+            for ( size_t i = 0; i < cnt; i++ ) {
+                if ( it->m_lines[i].m_role != OBJID_ROLE_OUTER ) {
+                    _process_area ( it->m_lines[i], true, true );
+                }
+            }
+
+        }
+
+    }
+    #endif
+}
+
+void geo_processor_t::_reset_map ( void ) {
+
+    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
+        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
+            for ( auto it_coord = it_geo_line->m_coords.begin(); it_coord != it_geo_line->m_coords.end(); it_coord++ ) {
+                it_coord->reset_angle();
+            }
+        }
+    }
+
+    m_paint_list.clear();
+}
+
+void geo_processor_t::_apply_angle ( void ) {
+
+    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
+
+        if ( !it_geo_area->m_to_display ) {
+            continue;
+        }
+
+        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
+            _rotate_geo_line ( it_geo_line->m_coords );
+        }
+    }
+
+}
+
+
+#if 0
 
 void geo_processor_t::_calc_map_rect ( const geo_coord_t center, double scale, const paint_rect_t wnd ) {
 
@@ -435,34 +678,6 @@ void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_ent
     }
 
     map_entry.m_data_off = map_entry_offset;
-}
-
-void geo_processor_t::_reset_map ( void ) {
-
-    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
-        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            for ( auto it_coord = it_geo_line->m_coords.begin(); it_coord != it_geo_line->m_coords.end(); it_coord++ ) {
-                it_coord->reset_angle();
-            }
-        }
-    }
-
-    m_paint_list.clear();
-}
-
-void geo_processor_t::_apply_angle ( void ) {
-
-    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
-
-        if ( !it_geo_area->m_to_display ) {
-            continue;
-        }
-
-        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            _rotate_geo_line ( it_geo_line->m_coords );
-        }
-    }
-
 }
 
 void geo_processor_t::_rotate_geo_line ( v_geo_coord_t& coords ) {
@@ -621,42 +836,6 @@ void geo_processor_t::_win_coord ( const geo_coord_t& geo_pos, paint_coord_t& wi
     win_pos.y = static_cast<int32_t> (pos_pt.y);
 }
 
-void geo_processor_t::_draw_area ( void ) {
-
-    geo_pixel_t border_color;
-    geo_pixel_t fill_color;
-
-    size_t cnt;
-
-    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
-
-        if ( it->m_record_type != OBJID_RECORD_AREA ) {
-            continue;
-        }
-
-        cnt = it->m_lines.size();
-
-        if ( cnt == 1 ) {
-            _process_area ( it->m_lines[0], false, false );
-        } else {
-
-            for (size_t i = 0; i < cnt; i++) {
-                if ( it->m_lines[i].m_role == OBJID_ROLE_OUTER ) {
-                    _process_area ( it->m_lines[i], false, false );
-                }
-            }
-            for (size_t i = 0; i < cnt; i++) {
-                if ( it->m_lines[i].m_role == OBJID_ROLE_INNER ) {
-                    _process_area (it->m_lines[i], false, false );
-                }
-            }
-
-        }
-
-        // break;
-    }
-}
-
 void geo_processor_t::_process_area ( paint_line_t& geo_line, const bool force_clr, const bool mark_up ) {
 
     geo_pixel_t border_color;
@@ -806,117 +985,6 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
             break;
     }
 
-}
-
-void geo_processor_t::_draw_building ( void ) {
-
-    geo_pixel_t border_color;
-    geo_pixel_t fill_color;
-
-    size_t cnt;
-
-    int  start_cnt = 15;
-    int  end_cnt   = 20;
-    int  out_cnt   =  0;
-
-    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
-
-        if ( it->m_record_type != OBJID_RECORD_BUILDING ) {
-            continue;
-        }
-
-        out_cnt++;
-
-        if (out_cnt < start_cnt || out_cnt > end_cnt) {
-            continue;
-        }
-
-        cnt = it->m_lines.size();
-
-        if ( cnt == 1 ) {
-            _process_area ( it->m_lines[0], true, true );
-        } else {
-
-            for ( size_t i = 0; i < cnt; i++ ) {
-                if ( it->m_lines[i].m_role == OBJID_ROLE_OUTER ) {
-                    _process_area ( it->m_lines[i], true, true );
-                }
-            }
-            for ( size_t i = 0; i < cnt; i++ ) {
-                if ( it->m_lines[i].m_role != OBJID_ROLE_OUTER ) {
-                    _process_area ( it->m_lines[i], true, true );
-                }
-            }
-
-        }
-
-    }
-
-}
-
-void geo_processor_t::_draw_roads ( void ) {
-
-    static int stop_cnt = 1;
-    int out_cnt = 0;
-
-    geo_pixel_t clr1 (255, 0, 0);
-    geo_pixel_t clr2 (255, 0, 0);
-    int         road_width_m;
-
-    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
-
-        if ( it->m_record_type != OBJID_RECORD_HIGHWAY ) {
-            continue;
-        }
-
-        switch ( it->m_default_type ) {
-
-            // асфальтированные жилый улицы. оставляем.
-            case OBJID_TYPE_STREET:
-                _map_color ( it->m_default_type, clr1, clr2 );
-                road_width_m = 3;
-                break;
-
-            // асфальтовая дорога. сотавляем.
-            case OBJID_TYPE_SERVICE:            
-                _map_color ( it->m_default_type, clr1, clr2 );
-                road_width_m = 3;
-                break;
-
-            // асфальтовая дорога. сотавляем.
-            case OBJID_TYPE_RESIDENTIAL:        
-                _map_color ( it->m_default_type, clr1, clr2 );
-                road_width_m = 3;
-                break;
-
-            // асфальтовая дорожка. оставляем.
-            case OBJID_TYPE_TRACK:              
-                _map_color ( it->m_default_type, clr1, clr2 );
-                road_width_m = 1;
-                break;
-
-            case OBJID_TYPE_PATH:               // тропинки. пропускаем
-            case OBJID_TYPE_FOOTWAY:            // просто возможность пройти. пропускаем.
-            case OBJID_TYPE_ROAD:               // таких нет. пропускаем.
-            case OBJID_TYPE_STEPS:              // таких нет. пропускаем.
-            default:                            // 
-                continue;
-
-        }
-
-        road_width_m *= 2;
-
-        for ( auto road_it = it->m_lines.cbegin(); road_it != it->m_lines.cend(); road_it++ ) {
-            if ( out_cnt >= stop_cnt ) {
-                // break;
-            }
-            _poly_line ( road_it->m_paint, road_width_m, clr2 );
-            out_cnt++;
-        }
-
-    }
-
-    stop_cnt++;
 }
 
 void geo_processor_t::_poly_area ( const v_paint_coord_t& poly_line, const geo_pixel_t color ) {

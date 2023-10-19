@@ -89,6 +89,29 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
 
 #endif
 
+
+static std::string _to_str ( double val ) {
+
+    std::string ret_val;
+    char tmp[50];
+
+    sprintf_s ( tmp, sizeof(tmp) - 1, "%.7lf", val );
+    ret_val = tmp;
+
+    return ret_val;
+}
+
+static std::string _to_str ( size_t  val ) {
+
+    std::string ret_val;
+    char tmp[50];
+
+    sprintf_s(tmp, sizeof(tmp) - 1, "%zi", val);
+    ret_val = tmp;
+
+    return ret_val;
+}
+
 static void _log_pair ( const char* const key, const char* const val, bool cr ) {
 
     std::cout << key << ":" << val << ";";
@@ -98,13 +121,18 @@ static void _log_pair ( const char* const key, const char* const val, bool cr ) 
     }
 }
 
-static void _log_pair ( const char* const key, size_t val, bool cr ) {
+static void _log_pair_i ( const char* const key, size_t val, bool cr ) {
 
-    char fmt[50];
+    std::string str;
+    str = _to_str ( val );
+    _log_pair ( key, str.c_str(), cr);
+}
 
-    sprintf_s(fmt, sizeof(fmt), "%zd", val);
+static void _log_pair_d ( const char* const key, double val, bool cr ) {
 
-    _log_pair(key, fmt, cr);
+    std::string str;
+    str = _to_str ( val );
+    _log_pair ( key, str.c_str(), cr);
 }
 
 static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
@@ -112,7 +140,7 @@ static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
     map_pos_t gps_min, map_min;
     map_pos_t gps_max, map_max;
 
-    char tmp[160] = { 0 };
+    std::string val;
 
     v_geo_offset_t*  res_ptr = nullptr;
 
@@ -127,20 +155,22 @@ static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
     in_rect.min.get ( POS_TYPE_MAP, map_min );
     in_rect.max.get ( POS_TYPE_MAP, map_max );
 
-    sprintf_s ( 
-        tmp, sizeof(tmp)-1, 
-        "%lf %lf %lf %lf %lf %lf %lf %lf", 
-        gps_min.y, gps_min.x, gps_max.y, gps_max.x, 
-        map_min.y, map_min.x, map_max.y, map_max.x 
-    );
+    val += _to_str ( gps_min.y );  val += " ";
+    val += _to_str ( gps_min.x );  val += " ";
+    val += _to_str ( gps_max.y );  val += " ";
+    val += _to_str ( gps_max.x );  val += " ";
+    val += _to_str ( map_min.y );  val += " ";
+    val += _to_str ( map_min.x );  val += " ";
+    val += _to_str ( map_max.y );  val += " ";
+    val += _to_str ( map_max.x );
 
     _log_pair ( KEYNAME_INDEX,    KEYPARAM_RECT,  true );
-    _log_pair ( KEYNAME_POSITION, tmp,            true );
+    _log_pair ( KEYNAME_POSITION, val.c_str(),    true );
     _log_pair ( KEYNAME_OFFSETS,  KEYPARAM_BEGIN, false );
 
     auto item_ptr = res_ptr->cbegin();
     while ( item_ptr != res_ptr->cend() ) {
-        _log_pair ( KEYNAME_MEMBER, *item_ptr, false );
+        _log_pair_i ( KEYNAME_MEMBER, *item_ptr, false );
         item_ptr++;
     }
 
@@ -148,6 +178,41 @@ static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
     _log_pair ( KEYNAME_INDEX,   KEYPARAM_END, true );
 
     std::cout << std::endl;
+}
+
+static void _log_region ( const geo_coord_t& coord_min, const geo_coord_t& coord_max, int x_pages, int y_pages ) {
+
+    #if 0
+        std::string pos_min;
+        std::string pos_max;
+
+        pos_min += _to_str ( coord_min.y(POS_TYPE_GPS) );  pos_min += " ";
+        pos_min += _to_str ( coord_min.x(POS_TYPE_GPS) );  pos_min += " ";
+        pos_min += _to_str ( coord_min.y(POS_TYPE_MAP) );  pos_min += " ";
+        pos_min += _to_str ( coord_min.x(POS_TYPE_MAP) );
+
+        pos_max += _to_str ( coord_max.y(POS_TYPE_GPS) );  pos_max += " ";
+        pos_max += _to_str ( coord_max.x(POS_TYPE_GPS) );  pos_max += " ";
+        pos_max += _to_str ( coord_max.y(POS_TYPE_MAP) );  pos_max += " ";
+        pos_max += _to_str ( coord_max.x(POS_TYPE_MAP) );
+
+        _log_pair   ( KEYNAME_MAP,       KEYPARAM_BEGIN,  true );
+        _log_pair   ( KEYNAME_MAP_MAX,   pos_max.c_str(), true );
+        _log_pair   ( KEYNAME_MAP_MIN,   pos_min.c_str(), true );
+        _log_pair_i ( KEYNAME_MAP_XCNT,  x_pages,         true );
+        _log_pair_i ( KEYNAME_MAP_YCNT,  y_pages,         true );
+        _log_pair_d ( KEYNAME_MAP_XSTEP, g_step_hor,      true );
+        _log_pair_d ( KEYNAME_MAP_YSTEP, g_step_ver,      true );
+        _log_pair   ( KEYNAME_MAP,       KEYPARAM_END,    true );
+
+        std::cout << std::endl;
+
+    #else
+        (void) (coord_min);
+        (void) (coord_max);
+        (void) (x_pages);
+        (void) (y_pages);
+    #endif
 }
 
 static void _scan_rect ( const geo_rect_t& in_rect, v_geo_offset_t& result ) {
@@ -301,8 +366,14 @@ static void _find_scale ( void ) {
 static void _slicing ( void ) {
 
     geo_rect_t      map_rect;
+    int             x_pages = 0;
+    int             y_pages = 0;
 
     for ( double y = g_map_min.y; y <= g_map_max.y; y += g_step_ver ) {
+
+        y_pages++;
+        x_pages = 0;
+
         for ( double x = g_map_min.x; x <= g_map_max.x; x += g_step_hor ) {
 
             map_rect.min.set_x ( pos_type_t::POS_TYPE_MAP, x );
@@ -315,12 +386,18 @@ static void _slicing ( void ) {
 
             g_slicer_rects.push_back ( map_rect );
 
+            x_pages++;
         }
     }
 
+    _log_region ( map_rect.min, map_rect.max, x_pages, y_pages );
+
     g_scan_result.resize ( g_slicer_rects.size() );
 
-    int max_workers_cnt = std::thread::hardware_concurrency();
+    int max_workers_cnt = std::thread::hardware_concurrency() - 2;
+    if ( max_workers_cnt < 1 ) {
+        max_workers_cnt = 1;
+    }
 
     std::vector<std::thread*>  workders_list;
 
@@ -337,14 +414,6 @@ static void _slicing ( void ) {
     for ( size_t i = 0; i < workders_list.size(); i++ ) {
         delete workders_list[i];
     }
-
-    #if 0
-        thread_pool pool ( 2 );
-        for (int id = 0; id < g_slicer_rects.size(); id++) {
-            pool.push_task([g_slicer_rects, id] { _scan_rect(g_slicer_rects[id], id); });
-        }
-        pool.wait_for_tasks();
-    #endif
 
     for (size_t i = 0; i < g_slicer_rects.size(); i++) {
         _log_index ( g_slicer_rects[i], i );
@@ -379,7 +448,7 @@ int main ( int argc, char* argv[] ) {
         if ( eoc ) {
             g_geo_parser.process_map ( geo_record, eor );
             if (eor) {
-                g_geo_record_list.push_back(geo_record);
+                g_geo_record_list.push_back ( geo_record );
             }
         }
 

@@ -145,13 +145,14 @@ class geo_processor_t {
         void geo_intersect ( const v_geo_coord_t& polyline, const geo_rect_t& in_rect, const pos_type_t coord_type, bool is_area, vv_geo_coord_t& clippedLine ) const;
 
     private:
-        void _load_idx ( v_geo_idx_rec_t& idx_list );
-        void _find_idx_rect ( const v_geo_idx_rec_t& map_idx, geo_rect_t& map_rect );
+        void _load_idx ( l_geo_idx_rec_t& idx_list );
+        void _find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, int& x_step, int& y_step );
+        void _map_idx ( const geo_rect_t rect,  const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx );
         void _px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const;
         void _px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const;
         void _alloc_buffer ( uint32_t width, uint32_t height );
         void _fill_solid ( const geo_pixel_t clr );
-        void _calc_map_rect ( const geo_coord_t center, double scale, const paint_rect_t wnd );
+        void _calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd );
         void _filter_rects ( const v_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, v_uint32_t& out_list );
         void _merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uint32_t& in_list, v_uint32_t& map_entries );
         void _load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_items );
@@ -186,15 +187,21 @@ class geo_processor_t {
         bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, const pos_type_t src, geo_coord_t& point ) const;
         void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
         void _process_pt_list ( const paint_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color );
-        void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
+        // void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
 
     private:
         std::string             m_idx_file_name;
-        geo_rect_t              m_idx_map_rect;
+
+        vvv_geo_offset_t        m_idx_map;
+        geo_rect_t              m_idx_rect;
+        int                     m_idx_x_cnt;
+        int                     m_idx_x_step;
+        int                     m_idx_y_cnt;
+        int                     m_idx_y_step;
 
         std::string             m_map_file_name;
 
-        v_geo_idx_rec_t         m_map_idx;
+        l_geo_idx_rec_t         m_map_idx2;
         std::ifstream           m_map_file;
         double                  m_map_scale;
         geo_coord_t             m_map_center;

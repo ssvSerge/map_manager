@@ -17,6 +17,15 @@
 #define KEYNAME_POSITION       "POSITION"
 #define KEYNAME_OSM_REF        "REF"
 
+#define KEYNAME_MAP            "MAP"
+#define KEYNAME_MAP_MAX        "MAX"
+#define KEYNAME_MAP_MIN        "MIN"
+#define KEYNAME_MAP_XCNT       "XCNT"
+#define KEYNAME_MAP_XSTEP      "XSTEP"
+#define KEYNAME_MAP_YCNT       "YCNT"
+#define KEYNAME_MAP_YSTEP      "YSTEP"
+
+
 #define KEYPARAM_BEGIN         "BEGIN"
 #define KEYPARAM_END           "END"
 #define KEYPARAM_OUTER         "OUTER"

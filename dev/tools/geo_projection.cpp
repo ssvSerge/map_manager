@@ -25,7 +25,7 @@ void geo_2_proj ( const double lat, const double lon, double& x, double& y ) {
 	y = EARTH_R * log(tan((M_PI * 0.25) + (0.5 * (M_PI * lat / 180))));
 }
 
-void proj_2_geo ( const double x, const double y, double& lat, double& lon ) {
+void proj_2_geo ( const double x, const double y, double& lon, double& lat ) {
 
 	const double R2D = 180 / M_PI;
 	const double A   = EARTH_R;

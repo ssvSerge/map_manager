@@ -8,7 +8,7 @@
 // double toRadians    ( double val);
 
 void geo_2_proj ( const double lat, const double lon, double& x, double& y );
-void proj_2_geo ( const double x, const double y, double& lat, double& lon );
+void proj_2_geo ( const double x, const double y, double& lon, double& lat );
 
 double gps_distance ( double lon1, double lat1, double lon2, double lat2 );
 

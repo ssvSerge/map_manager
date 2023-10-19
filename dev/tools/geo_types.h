@@ -16,6 +16,7 @@
 #include <cassert>
 
 #include <geo_projection.h>
+#include <lex_keys.h>
 
 #define CNT(x)          ( sizeof(x) / sizeof(x[0]) )
 #define MSG_LEN         ( 128 )
@@ -186,6 +187,7 @@ typedef uint32_t                                    geo_offset_t;
 typedef std::set<geo_offset_t>                      set_offset_t;
 typedef std::vector<geo_offset_t>                   v_geo_offset_t;
 typedef std::vector<v_geo_offset_t>                 vv_geo_offset_t;
+typedef std::vector<vv_geo_offset_t>                vvv_geo_offset_t;
 typedef std::list<geo_offset_t>                     list_geo_offset_t;
 typedef std::vector<uint32_t>                       v_uint32_t;
 typedef std::vector<uint64_t>                       vector_uint64_t;
@@ -248,11 +250,20 @@ typedef enum tag_obj_type {
 
     OBJID_RECORD_END,
 
+    OBJID_IDX_MAP_BEGIN,
+        OBJID_IDX_MAP_MIN,
+        OBJID_IDX_MAP_MAX,
+        OBJID_IDX_MAP_XCNT,
+        OBJID_IDX_MAP_YCNT,
+        OBJID_IDX_MAP_XSTEP,
+        OBJID_IDX_MAP_YSTEP,
+    OBJID_IDX_MAP_END,
+
     OBJID_IDX_BEGIN,
-    OBJID_IDX_RECT,
-    OBJID_IDX_MEMBERS_BEGIN,
-    OBJID_IDX_MEMBER,
-    OBJID_IDX_MEMBERS_END,
+        OBJID_IDX_RECT,
+        OBJID_IDX_MEMBERS_BEGIN,
+        OBJID_IDX_MEMBER,
+        OBJID_IDX_MEMBERS_END,
     OBJID_IDX_END,
 
     OBJID_LAST_ID
@@ -309,8 +320,23 @@ class geo_rect_t {
         }
 
         void load(const char* const val) {
-            (void) (val);
-            // (void)sscanf_s( val, "%lf %lf %lf %lf", &min.x, &min.y, &max.x, &max.y );
+
+            double v1, v2, v3, v4, v5, v6, v7, v8;
+
+            sscanf_s ( val, "%lf %lf %lf %lf %lf %lf %lf %lf", &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 );
+
+            min.set_y ( POS_TYPE_GPS, v1 );
+            min.set_x ( POS_TYPE_GPS, v2 );
+            max.set_y ( POS_TYPE_GPS, v3 );
+            max.set_x ( POS_TYPE_GPS, v4 );
+
+            min.set_y ( POS_TYPE_MAP, v5 );
+            min.set_x ( POS_TYPE_MAP, v6 );
+            max.set_y ( POS_TYPE_MAP, v7 );
+            max.set_x ( POS_TYPE_MAP, v8 );
+
+            min.reset_angle ();
+            max.reset_angle ();
         }
 
         bool operator== (const geo_rect_t& ref) const {
@@ -592,18 +618,20 @@ class geo_idx_rec_t {
     public:
         geo_rect_t         m_rect;
         v_geo_offset_t     m_list_off;
-        uint64_t           m_osm_id;
 
     public:
         void clear() {
             m_rect.clear();
             m_list_off.clear();
-            m_osm_id = 0;
         }
 };
 
-typedef std::list<geo_idx_rec_t>      l_geo_idx_rec_t;
-typedef std::vector<geo_idx_rec_t>    v_geo_idx_rec_t;
+typedef std::list<geo_idx_rec_t>       l_geo_idx_rec_t;
+typedef std::vector<geo_idx_rec_t>     v_geo_idx_rec_t;
+typedef std::vector<v_geo_idx_rec_t>   vv_geo_idx_rec_t;
+
+typedef std::vector<geo_offset_t>      v_geo_offset_t;
+typedef std::vector<v_geo_offset_t>    vv_geo_offset_t;
 
 static const lex_ctx_t g_lex_map[] = {
     { "RECORD",     "AREA",         OBJID_RECORD_AREA },
@@ -656,13 +684,23 @@ static const lex_ctx_t g_lex_types[] = {
 };
 
 static const lex_ctx_t g_lex_idx[] = {
-    { "IDX",        "RECT",         OBJID_IDX_BEGIN },
-    { "POSITION",   "",             OBJID_IDX_RECT },
-    { "OFF",        "BEGIN",        OBJID_IDX_MEMBERS_BEGIN },
-    { "M",          "",             OBJID_IDX_MEMBER },
-    { "REF",        "",             OBJID_XREF },
-    { "OFF",        "END",          OBJID_IDX_MEMBERS_END },
-    { "IDX",        "END",          OBJID_IDX_END },
+
+    { KEYNAME_MAP,          KEYPARAM_BEGIN,     OBJID_IDX_MAP_BEGIN     },
+    { KEYNAME_MAP_MIN,      "",                 OBJID_IDX_MAP_MIN       },
+    { KEYNAME_MAP_MAX,      "",                 OBJID_IDX_MAP_MAX       },
+    { KEYNAME_MAP_XCNT,     "",                 OBJID_IDX_MAP_XCNT      },
+    { KEYNAME_MAP_YCNT,     "",                 OBJID_IDX_MAP_YCNT      },
+    { KEYNAME_MAP_XSTEP,    "",                 OBJID_IDX_MAP_XSTEP     },
+    { KEYNAME_MAP_YSTEP,    "",                 OBJID_IDX_MAP_YSTEP     },
+    { KEYNAME_MAP,          KEYPARAM_END,       OBJID_IDX_MAP_END       },
+
+    { KEYNAME_INDEX,        KEYPARAM_RECT,      OBJID_IDX_BEGIN         },
+    { KEYNAME_POSITION,     "",                 OBJID_IDX_RECT          },
+    { KEYNAME_OFFSETS,      KEYPARAM_BEGIN,     OBJID_IDX_MEMBERS_BEGIN },
+    { KEYNAME_MEMBER,       "",                 OBJID_IDX_MEMBER        },
+    { KEYNAME_OSM_REF,      "",                 OBJID_XREF              },
+    { KEYNAME_OFFSETS,      KEYPARAM_END,       OBJID_IDX_MEMBERS_END   },
+    { KEYNAME_INDEX,        KEYPARAM_END,       OBJID_IDX_END           },
 };
 
 class geo_parser_t {
@@ -761,8 +799,9 @@ class geo_parser_t {
 
         void process_idx ( geo_idx_rec_t& geo_idx, bool& eor ) {
 
-            uint64_t    ref;
-            obj_type_t  code = OBJID_ERROR;
+            obj_type_t     code = OBJID_ERROR;
+            // uint64_t    ref;
+            // double      p1, p2, p3, p4;
 
             eor = false;
 
@@ -773,6 +812,55 @@ class geo_parser_t {
             }
 
             switch ( code ) {
+
+                #if 0
+
+                case OBJID_IDX_MAP_BEGIN:
+                    geo_idx.m_map.min.clear();
+                    geo_idx.m_map.max.clear();
+                    geo_idx.m_map_x_cnt  = 0;
+                    geo_idx.m_map_x_step = 0;
+                    geo_idx.m_map_y_cnt  = 0;
+                    geo_idx.m_map_y_step = 0;
+                    break;
+
+                case OBJID_IDX_MAP_MIN:
+                    sscanf_s ( m_geo_param.value.msg, "%lf %lf %lf %lf", &p1, &p2, &p3, &p4 );
+                    geo_idx.m_map.min.set_y ( pos_type_t::POS_TYPE_GPS, p1 );
+                    geo_idx.m_map.min.set_x ( pos_type_t::POS_TYPE_GPS, p2 );
+                    geo_idx.m_map.min.set_y ( pos_type_t::POS_TYPE_MAP, p3 );
+                    geo_idx.m_map.min.set_x ( pos_type_t::POS_TYPE_MAP, p4 );
+                    break;
+
+                case OBJID_IDX_MAP_MAX:
+                    sscanf_s ( m_geo_param.value.msg, "%lf %lf %lf %lf", &p1, &p2, &p3, &p4 );
+                    geo_idx.m_map.max.set_y ( pos_type_t::POS_TYPE_GPS, p1 );
+                    geo_idx.m_map.max.set_x ( pos_type_t::POS_TYPE_GPS, p2 );
+                    geo_idx.m_map.max.set_y ( pos_type_t::POS_TYPE_MAP, p3 );
+                    geo_idx.m_map.max.set_x ( pos_type_t::POS_TYPE_MAP, p4 );
+                    break;
+
+                case OBJID_IDX_MAP_XCNT:
+                    sscanf_s ( m_geo_param.value.msg, "%d", &geo_idx.m_map_x_cnt );
+                    break;
+
+                case OBJID_IDX_MAP_YCNT:
+                    sscanf_s ( m_geo_param.value.msg, "%d", &geo_idx.m_map_y_cnt );
+                    break;
+
+                case OBJID_IDX_MAP_XSTEP:
+                    sscanf_s ( m_geo_param.value.msg, "%lf", &geo_idx.m_map_x_step );
+                    break;
+
+                case OBJID_IDX_MAP_YSTEP:
+                    sscanf_s ( m_geo_param.value.msg, "%lf", &geo_idx.m_map_y_step );
+                    break;
+
+                #endif
+
+                case OBJID_IDX_MAP_END:
+                    eor = true;
+                    break;
 
                 case OBJID_IDX_BEGIN:
                     geo_idx.clear();
@@ -792,10 +880,12 @@ class geo_parser_t {
                     geo_idx.m_list_off.push_back(off);
                     break;
 
+                #if 0
                 case OBJID_XREF:
                     sscanf_s(m_geo_param.value.msg, "%lld", &ref);
                     geo_idx.m_osm_id = ref;
                     break;
+                #endif
 
                 case OBJID_IDX_MEMBERS_END:
                     break;

@@ -11,8 +11,8 @@
 // #include <GeographicLib/Geodesic.hpp>
 // #include <idx_file.h>
 
-#define NAME_IDX    "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt"
-#define NAME_MAP    "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt"
+#define NAME_IDX    "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_idx.txt"
+#define NAME_MAP    "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_map.txt"
 
 
 IMPLEMENT_DYNAMIC ( CMapPainter, CStatic )
@@ -209,8 +209,8 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     wnd.max.x   = client_rect.Width();
     wnd.max.y   = client_rect.Height();
-    // center.x    = lon;
-    // center.y    = lat;
+    center.set_x ( pos_type_t::POS_TYPE_MAP, 6453151 );
+    center.set_y ( pos_type_t::POS_TYPE_MAP, 1594414 );
 
     g_geo_processor.process_map ( wnd, center, scale, angle );
 }
