@@ -314,12 +314,17 @@ typedef std::vector<v_paint_coord_t>  vv_paint_coord_t;
 class geo_rect_t {
 
     public:
-        void clear() {
+        void clear ( void ) {
             min.clear();
             max.clear();
         }
 
-        void load(const char* const val) {
+        void set_src ( pos_type_t pos_type ) {
+            min.set_src ( pos_type );
+            max.set_src ( pos_type );
+        }
+
+        void load ( const char* const val ) {
 
             double v1, v2, v3, v4, v5, v6, v7, v8;
 
@@ -339,7 +344,7 @@ class geo_rect_t {
             max.reset_angle ();
         }
 
-        bool operator== (const geo_rect_t& ref) const {
+        bool operator== ( const geo_rect_t& ref ) const {
 
             if ( ref.min != this->min ) {
                 return false;
@@ -350,9 +355,19 @@ class geo_rect_t {
             return true;
         }
 
-        bool operator!= (const geo_rect_t& ref) const {
+        bool operator!= ( const geo_rect_t& ref ) const {
             bool ret_val = this->operator== (ref);
             return (!ret_val);
+        }
+
+        double width ( pos_type_t type ) const {
+            double offset = max.x(type) - min.x(type);
+            return offset;
+        }
+
+        double height( pos_type_t type ) const {
+            double offset = max.y(type) - min.y(type);
+            return offset;
         }
 
         bool is_overlapped ( const geo_rect_t& slice, const pos_type_t src ) const {
@@ -372,7 +387,6 @@ class geo_rect_t {
             }
 
             return true;
-
         }
 
     public:
@@ -492,6 +506,7 @@ class geo_entry_t {
         uint64_t                m_osm_ref;          // REF:8094759
         geo_offset_t            m_data_off;         // Offset in data file.
         bool                    m_to_display;       // TRUE if required to draw.
+        int32_t                 m_miss_cnt;         // 
         v_geo_line_t            m_lines;            // RECORDS
 };
 

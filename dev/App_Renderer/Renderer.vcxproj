@@ -67,6 +67,7 @@
       </PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -93,6 +94,7 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -121,6 +123,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\tools\geo_processor.cpp" />
+    <ClCompile Include="..\tools\geo_processor_ex.cpp" />
+    <ClCompile Include="..\tools\gpc.c" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Dlg.cpp" />
     <ClCompile Include="MapPainter.cpp" />

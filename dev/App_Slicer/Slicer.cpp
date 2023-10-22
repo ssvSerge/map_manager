@@ -128,12 +128,14 @@ static void _log_pair_i ( const char* const key, size_t val, bool cr ) {
     _log_pair ( key, str.c_str(), cr);
 }
 
+#if 0
 static void _log_pair_d ( const char* const key, double val, bool cr ) {
 
     std::string str;
     str = _to_str ( val );
     _log_pair ( key, str.c_str(), cr);
 }
+#endif
 
 static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
 

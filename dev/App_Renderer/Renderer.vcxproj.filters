@@ -56,6 +56,12 @@
     <ClCompile Include="..\tools\geo_processor.cpp">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\tools\geo_processor_ex.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tools\gpc.c">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="App_Renderer.rc">

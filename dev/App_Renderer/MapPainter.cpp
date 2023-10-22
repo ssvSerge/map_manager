@@ -205,13 +205,20 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
         g_geo_processor.set_names ( NAME_IDX, NAME_MAP );
     }
 
+    (void)(lon);
+    (void)(lat);
+
     GetClientRect ( client_rect );
 
-    wnd.max.x   = client_rect.Width();
-    wnd.max.y   = client_rect.Height();
-    center.set_x ( pos_type_t::POS_TYPE_MAP, 6453151 );
-    center.set_y ( pos_type_t::POS_TYPE_MAP, 1594414 );
+    wnd.min.x = 0;
+    wnd.min.y = 0;
+    wnd.max.x = client_rect.Width();
+    wnd.max.y = client_rect.Height();
 
+    center.set_x ( pos_type_t::POS_TYPE_MAP, 1594414 );
+    center.set_y ( pos_type_t::POS_TYPE_MAP, 6453150 );
+
+    g_geo_processor.load_idx ();
     g_geo_processor.process_map ( wnd, center, scale, angle );
 }
 

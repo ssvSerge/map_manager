@@ -31,96 +31,97 @@ geo_processor_t::geo_processor_t() {
 
 void geo_processor_t::set_names ( const char* const idx_file_name, const char* const map_file_name ) {
 
-    l_geo_idx_rec_t  idx;
-
     m_map_file_name = map_file_name;
     m_idx_file_name = idx_file_name;
 
-    m_idx_map.clear();
-
     m_map_file.open ( m_map_file_name, std::ios_base::binary );
 
-    _load_idx ( idx );
-    _find_idx_rect ( idx, m_idx_rect, m_idx_x_step, m_idx_y_step );
-    _map_idx ( m_idx_rect, m_idx_x_step, m_idx_y_step, idx );
+}
+
+void geo_processor_t::load_idx ( void ) {
+
+    _load_idx(m_idx_list);
+
+    {   geo_rect_t  map_rect;
+        int         x_step;
+        int         y_step;
+        _find_idx_rect(m_idx_list, map_rect, x_step, y_step);
+        x_step = y_step;
+    }
 }
 
 void geo_processor_t::process_map ( const paint_rect_t wnd, const geo_coord_t center, const double scale, const double angle ) {
 
-    const double delta_angle = 0.5;
+    const  pos_type_t pos_type = POS_TYPE_MAP;
 
-    bool update_request_rect = false;
-    bool update_request_center = false;
-    bool update_request_scale = false;
-    bool update_request_angle = false;
-    bool update_request_map = false;
+    geo_rect_t  geo_wnd;
+    double      offset;
+    double      shift_x;
+    double      shift_y;
+    
+    shift_x   =  wnd.width()  / scale;
+    shift_y   =  wnd.height() / scale;
 
-    if (m_paint_rect != wnd) {
-        update_request_rect = true;
-        m_paint_rect = wnd;
+    offset    =  shift_x*shift_x  +  shift_y*shift_y;  // диагональ
+    offset    =  sqrt ( offset );                      // описанная окружность
+    offset   *=  sqrt(2);                              // квадрат вокруг окружности.
+    offset   *=  1.1;                                  // резерв на доп. вращение.
+    offset   /=  2;                                    // смещение от центра.
+
+    geo_wnd.min.set_x ( POS_TYPE_MAP, center.x(pos_type) - offset );
+    geo_wnd.min.set_y ( POS_TYPE_MAP, center.y(pos_type) - offset );
+    geo_wnd.max.set_x ( POS_TYPE_MAP, center.x(pos_type) + offset );
+    geo_wnd.max.set_y ( POS_TYPE_MAP, center.y(pos_type) + offset );
+
+    bool  update_map    = false;
+    bool  update_angle  = false;
+
+    geo_wnd.set_src    ( pos_type );
+    m_geo_wnd.set_src  ( pos_type );
+
+    if ( m_geo_wnd != geo_wnd ) {
+        m_geo_wnd     = geo_wnd;
+        update_map    = true;
+        update_angle  = true;
+    } else
+    if ( m_geo_angle != angle ) {
+        m_geo_angle   = angle;
+        update_angle  = true;
     }
 
-    if (m_paint_center != center) {
-        update_request_center = true;
-        m_paint_center = center;
+    if ( update_angle ) {
+        _set_angle ( angle );
     }
 
-    if (m_paint_scale != scale) {
-        update_request_scale = true;
-        m_paint_scale = scale;
+    if ( update_map ) {
+
+        m_geo_center = center;
+
+        _alloc_img_buffer ( m_geo_wnd );
+        _load_ids ( m_geo_wnd, m_idx_list, m_map_ids );
+        _load_map_by_idx ( m_map_ids, m_map_cache );
+        _apply_angle ();
+        _trim_map_by_rect ();
+
+        _draw_area ();
+        _draw_building ();
+        _draw_roads ();
     }
 
-    if (std::abs(m_paint_angle - angle) > delta_angle) {
-        update_request_angle = true;
-        m_paint_angle = angle;
-    }
 
-    if (update_request_rect) {
-        _alloc_buffer ( m_paint_rect.width(), m_paint_rect.height() );
-    }
-
-    if (update_request_center || update_request_scale) {
-
-        v_uint32_t  rects_list;
-        v_uint32_t  map_entrie;
-
-        update_request_map = true;
-
-        _calc_map_rect(center, scale, wnd);
-        // _filter_rects ( m_map_idx, m_map_geo_rect, rects_list );
-        // _merge_idx ( m_map_idx, rects_list, map_entrie );
-        _load_map_by_idx(map_entrie, m_map_cache );
-    }
-
-    if (update_request_map) {
-        update_request_angle = true;
-        // _trim_map_by_rect ();
-    }
-
-    if (update_request_angle) {
-
-        paint_coord_t pos;
-        geo_pixel_t   clr;
-
-        _fill_solid(g_color_none);
-        _set_angle(angle);
-        _reset_map();
-        _apply_angle();
-        _trim_map_by_rect();
-
-        _draw_area();
-        _draw_building();
-        _draw_roads();
-        _draw_roads();
-    }
 }
 
 void geo_processor_t::get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) const {
 
+    (void)(pos);
+    (void)(px);
+
+    #if 0
+
     geo_pixel_int_t tmp;
 
     int32_t offset = 0;
-    int32_t width = m_paint_rect.width();
+    int32_t width  = m_paint_rect.width();
     int32_t height = m_paint_rect.height();
 
     if ((pos.x >= width) || (pos.y >= height)) {
@@ -131,6 +132,8 @@ void geo_processor_t::get_pix ( const paint_coord_t& pos, geo_pixel_t& px ) cons
     }
 
     _px_conv(tmp, px);
+
+    #endif
 }
 
 void geo_processor_t::close ( void ) {
@@ -138,20 +141,45 @@ void geo_processor_t::close ( void ) {
     m_geo_angle     = 0;
     m_geo_angle_sin = 0;
     m_geo_angle_cos = 1;
-    m_map_scale     = 1;
-    m_map_step_x    = 0;
-    m_map_step_y    = 0;
+    m_geo_angle     = 1;
+    // m_map_step_x    = 0;
+    // m_map_step_y    = 0;
 
-    m_map_center.clear();
-    m_map_geo_rect.clear();
-    m_paint_rect.clear();
-    m_paint_center.clear();
+    // m_geo_center.clear();
+    // m_map_geo_rect.clear();
+    // m_paint_rect.clear();
+    // m_paint_center.clear();
 
     if ( m_video_buffer != nullptr ) {
         delete m_video_buffer;
         m_video_buffer = nullptr;
     }
 
+}
+
+void geo_processor_t::set_pix ( const paint_coord_t& pos, const geo_pixel_t& px ) {
+
+    if (pos.x < 0) {
+        return;
+    }
+    if (pos.y < 0) {
+        return;
+    }
+    if ( pos.x >= m_video_rect.max.x ) {
+        return;
+    }
+    if ( pos.y >= m_video_rect.max.y ) {
+        return;
+    }
+
+    int32_t           offset;
+    geo_pixel_int_t   tmp;
+
+    _px_conv(px, tmp);
+
+    offset = (pos.y * m_video_rect.max.x) + pos.x;
+
+    m_video_buffer[offset] = tmp;
 }
 
 //---------------------------------------------------------------------------//
@@ -165,6 +193,8 @@ void geo_processor_t::_load_idx ( l_geo_idx_rec_t& idx_list ) {
     char            ch;
     bool            eoc;
     bool            eor;
+
+    idx_list.clear();
 
     idx_file.open ( m_idx_file_name, std::ios_base::binary );
 
@@ -187,169 +217,198 @@ void geo_processor_t::_load_idx ( l_geo_idx_rec_t& idx_list ) {
     }
 }
 
-void geo_processor_t::_find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, int& x_step, int& y_step ) {
+void geo_processor_t::_load_ids ( const geo_rect_t& base_rect, const l_geo_idx_rec_t& rect_list, v_geo_offset_t& out_list ) {
 
-    map_pos_t  rect_geo_min;
-    map_pos_t  rect_geo_max;
-    map_pos_t  rect_map_min;
-    map_pos_t  rect_map_max;
+    std::set<geo_offset_t> nodes_list;
+    size_t  insert_cnt  = 0;
+    size_t  objects_cnt = 0;
 
-    map_pos_t  geo_min;
-    map_pos_t  geo_max;
-    map_pos_t  map_min;
-    map_pos_t  map_max;
+    out_list.clear();
 
-    bool       is_first = true;
-
-    for ( auto it = map_idx.cbegin(); it != map_idx.cend(); it++ ) {
-        
-        it->m_rect.min.get ( POS_TYPE_GPS, geo_min );
-        it->m_rect.max.get ( POS_TYPE_GPS, geo_max );
-        it->m_rect.min.get ( POS_TYPE_MAP, map_min );
-        it->m_rect.max.get ( POS_TYPE_MAP, map_max );
-
-        if ( is_first ) {
-
-            is_first = false;
-
-            rect_geo_min = geo_min;
-            rect_geo_max = geo_max;
-
-            rect_map_min = map_min;
-            rect_map_max = map_max;
-
-            x_step = static_cast<int> (rect_map_max.x - rect_map_min.x);
-            y_step = static_cast<int> (rect_map_max.y - rect_map_min.y);
-
-        } else {
-
-            rect_geo_min.x = std::min ( rect_geo_min.x, geo_min.x );
-            rect_geo_min.y = std::min ( rect_geo_min.y, geo_min.y );
-
-            rect_map_min.x = std::min ( rect_map_min.x, map_min.x );
-            rect_map_min.y = std::min ( rect_map_min.y, map_min.y );
-
-            rect_geo_max.x = std::max ( rect_geo_max.x, geo_max.x );
-            rect_geo_max.y = std::max ( rect_geo_max.y, geo_max.y );
-
-            rect_map_max.x = std::max ( rect_map_max.x, map_max.x );
-            rect_map_max.y = std::max ( rect_map_max.y, map_max.y );
-
+    for ( auto it = rect_list.cbegin(); it != rect_list.cend(); it++ ) {
+        if ( _is_overlapped(base_rect, POS_TYPE_MAP, it->m_rect) ) {
+            for (auto ref = it->m_list_off.cbegin(); ref != it->m_list_off.cend(); ref++ ) {
+                insert_cnt++;
+                nodes_list.insert ( *ref );
+            }
         }
-
     }
 
-    map_rect.min.set ( POS_TYPE_GPS, rect_geo_min );
-    map_rect.min.set ( POS_TYPE_MAP, rect_map_min );
-    map_rect.max.set ( POS_TYPE_GPS, rect_geo_max );
-    map_rect.max.set ( POS_TYPE_MAP, rect_map_max );
-}
+    objects_cnt = nodes_list.size();
 
-void geo_processor_t::_map_idx ( const geo_rect_t rect, const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx ) {
-
-    int  y_cnt;
-    int  x_cnt;
-    int  y;
-    int  x;
-    double delta;
-
-    delta  = rect.max.y(pos_type_t::POS_TYPE_MAP) - rect.min.y(pos_type_t::POS_TYPE_MAP);
-    y_cnt  = static_cast<int> (delta / y_step);
-
-    delta  = rect.max.x(pos_type_t::POS_TYPE_MAP) - rect.min.x(pos_type_t::POS_TYPE_MAP);
-    x_cnt  = static_cast<int> (delta / x_step);
-
-    m_idx_map.resize(y_cnt);
-
-    for ( size_t i = 0; i < y_cnt; i++ ) {
-        m_idx_map[i].resize(x_cnt);
+    out_list.reserve ( objects_cnt );
+    for ( auto it = nodes_list.cbegin(); it != nodes_list.cend(); it++ ) {
+        out_list.push_back ( *it );
     }
-
-    auto it = map_idx.begin();
-    while ( it != map_idx.end() ) {
-        
-        delta  = it->m_rect.min.y ( pos_type_t::POS_TYPE_MAP ) - rect.min.y ( pos_type_t::POS_TYPE_MAP );
-        y      = static_cast<int> (delta / y_step);
-
-        delta  = it->m_rect.min.x ( pos_type_t::POS_TYPE_MAP ) - rect.min.x ( pos_type_t::POS_TYPE_MAP );
-        x      = static_cast<int> (delta / x_step);
-
-        m_idx_map[y][x] = it->m_list_off;
-
-        map_idx.pop_front();          
-        it = map_idx.begin();        
-    }
-
+                                            
     return;
 }
 
-void geo_processor_t::_alloc_buffer ( uint32_t width, uint32_t height ) {
+void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache ) {
 
-    const uint32_t alloc_size = width * height;
+    geo_entry_t     new_entry;
+    bool            already_known;
 
-    if ( m_video_buffer != nullptr ) {
-        delete (m_video_buffer);
-        m_video_buffer = nullptr;
+    for ( auto map_entry_it = map_cache.begin(); map_entry_it != map_cache.end(); map_entry_it++ ) {
+        map_entry_it->m_to_display = false;
+        map_entry_it->m_miss_cnt++;
     }
 
-    m_paint_rect.clear();
-    m_paint_rect.max.x = width;
-    m_paint_rect.max.y = height;
+    for ( auto id = map_entries.cbegin(); id != map_entries.cend(); id++ ) {
 
-    m_video_buffer = new geo_pixel_int_t [ alloc_size ];
+        already_known = false;
 
-    assert(m_video_buffer != nullptr);
+        for ( auto idx_it = map_cache.begin(); idx_it != map_cache.end(); idx_it++ ) {
+            if ( idx_it->m_data_off == *id ) {
+                already_known = true;
+                idx_it->m_to_display = true;
+                idx_it->m_miss_cnt = 0;
+                break;
+            }
+        }
 
-    _fill_solid(g_color_none);
-}
-
-void geo_processor_t::_fill_solid ( const geo_pixel_t clr ) {
-
-    const uint32_t alloc_size = m_paint_rect.max.x * m_paint_rect.max.y;
-
-    if ( m_video_buffer != nullptr ) {
-        geo_pixel_int_t clr_int;
-        _px_conv ( clr, clr_int );
-        for (uint32_t i = 0; i < alloc_size; i++) {
-            m_video_buffer[i] = clr_int;
+        if ( !already_known ) {
+            new_entry.clear();
+            _load_map_entry(*id, new_entry);
+            new_entry.m_to_display = true;
+            new_entry.m_miss_cnt   = 0;
+            map_cache.push_back(new_entry);
         }
     }
 }
 
-void geo_processor_t::_set_angle ( const double angle ) {
+void geo_processor_t::_apply_angle ( void ) {
 
-    constexpr double pi_rad_scale = 0.01745329251994329576923690768489;
+    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
 
-    m_geo_angle = angle;
-    m_geo_angle_sin = sin(angle * pi_rad_scale);
-    m_geo_angle_cos = cos(angle * pi_rad_scale);
+        if ( !it_geo_area->m_to_display ) {
+            continue;
+        }
+
+        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
+            _rotate_geo_line(it_geo_line->m_coords);
+        }
+    }
+
 }
 
-void geo_processor_t::_calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd ) {
+void geo_processor_t::_trim_map_by_rect ( void ) {
 
-    map_pos_t map_center;
+    paint_entry_t       out_record;
 
-    int x_shift_1;
-    int x_shift_2;
-    int y_shift;
+    m_paint_list.clear();
 
-    center.get ( POS_TYPE_GPS, map_center );
+    for (auto it_src = m_map_cache.cbegin(); it_src != m_map_cache.cend(); it_src++) {
 
-    x_shift_1 = wnd.width() / 3;
-    x_shift_2 = wnd.width() - x_shift_1;
+        if ( !it_src->m_to_display ) {
+            continue;
+        }
 
-    y_shift = wnd.height() / 2;
+        if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
+            _trim_record ( m_geo_wnd, *it_src, true, out_record );
+        }
+        else
+        if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
+            _trim_record ( m_geo_wnd, *it_src, true, out_record );
+        }
+        else
+        if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
+            _trim_record ( m_geo_wnd, *it_src, false, out_record );
+        }
 
-    m_map_geo_rect.min.set_x ( POS_TYPE_MAP, map_center.x - x_shift_1 );
-    m_map_geo_rect.min.set_y ( POS_TYPE_MAP, map_center.y - y_shift   );
+        if (out_record.m_lines.size() > 0) {
+            m_paint_list.push_back(out_record);
+        }
+    }
+}
 
-    m_map_geo_rect.max.set_x ( POS_TYPE_MAP, map_center.x + x_shift_2 );
-    m_map_geo_rect.max.set_y ( POS_TYPE_MAP, map_center.y + y_shift   );
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_draw_area ( void ) {
+
+    geo_pixel_t border_color;
+    geo_pixel_t fill_color;
+
+    size_t cnt;
+
+    for (auto it = m_paint_list.begin(); it != m_paint_list.end(); it++) {
+
+        if (it->m_record_type != OBJID_RECORD_AREA) {
+            continue;
+        }
+
+        cnt = it->m_lines.size();
+
+        if (cnt == 1) {
+            _process_area ( it->m_lines[0], false, false );
+        }
+        else {
+
+            for (size_t i = 0; i < cnt; i++) {
+                if (it->m_lines[i].m_role == OBJID_ROLE_OUTER) {
+                    _process_area ( it->m_lines[i], false, false );
+                }
+            }
+            for (size_t i = 0; i < cnt; i++) {
+                if (it->m_lines[i].m_role == OBJID_ROLE_INNER) {
+                    _process_area (it->m_lines[i], false, false );
+                }
+            }
+
+        }
+
+        // break;
+    }
+}
+
+void geo_processor_t::_draw_building ( void ) {
+
+    geo_pixel_t border_color;
+    geo_pixel_t fill_color;
+
+    size_t cnt;
+
+    int  start_cnt = 15;
+    int  end_cnt = 20;
+    int  out_cnt = 0;
+
+    for (auto it = m_paint_list.begin(); it != m_paint_list.end(); it++) {
+
+        if (it->m_record_type != OBJID_RECORD_BUILDING) {
+            continue;
+        }
+
+        out_cnt++;
+
+        if (out_cnt < start_cnt || out_cnt > end_cnt) {
+            continue;
+        }
+
+        cnt = it->m_lines.size();
+
+        if (cnt == 1) {
+            _process_area(it->m_lines[0], true, true);
+        }
+        else {
+
+            for (size_t i = 0; i < cnt; i++) {
+                if (it->m_lines[i].m_role == OBJID_ROLE_OUTER) {
+                    _process_area(it->m_lines[i], true, true);
+                }
+            }
+            for (size_t i = 0; i < cnt; i++) {
+                if (it->m_lines[i].m_role != OBJID_ROLE_OUTER) {
+                    _process_area(it->m_lines[i], true, true);
+                }
+            }
+
+        }
+
+    }
 }
 
 void geo_processor_t::_draw_roads ( void ) {
 
-    #if 0
     static int stop_cnt = 1;
     int out_cnt = 0;
 
@@ -411,440 +470,9 @@ void geo_processor_t::_draw_roads ( void ) {
     }
 
     stop_cnt++;
-
-    #endif
 }
 
-void geo_processor_t::_draw_area ( void ) {
-
-    #if 0
-    geo_pixel_t border_color;
-    geo_pixel_t fill_color;
-
-    size_t cnt;
-
-    for (auto it = m_paint_list.begin(); it != m_paint_list.end(); it++) {
-
-        if (it->m_record_type != OBJID_RECORD_AREA) {
-            continue;
-        }
-
-        cnt = it->m_lines.size();
-
-        if (cnt == 1) {
-            _process_area(it->m_lines[0], false, false);
-        }
-        else {
-
-            for (size_t i = 0; i < cnt; i++) {
-                if (it->m_lines[i].m_role == OBJID_ROLE_OUTER) {
-                    _process_area(it->m_lines[i], false, false);
-                }
-            }
-            for (size_t i = 0; i < cnt; i++) {
-                if (it->m_lines[i].m_role == OBJID_ROLE_INNER) {
-                    _process_area(it->m_lines[i], false, false);
-                }
-            }
-
-        }
-
-        // break;
-    }
-    #endif
-}
-
-void geo_processor_t::_draw_building ( void ) {
-
-    #if 0
-    geo_pixel_t border_color;
-    geo_pixel_t fill_color;
-
-    size_t cnt;
-
-    int  start_cnt = 15;
-    int  end_cnt   = 20;
-    int  out_cnt   =  0;
-
-    for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {
-
-        if ( it->m_record_type != OBJID_RECORD_BUILDING ) {
-            continue;
-        }
-
-        out_cnt++;
-
-        if (out_cnt < start_cnt || out_cnt > end_cnt) {
-            continue;
-        }
-
-        cnt = it->m_lines.size();
-
-        if ( cnt == 1 ) {
-            _process_area ( it->m_lines[0], true, true );
-        } else {
-
-            for ( size_t i = 0; i < cnt; i++ ) {
-                if ( it->m_lines[i].m_role == OBJID_ROLE_OUTER ) {
-                    _process_area ( it->m_lines[i], true, true );
-                }
-            }
-            for ( size_t i = 0; i < cnt; i++ ) {
-                if ( it->m_lines[i].m_role != OBJID_ROLE_OUTER ) {
-                    _process_area ( it->m_lines[i], true, true );
-                }
-            }
-
-        }
-
-    }
-    #endif
-}
-
-void geo_processor_t::_reset_map ( void ) {
-
-    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
-        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            for ( auto it_coord = it_geo_line->m_coords.begin(); it_coord != it_geo_line->m_coords.end(); it_coord++ ) {
-                it_coord->reset_angle();
-            }
-        }
-    }
-
-    m_paint_list.clear();
-}
-
-void geo_processor_t::_apply_angle ( void ) {
-
-    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
-
-        if ( !it_geo_area->m_to_display ) {
-            continue;
-        }
-
-        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            _rotate_geo_line ( it_geo_line->m_coords );
-        }
-    }
-
-}
-
-
-#if 0
-
-void geo_processor_t::_calc_map_rect ( const geo_coord_t center, double scale, const paint_rect_t wnd ) {
-
-    const double geo_delta = 0.0001;
-
-    double  geo_hor;
-    double  geo_ver;
-    double  shift_hor;
-    double  shift_ver;
-
-    map_pos_t gps_center;
-    map_pos_t step_hor;
-    map_pos_t step_ver;
-
-    center.get ( gps_center, POS_TYPE_GPS );
-
-    step_hor    = gps_center;
-    step_hor.x += geo_delta;
-
-    step_ver    = gps_center;
-    step_hor.y += geo_delta;
-
-    GeographicLib::Geodesic geod(GeographicLib::Constants::WGS84_a(), GeographicLib::Constants::WGS84_f());
-
-    geod.Inverse ( gps_center.y, gps_center.x, step_hor.y, step_hor.x, shift_hor );
-    geod.Inverse ( gps_center.y, gps_center.x, step_ver.y, step_ver.x, shift_ver );
-
-    m_map_step_x = geo_delta / shift_hor / scale;
-    m_map_step_y = geo_delta / shift_ver / scale;
-
-    geo_hor = m_map_step_x * ( wnd.width()  - 1 );
-    geo_ver = m_map_step_y * ( wnd.height() - 1 );
-
-    map_pos_t  left_bottom;
-    map_pos_t  right_top;
-
-    center.get ( left_bottom, pos_type_t::POS_TYPE_GPS );
-    center.get ( right_top,   pos_type_t::POS_TYPE_GPS );
-
-    left_bottom.x -= geo_hor / 2;
-    left_bottom.y -= geo_ver / 2;
-
-    right_top.x   += geo_hor / 2;
-    right_top.y   += geo_ver / 2;
-
-    m_map_geo_rect.min.set ( left_bottom, pos_type_t::POS_TYPE_GPS );
-    _pt_to_projection ( left_bottom );
-    m_map_geo_rect.min.set ( left_bottom, pos_type_t::POS_TYPE_MAP );
-
-    m_map_geo_rect.max.set ( right_top,   pos_type_t::POS_TYPE_GPS );
-    _pt_to_projection ( right_top );
-    m_map_geo_rect.min.set ( right_top, pos_type_t::POS_TYPE_MAP );
-
-    
-
-}
-
-void geo_processor_t::_filter_rects ( const v_geo_idx_rec_t& rect_list, const geo_rect_t& base_rect, v_uint32_t& out_list ) {
-
-    for (uint32_t i = 0; i < rect_list.size(); i++) {
-        if ( _is_overlapped(base_rect, rect_list[i].m_rect) ) {
-            out_list.push_back(i);
-        }
-    }
-}
-
-bool geo_processor_t::_is_overlapped ( const geo_rect_t& window, const geo_rect_t& slice ) const {
-
-    return window.is_overlapped ( slice, pos_type_t::POS_TYPE_GPS );
-}
-
-void geo_processor_t::_merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uint32_t& in_list, v_uint32_t& map_entries ) {
-
-    set_offset_t tmp_map;
-    size_t sub_idx;
-
-    map_entries.clear();
-
-    for ( size_t i = 0; i < in_list.size(); i++ ) {
-        sub_idx = in_list[i];
-        for (size_t y = 0; y < rect_list[sub_idx].m_list_off.size(); y++) {
-            tmp_map.insert(rect_list[sub_idx].m_list_off[y]);
-        }
-    }
-
-    for ( auto it = tmp_map.cbegin(); it != tmp_map.cend(); it++ ) {
-        map_entries.push_back(*it);
-    }
-
-    std::sort(map_entries.begin(), map_entries.end());
-}
-
-void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_items ) {
-
-    geo_entry_t new_entry;
-    bool already_read;
-
-    for ( auto map_entry_it = map_items.begin(); map_entry_it != map_items.end(); map_entry_it++ ) {
-        map_entry_it->m_to_display = false;
-    }
-
-    for ( auto id = map_entries.cbegin(); id != map_entries.cend(); id++ ) {
-
-        already_read = false;
-        for ( auto idx_it = map_items.begin(); idx_it != map_items.end(); idx_it++ ) {
-            if ( idx_it->m_data_off == *id ) {
-                already_read = true;
-                idx_it->m_to_display = true;
-                break;
-            }
-        }
-
-        if ( !already_read ) {
-            new_entry.clear();
-            _load_map_entry ( *id, new_entry );
-            new_entry.m_to_display = true;
-            map_items.push_back(new_entry);
-        }
-    }
-}
-
-void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_entry_t& map_entry ) {
-
-    geo_parser_t parser;
-
-    char    ch     = 0;
-    bool    eoc    = false;
-    bool    eor    = false;
-
-    m_map_file.seekg ( map_entry_offset, m_map_file.beg );
-
-    while ( m_map_file.read(&ch, 1) ) {
-
-        parser.load_param(ch, eoc, 0);
-        if ( !eoc ) {
-            continue;
-        }
-
-        parser.process_map ( map_entry, eor );
-        if ( !eor ) {
-            continue;
-        }
-
-        break;
-    }
-
-    map_entry.m_data_off = map_entry_offset;
-}
-
-void geo_processor_t::_rotate_geo_line ( v_geo_coord_t& coords ) {
-
-    for (auto it_coord = coords.begin(); it_coord != coords.end(); it_coord++) {
-        _rotate_coord ( *it_coord );
-    }
-}
-
-void geo_processor_t::_rotate_coord ( geo_coord_t& coord ) const {
-
-    map_pos_t  pt;
-    map_pos_t  center;
-    map_pos_t  rotated;
-
-    double  translated_x  =  0;
-    double  translated_y  =  0;
-    double  rotated_x     =  0;
-    double  rotated_y     =  0;
-
-    coord.get ( pt, pos_type_t::POS_TYPE_MAP );
-    m_map_center.get ( center, pos_type_t::POS_TYPE_MAP );
-
-    translated_x = pt.x - center.x;
-    translated_y = pt.y - center.y;
-
-    rotated_x  = translated_x * m_geo_angle_cos - translated_y * m_geo_angle_sin;
-    rotated_x += center.x;
-
-    rotated_y  = translated_x * m_geo_angle_sin + translated_y * m_geo_angle_cos;
-    rotated_y += center.y;
-
-    rotated.x = rotated_x;
-    rotated.y = rotated_y;
-
-    coord.set ( rotated, pos_type_t::POS_TYPE_ANGLE );
-}
-
-void geo_processor_t::_trim_map_by_rect ( void ) {
-
-    paint_entry_t       out_record;
-
-    m_paint_list.clear();
-
-    for ( auto it_src = m_map_cache.cbegin(); it_src != m_map_cache.cend(); it_src++ ) {
-
-        if ( !it_src->m_to_display ) {
-            continue;
-        }
-
-        if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
-            _trim_record_area ( m_map_geo_rect, *it_src, out_record );
-        } else
-        if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
-            _trim_record_area ( m_map_geo_rect, *it_src, out_record );
-        } else
-        if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
-            _trim_record_path ( m_map_geo_rect, *it_src, out_record );
-        }
-
-        if ( out_record.m_lines.size() > 0 ) {
-            m_paint_list.push_back(out_record);
-        }
-    }
-}
-
-void geo_processor_t::_trim_record_area ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
-
-    vv_geo_coord_t      trim_out;
-    paint_line_t        out_path;
-
-    out_record.clear();
-
-    out_record.m_record_type  = geo_path.m_record_type;
-    out_record.m_default_type = geo_path.m_default_type;
-
-    for ( auto it_in_line = geo_path.m_lines.cbegin(); it_in_line != geo_path.m_lines.cend(); it_in_line++ ) {
-
-        out_path.m_role = it_in_line->m_role;
-        out_path.m_type = it_in_line->m_type;
-
-        geo_intersect ( it_in_line->m_coords, rect_path, POS_TYPE_GPS, trim_out );
-
-        for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
-            _map_coords ( *it_out_line, out_path.m_paint );
-            out_path.m_paint.push_back ( out_path.m_paint.front() );
-            out_record.m_lines.push_back ( out_path );
-        }
-
-    }
-
-    return;
-}
-
-void geo_processor_t::_trim_record_path ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, paint_entry_t& out_record ) {
-
-    vv_geo_coord_t  trim_out;
-    paint_line_t    out_path;
-
-    int in_paths_cnt  = 0;
-    int out_paths_cnt = 0;
-
-    out_record.clear();
-
-    out_record.m_record_type  = geo_path.m_record_type;
-    out_record.m_default_type = geo_path.m_default_type;
-
-    for ( auto it_in_line = geo_path.m_lines.cbegin(); it_in_line != geo_path.m_lines.cend(); it_in_line++ ) {
-
-        in_paths_cnt++;
-
-        out_path.m_role = it_in_line->m_role;
-        out_path.m_type = it_in_line->m_type;
-
-        _clip_poly_line ( it_in_line->m_coords, rect_path, trim_out );
-
-        for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
-            _map_coords ( *it_out_line, out_path.m_paint );
-            out_record.m_lines.push_back ( out_path );
-            out_paths_cnt++;
-        }
-
-    }
-
-    return;
-}
-
-void geo_processor_t::_map_coords ( const v_geo_coord_t& geo_path, v_paint_coord_t& win_path ) {
-
-    paint_coord_t win_coord;
-
-    win_path.clear();
-    for ( auto it = geo_path.cbegin(); it != geo_path.cend(); it++ ) {
-        _win_coord ( *it, win_coord );
-        win_path.push_back ( win_coord );
-    }
-}
-
-void geo_processor_t::_win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const {
-
-    map_pos_t pos_pt;
-    map_pos_t pos_min;
-
-    geo_pos.get ( pos_pt, pos_type_t::POS_TYPE_ANGLE );
-    m_map_geo_rect.min.get ( pos_min, pos_type_t::POS_TYPE_ANGLE );
-
-    pos_pt.x -= pos_min.x;
-    pos_pt.x /= m_map_step_x;
-    pos_pt.x += 0.5;
-
-    pos_pt.y -= pos_min.y;
-    pos_pt.y /= m_map_step_y;
-    pos_pt.y += 0.5;
-
-    win_pos.x = static_cast<int32_t> (pos_pt.x);
-    win_pos.y = static_cast<int32_t> (pos_pt.y);
-}
-
-void geo_processor_t::_process_area ( paint_line_t& geo_line, const bool force_clr, const bool mark_up ) {
-
-    geo_pixel_t border_color;
-    geo_pixel_t fill_color;
-
-    _map_color ( geo_line.m_type,  border_color, fill_color );
-    _poly_area ( geo_line.m_paint, border_color );
-    _fill_poly ( geo_line.m_paint, geo_line.m_fill, border_color, fill_color, force_clr, mark_up );
-}
+//---------------------------------------------------------------------------//
 
 void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const {
 
@@ -987,6 +615,248 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
 
 }
 
+void geo_processor_t::_set_angle ( const double angle ) {
+
+    constexpr double pi_rad_scale = 0.01745329251994329576923690768489;
+
+    m_geo_angle     = angle;
+    m_geo_angle_sin = sin ( angle * pi_rad_scale );
+    m_geo_angle_cos = cos ( angle * pi_rad_scale );
+}
+
+void geo_processor_t::_alloc_img_buffer ( const geo_rect_t& geo_rect ) {
+
+    const double    d_width     =  geo_rect.width ( pos_type_t::POS_TYPE_MAP );
+    const double    d_height    =  geo_rect.height( pos_type_t::POS_TYPE_MAP );
+    const uint32_t  i_width     =  static_cast<uint32_t> ( d_width  + 0.5 );
+    const uint32_t  i_height    =  static_cast<uint32_t> ( d_height + 0.5 );
+    const uint32_t  alloc_size  =  i_width * i_height;
+
+    paint_rect_t    new_rect;
+
+    new_rect.min.x = 0;
+    new_rect.min.y = 0;
+    new_rect.max.x = i_width;
+    new_rect.max.y = i_height;
+
+    if ( m_video_rect == new_rect ) {
+        return;
+    }
+
+    m_video_buffer_size = alloc_size;
+
+    if ( m_video_buffer != nullptr ) {
+        delete (m_video_buffer);
+        m_video_buffer = nullptr;
+    }
+
+    m_video_buffer = new geo_pixel_int_t [ m_video_buffer_size ];
+    assert ( m_video_buffer != nullptr );
+    _fill_solid ( g_color_none );
+}
+
+void geo_processor_t::_fill_solid ( const geo_pixel_t clr ) {
+
+    const uint32_t  alloc_w = static_cast<uint32_t> ( m_geo_wnd.width(POS_TYPE_MAP)  + 0.5 );
+    const uint32_t  alloc_h = static_cast<uint32_t> ( m_geo_wnd.height(POS_TYPE_MAP) + 0.5 );
+    const uint32_t  alloc_size = alloc_w * alloc_h;
+
+    if ( m_video_buffer != nullptr ) {
+        geo_pixel_int_t clr_int;
+        _px_conv ( clr, clr_int );
+        for ( uint32_t i = 0; i < alloc_size; i++ ) {
+            m_video_buffer[i] = clr_int;
+        }
+    }
+}
+
+void geo_processor_t::_px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const {
+
+    uint16_t val = 0;
+
+    val |= (from.getR() >> 3);
+
+    val <<= 6;
+    val |= (from.getG() >> 2);
+
+    val <<= 5;
+    val |= (from.getB() >> 3);
+
+    to = val;
+}
+
+bool geo_processor_t::_is_overlapped ( const geo_rect_t& window, const pos_type_t pos_type, const geo_rect_t& slice ) const {
+    return window.is_overlapped(slice, pos_type );
+}
+
+void geo_processor_t::_find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, int& x_step, int& y_step ) {
+
+    map_pos_t  rect_geo_min;
+    map_pos_t  rect_geo_max;
+    map_pos_t  rect_map_min;
+    map_pos_t  rect_map_max;
+
+    map_pos_t  geo_min;
+    map_pos_t  geo_max;
+    map_pos_t  map_min;
+    map_pos_t  map_max;
+
+    bool       is_first = true;
+
+    for ( auto it = map_idx.cbegin(); it != map_idx.cend(); it++ ) {
+        
+        it->m_rect.min.get ( POS_TYPE_GPS, geo_min );
+        it->m_rect.max.get ( POS_TYPE_GPS, geo_max );
+        it->m_rect.min.get ( POS_TYPE_MAP, map_min );
+        it->m_rect.max.get ( POS_TYPE_MAP, map_max );
+
+        if ( is_first ) {
+
+            is_first = false;
+
+            rect_geo_min = geo_min;
+            rect_geo_max = geo_max;
+
+            rect_map_min = map_min;
+            rect_map_max = map_max;
+
+            x_step = static_cast<int> (rect_map_max.x - rect_map_min.x);
+            y_step = static_cast<int> (rect_map_max.y - rect_map_min.y);
+
+        } else {
+
+            rect_geo_min.x = std::min ( rect_geo_min.x, geo_min.x );
+            rect_geo_min.y = std::min ( rect_geo_min.y, geo_min.y );
+
+            rect_map_min.x = std::min ( rect_map_min.x, map_min.x );
+            rect_map_min.y = std::min ( rect_map_min.y, map_min.y );
+
+            rect_geo_max.x = std::max ( rect_geo_max.x, geo_max.x );
+            rect_geo_max.y = std::max ( rect_geo_max.y, geo_max.y );
+
+            rect_map_max.x = std::max ( rect_map_max.x, map_max.x );
+            rect_map_max.y = std::max ( rect_map_max.y, map_max.y );
+
+        }
+
+    }
+
+    map_rect.min.set ( POS_TYPE_GPS, rect_geo_min );
+    map_rect.min.set ( POS_TYPE_MAP, rect_map_min );
+    map_rect.max.set ( POS_TYPE_GPS, rect_geo_max );
+    map_rect.max.set ( POS_TYPE_MAP, rect_map_max );
+}
+
+void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_entry_t& map_entry ) {
+
+    geo_parser_t parser;
+
+    char    ch = 0;
+    bool    eoc = false;
+    bool    eor = false;
+
+    m_map_file.seekg(map_entry_offset, m_map_file.beg);
+
+    while (m_map_file.read(&ch, 1)) {
+
+        parser.load_param(ch, eoc, 0);
+        if (!eoc) {
+            continue;
+        }
+
+        parser.process_map(map_entry, eor);
+        if (!eor) {
+            continue;
+        }
+
+        break;
+    }
+
+    map_entry.m_data_off = map_entry_offset;
+}
+
+void geo_processor_t::_rotate_geo_line ( v_geo_coord_t& coords ) {
+
+    for (auto it_coord = coords.begin(); it_coord != coords.end(); it_coord++) {
+        _rotate_coord (*it_coord);
+    }
+}
+
+void geo_processor_t::_rotate_coord ( geo_coord_t& coord ) const {
+
+    map_pos_t  pt;
+    map_pos_t  center;
+    map_pos_t  rotated;
+
+    double  translated_x = 0;
+    double  translated_y = 0;
+    double  rotated_x = 0;
+    double  rotated_y = 0;
+
+    coord.get(POS_TYPE_MAP, pt);
+    m_geo_center.get(POS_TYPE_MAP, center);
+
+    translated_x = pt.x - center.x;
+    translated_y = pt.y - center.y;
+
+    rotated_x = translated_x * m_geo_angle_cos - translated_y * m_geo_angle_sin;
+    rotated_x += center.x;
+
+    rotated_y = translated_x * m_geo_angle_sin + translated_y * m_geo_angle_cos;
+    rotated_y += center.y;
+
+    rotated.x = rotated_x;
+    rotated.y = rotated_y;
+
+    coord.set(POS_TYPE_ANGLE, rotated);
+}
+
+void geo_processor_t::_trim_record (const geo_rect_t& rect_path, const geo_entry_t& geo_path, const bool is_area, paint_entry_t& out_record) {
+
+    vv_geo_coord_t      trim_out;
+    paint_line_t        out_path;
+
+    out_record.clear();
+
+    out_record.m_record_type  = geo_path.m_record_type;
+    out_record.m_default_type = geo_path.m_default_type;
+
+    for ( auto it_in_line = geo_path.m_lines.cbegin(); it_in_line != geo_path.m_lines.cend(); it_in_line++ ) {
+
+        out_path.m_role = it_in_line->m_role;
+        out_path.m_type = it_in_line->m_type;
+
+        geo_intersect ( it_in_line->m_coords, rect_path, POS_TYPE_MAP, is_area, trim_out );
+
+        for ( auto it_out_line = trim_out.cbegin(); it_out_line != trim_out.cend(); it_out_line++ ) {
+            out_path.m_paint.push_back(out_path.m_paint.front());
+            out_record.m_lines.push_back(out_path);
+        }
+
+    }
+
+    return;
+}
+
+void geo_processor_t::_process_area ( paint_line_t& geo_line, const bool force_clr, const bool mark_up ) {
+
+    geo_pixel_t border_color;
+    geo_pixel_t fill_color;
+
+    _map_color ( geo_line.m_type, border_color, fill_color );
+    _poly_area ( geo_line.m_paint, border_color );
+    _fill_poly ( geo_line.m_paint, geo_line.m_fill, border_color, fill_color, force_clr, mark_up );
+}
+
+void geo_processor_t::_poly_line(const v_paint_coord_t& poly_line, const int width, const geo_pixel_t color) {
+
+    if (poly_line.size() >= 2) {
+        for (size_t i = 0; i < poly_line.size() - 1; i++) {
+            _line ( poly_line[i + 0], poly_line[i + 1], width, color );
+        }
+    }
+}
+
 void geo_processor_t::_poly_area ( const v_paint_coord_t& poly_line, const geo_pixel_t color ) {
 
     if ( poly_line.size() < 2 ) {
@@ -998,29 +868,30 @@ void geo_processor_t::_poly_area ( const v_paint_coord_t& poly_line, const geo_p
     }
 }
 
-void geo_processor_t::_poly_line ( const v_paint_coord_t& poly_line, const int width, const geo_pixel_t color ) {
+void geo_processor_t::_fill_poly ( const v_paint_coord_t& poly_line, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up ) {
 
-    if ( poly_line.size() >= 2 ) {
-        for ( size_t i = 0; i < poly_line.size() - 1; i++ ) {
-            _line ( poly_line[i + 0], poly_line[i + 1], width, color );
+    (void) (poly_line);
+    (void) (coords_list);
+    (void) (bk_clr); 
+    (void) (fill_clr);
+    (void) (force_clr);
+    (void) (mark_up);
+
+    #if 0
+    if (coords_list.size() == 0) {
+        _generate_paint_pos(poly_line, coords_list);
+    }
+
+    for (auto paint_pt = coords_list.cbegin(); paint_pt != coords_list.cend(); paint_pt++) {
+        _fill_poly(*paint_pt, bk_clr, fill_clr, force_clr);
+    }
+
+    if (mark_up) {
+        for (auto paint_pt = coords_list.cbegin(); paint_pt != coords_list.cend(); paint_pt++) {
+            set_pix(*paint_pt, geo_pixel_t(255, 0, 0));
         }
     }
-}
-
-void geo_processor_t::_process_pt_list ( const paint_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color ) {
-
-    paint_coord_t pt;
-
-    for ( size_t i = 0; i < shift_list.size(); i++ ) {
-        
-        pt.x = base.x;
-        pt.y = base.y;
-
-        pt.x += shift_list[i].dx;
-        pt.y += shift_list[i].dy;
-
-        set_pix ( pt, color );
-    }
+    #endif
 }
 
 void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, const geo_pixel_t color ) {
@@ -1038,27 +909,27 @@ void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, 
 
     const int deltaX = static_cast<int> (abs(p2.x - p1.x));
     const int deltaY = static_cast<int> (abs(p2.y - p1.y));
-    const int signX  = (p1.x < p2.x) ? 1 : -1;
-    const int signY  = (p1.y < p2.y) ? 1 : -1;
+    const int signX = (p1.x < p2.x) ? 1 : -1;
+    const int signY = (p1.y < p2.y) ? 1 : -1;
 
     error1 = deltaX - deltaY;
 
     set_pix ( p2, color );
 
-    while ( (p1.x != p2.x) || (p1.y != p2.y) ) {
+    while ((p1.x != p2.x) || (p1.y != p2.y)) {
 
         set_pix ( p1, color );
 
         error2 = error1 * 2;
 
-        if ( error2 > -deltaY ) {
+        if (error2 > -deltaY) {
             error1 -= deltaY;
-            p1.x   += signX;
+            p1.x += signX;
         }
 
-        if ( error2 < deltaX ) {
+        if (error2 < deltaX) {
             error1 += deltaX;
-            p1.y   += signY;
+            p1.y += signY;
         }
     }
 }
@@ -1070,7 +941,7 @@ void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, 
     paint_coord_t     p1;
     paint_coord_t     p2;
 
-    if ( width % 2 ) {
+    if (width % 2) {
         width++;
     }
 
@@ -1082,14 +953,15 @@ void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, 
 
     r2 = radius * radius - 0.5;
 
-    offsets_list.reserve ( width* width );
+    offsets_list.reserve(width * width);
+
     for (int y = -radius; y <= radius; ++y) {
         y2 = y * y;
         for (int x = -radius; x <= radius; ++x) {
             x2 = x * x;
             if ((x2 + y2) <= r2) {
-                pt.dx  = x;
-                pt.dy  = y;
+                pt.dx = x;
+                pt.dy = y;
                 offsets_list.push_back(pt);
             }
         }
@@ -1112,7 +984,7 @@ void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, 
 
     _process_pt_list ( p2, offsets_list, color );
 
-    while ( (p1.x != p2.x) || (p1.y != p2.y) ) {
+    while ((p1.x != p2.x) || (p1.y != p2.y)) {
 
         _process_pt_list ( p1, offsets_list, color );
 
@@ -1131,21 +1003,210 @@ void geo_processor_t::_line ( const paint_coord_t from, const paint_coord_t to, 
 
 }
 
-void geo_processor_t::_fill_poly ( const v_paint_coord_t& poly_line, v_paint_coord_t& coords_list, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up ) {
+void geo_processor_t::_process_pt_list ( const paint_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color ) {
 
-    if ( coords_list.size() == 0 ) {
-        _generate_paint_pos ( poly_line, coords_list );
+    paint_coord_t pt;
+
+    for ( size_t i = 0; i < shift_list.size(); i++ ) {
+        
+        pt.x = base.x;
+        pt.y = base.y;
+
+        pt.x += shift_list[i].dx;
+        pt.y += shift_list[i].dy;
+
+        set_pix ( pt, color );
+    }
+}
+
+
+
+#if 0
+
+void geo_processor_t::_map_idx ( const geo_rect_t rect, const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx ) {
+
+    int  y_cnt;
+    int  x_cnt;
+    int  y;
+    int  x;
+    double delta;
+
+    delta  = rect.max.y(pos_type_t::POS_TYPE_MAP) - rect.min.y(pos_type_t::POS_TYPE_MAP);
+    y_cnt  = static_cast<int> (delta / y_step);
+
+    delta  = rect.max.x(pos_type_t::POS_TYPE_MAP) - rect.min.x(pos_type_t::POS_TYPE_MAP);
+    x_cnt  = static_cast<int> (delta / x_step);
+
+    m_idx_map.resize(y_cnt);
+    for ( size_t i = 0; i < y_cnt; i++ ) {
+        m_idx_map[i].resize(x_cnt);
     }
 
-    for ( auto paint_pt = coords_list.cbegin(); paint_pt != coords_list.cend(); paint_pt++ ) {
-        _fill_poly ( *paint_pt, bk_clr, fill_clr, force_clr );
+    auto it = map_idx.begin();
+    while ( it != map_idx.end() ) {
+        
+        delta  = it->m_rect.min.y ( pos_type_t::POS_TYPE_MAP ) - rect.min.y ( pos_type_t::POS_TYPE_MAP );
+        y      = static_cast<int> (delta / y_step);
+
+        delta  = it->m_rect.min.x ( pos_type_t::POS_TYPE_MAP ) - rect.min.x ( pos_type_t::POS_TYPE_MAP );
+        x      = static_cast<int> (delta / x_step);
+
+        m_idx_map[y][x] = *it;
+
+        map_idx.pop_front();          
+        it = map_idx.begin();        
     }
 
-    if ( mark_up ) {
-        for ( auto paint_pt = coords_list.cbegin(); paint_pt != coords_list.cend(); paint_pt++ ) {
-            set_pix ( *paint_pt, geo_pixel_t(255, 0, 0) );
+    return;
+}
+
+void geo_processor_t::_calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd ) {
+
+    map_pos_t map_center;
+
+    int x_shift_1;
+    int x_shift_2;
+    int y_shift;
+
+    center.get ( POS_TYPE_GPS, map_center );
+
+    x_shift_1 = wnd.width() / 3;
+    x_shift_2 = wnd.width() - x_shift_1;
+
+    y_shift = wnd.height() / 2;
+
+    m_map_geo_rect.min.set_x ( POS_TYPE_MAP, map_center.x - x_shift_1 );
+    m_map_geo_rect.min.set_y ( POS_TYPE_MAP, map_center.y - y_shift   );
+
+    m_map_geo_rect.max.set_x ( POS_TYPE_MAP, map_center.x + x_shift_2 );
+    m_map_geo_rect.max.set_y ( POS_TYPE_MAP, map_center.y + y_shift   );
+}
+
+
+
+void geo_processor_t::_reset_map ( void ) {
+
+    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
+        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
+            for ( auto it_coord = it_geo_line->m_coords.begin(); it_coord != it_geo_line->m_coords.end(); it_coord++ ) {
+                it_coord->reset_angle();
+            }
         }
     }
+
+    m_paint_list.clear();
+}
+
+#if 0
+
+void geo_processor_t::_calc_map_rect ( const geo_coord_t center, double scale, const paint_rect_t wnd ) {
+
+    const double geo_delta = 0.0001;
+
+    double  geo_hor;
+    double  geo_ver;
+    double  shift_hor;
+    double  shift_ver;
+
+    map_pos_t gps_center;
+    map_pos_t step_hor;
+    map_pos_t step_ver;
+
+    center.get ( gps_center, POS_TYPE_GPS );
+
+    step_hor    = gps_center;
+    step_hor.x += geo_delta;
+
+    step_ver    = gps_center;
+    step_hor.y += geo_delta;
+
+    GeographicLib::Geodesic geod(GeographicLib::Constants::WGS84_a(), GeographicLib::Constants::WGS84_f());
+
+    geod.Inverse ( gps_center.y, gps_center.x, step_hor.y, step_hor.x, shift_hor );
+    geod.Inverse ( gps_center.y, gps_center.x, step_ver.y, step_ver.x, shift_ver );
+
+    m_map_step_x = geo_delta / shift_hor / scale;
+    m_map_step_y = geo_delta / shift_ver / scale;
+
+    geo_hor = m_map_step_x * ( wnd.width()  - 1 );
+    geo_ver = m_map_step_y * ( wnd.height() - 1 );
+
+    map_pos_t  left_bottom;
+    map_pos_t  right_top;
+
+    center.get ( left_bottom, pos_type_t::POS_TYPE_GPS );
+    center.get ( right_top,   pos_type_t::POS_TYPE_GPS );
+
+    left_bottom.x -= geo_hor / 2;
+    left_bottom.y -= geo_ver / 2;
+
+    right_top.x   += geo_hor / 2;
+    right_top.y   += geo_ver / 2;
+
+    m_map_geo_rect.min.set ( left_bottom, pos_type_t::POS_TYPE_GPS );
+    _pt_to_projection ( left_bottom );
+    m_map_geo_rect.min.set ( left_bottom, pos_type_t::POS_TYPE_MAP );
+
+    m_map_geo_rect.max.set ( right_top,   pos_type_t::POS_TYPE_GPS );
+    _pt_to_projection ( right_top );
+    m_map_geo_rect.min.set ( right_top, pos_type_t::POS_TYPE_MAP );
+
+    
+
+}
+
+void geo_processor_t::_merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uint32_t& in_list, v_uint32_t& map_entries ) {
+
+    set_offset_t tmp_map;
+    size_t sub_idx;
+
+    map_entries.clear();
+
+    for ( size_t i = 0; i < in_list.size(); i++ ) {
+        sub_idx = in_list[i];
+        for (size_t y = 0; y < rect_list[sub_idx].m_list_off.size(); y++) {
+            tmp_map.insert(rect_list[sub_idx].m_list_off[y]);
+        }
+    }
+
+    for ( auto it = tmp_map.cbegin(); it != tmp_map.cend(); it++ ) {
+        map_entries.push_back(*it);
+    }
+
+    std::sort(map_entries.begin(), map_entries.end());
+}
+
+
+
+void geo_processor_t::_map_coords ( const v_geo_coord_t& geo_path, v_paint_coord_t& win_path ) {
+
+    paint_coord_t win_coord;
+
+    win_path.clear();
+    for ( auto it = geo_path.cbegin(); it != geo_path.cend(); it++ ) {
+        _win_coord ( *it, win_coord );
+        win_path.push_back ( win_coord );
+    }
+}
+
+void geo_processor_t::_win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const {
+
+    map_pos_t pos_pt;
+    map_pos_t pos_min;
+
+    geo_pos.get ( pos_pt, pos_type_t::POS_TYPE_ANGLE );
+    m_map_geo_rect.min.get ( pos_min, pos_type_t::POS_TYPE_ANGLE );
+
+    pos_pt.x -= pos_min.x;
+    pos_pt.x /= m_map_step_x;
+    pos_pt.x += 0.5;
+
+    pos_pt.y -= pos_min.y;
+    pos_pt.y /= m_map_step_y;
+    pos_pt.y += 0.5;
+
+    win_pos.x = static_cast<int32_t> (pos_pt.x);
+    win_pos.y = static_cast<int32_t> (pos_pt.y);
 }
 
 void geo_processor_t::_generate_paint_pos ( const v_paint_coord_t& region, v_paint_coord_t& coords_list ) const {
@@ -1521,19 +1582,6 @@ void geo_processor_t::_px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) 
     to.setB(tmp);
 }
 
-void geo_processor_t::_px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const {
-
-    uint16_t val = 0;
-
-    val |= (from.getR() >> 3);
-
-    val <<= 6;
-    val |= (from.getG() >> 2);
-
-    val <<= 5;
-    val |= (from.getB() >> 3);
-
-    to = val;
-}
+#endif
 
 //---------------------------------------------------------------------------//
