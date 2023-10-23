@@ -57,9 +57,9 @@ v_geo_coord_t g_dummy_rect;
 v_geo_coord_t g_dummy_line;
 
 
-void __format ( const geo_rect_t& rect, const pos_type_t coord_type, const v_geo_coord_t& polyline ) {
+void __format ( const geo_rect_t& rect, const v_geo_coord_t& polyline ) {
 
-    map_pos_t     dummy_pt1, dummy_pt2, dummy_pt3;
+    map_pos1_t    dummy_pt1, dummy_pt2, dummy_pt3;
     geo_coord_t   dummy;
 
     static int stop_cnt = 0;
@@ -67,38 +67,39 @@ void __format ( const geo_rect_t& rect, const pos_type_t coord_type, const v_geo
     g_dummy_rect.clear();
     g_dummy_line.clear();
 
-    rect.min.get(coord_type, dummy_pt1);
-    rect.max.get(coord_type, dummy_pt2);
 
-    dummy.set_x(coord_type, dummy_pt1.x);
-    dummy.set_y(coord_type, dummy_pt1.y);
+    rect.min.get_map ( dummy_pt1 );
+    rect.max.get_map ( dummy_pt2 );
+
+    dummy.set_map_x ( dummy_pt1.x );
+    dummy.set_map_y ( dummy_pt1.y );
+
     g_dummy_rect.push_back(dummy);
 
-    dummy.set_x(coord_type, dummy_pt2.x);
-    dummy.set_y(coord_type, dummy_pt1.y);
+    dummy.set_map_x ( dummy_pt2.x );
+    dummy.set_map_y ( dummy_pt1.y );
     g_dummy_rect.push_back(dummy);
 
-    dummy.set_x(coord_type, dummy_pt2.x);
-    dummy.set_y(coord_type, dummy_pt2.y);
+    dummy.set_map_x ( dummy_pt2.x );
+    dummy.set_map_y ( dummy_pt2.y );
     g_dummy_rect.push_back(dummy);
 
-    dummy.set_x(coord_type, dummy_pt1.x);
-    dummy.set_y(coord_type, dummy_pt2.y);
+    dummy.set_map_x ( dummy_pt1.x );
+    dummy.set_map_y ( dummy_pt2.y );
     g_dummy_rect.push_back(dummy);
 
-    dummy.set_x(coord_type, dummy_pt1.x);
-    dummy.set_y(coord_type, dummy_pt1.y);
+    dummy.set_map_x ( dummy_pt1.x );
+    dummy.set_map_y ( dummy_pt1.y );
     g_dummy_rect.push_back(dummy);
 
     for (size_t i = 0; i < polyline.size(); i++) {
-        polyline[i].get(coord_type, dummy_pt3);
-        dummy.set_x(coord_type, dummy_pt3.x);
-        dummy.set_y(coord_type, dummy_pt3.y);
+        polyline[i].get_map ( dummy_pt3);
+        dummy.set_map_x ( dummy_pt3.x );
+        dummy.set_map_y ( dummy_pt3.y );
         g_dummy_line.push_back(dummy);
     }
 
     stop_cnt++;
-
 }
 
 static void _reset (gpc_polygon& res ) {
@@ -113,12 +114,11 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, const geo_r
 
     gpc_polygon result;
 
-    map_pos_t   coord_min;
-    map_pos_t   coord_max;
-    map_pos_t   coord_src;
+    double      min_x, min_y, max_x, max_y;
+    double      pos_x, pos_y;
     size_t      poly_cnt;
 
-    // __format ( rect, coord_type, polyline );
+    __format ( rect, polyline );
 
     clippedLine.clear();
     _reset(result);
@@ -127,14 +127,24 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, const geo_r
         return;
     }
 
-    clip.alloc(4);
-    rect.min.get ( coord_type, coord_min );
-    rect.max.get ( coord_type, coord_max );
-     
-    clip.add ( 0, coord_min.x, coord_min.y );
-    clip.add ( 1, coord_max.x, coord_min.y );
-    clip.add ( 2, coord_max.x, coord_max.y );
-    clip.add ( 3, coord_min.x, coord_max.y );
+    clip.alloc ( 4 );
+
+    if ( coord_type == POS_TYPE_MAP ) {
+        min_x = rect.min.get_map_x();
+        min_y = rect.min.get_map_y();
+        max_x = rect.max.get_map_x();
+        max_y = rect.max.get_map_y();
+    } else {
+        min_x = rect.min.get_geo_x();
+        min_y = rect.min.get_geo_y();
+        max_x = rect.max.get_geo_x();
+        max_y = rect.max.get_geo_y();
+    }
+
+    clip.add ( 0, min_x, min_y );
+    clip.add ( 1, max_x, min_y );
+    clip.add ( 2, max_x, max_y );
+    clip.add ( 3, min_x, max_y );
 
     poly_cnt = polyline.size();
     if ( is_area ) {
@@ -142,9 +152,18 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, const geo_r
     }
 
     subject.alloc ( poly_cnt );
+
     for ( size_t i = 0; i < poly_cnt; i++ ) {
-        polyline[i].get ( coord_type, coord_src );
-        subject.add ( i, coord_src.x, coord_src.y );
+
+        if ( coord_type == POS_TYPE_MAP ) {
+            pos_x = polyline[i].get_map_x();
+            pos_y = polyline[i].get_map_y();
+        } else {
+            pos_x = polyline[i].get_geo_x();
+            pos_y = polyline[i].get_geo_y();
+        }
+
+        subject.add ( i, pos_x, pos_y );
     }
 
     gpc_polygon_clip ( GPC_INT, &subject.data, &clip.data, &result );
@@ -152,28 +171,31 @@ void geo_processor_t::geo_intersect ( const v_geo_coord_t& polyline, const geo_r
     for ( size_t i = 0; i < result.num_contours; i++ ) {
 
         v_geo_coord_t sector;
-        map_pos_t     pos;
+        geo_pos_t     pos;
         geo_coord_t   coord;
 
         sector.clear();
 
-        if ( result.contour[i].num_vertices > 0 ) {
+        if ( result.contour[i].num_vertices > 1 ) {
 
             for ( size_t y = 0; y < result.contour[i].num_vertices; y++ ) {
 
                 pos.x = result.contour[i].vertex[y].x;
                 pos.y = result.contour[i].vertex[y].y;
 
-                coord.set(coord_type, pos);
+                if ( coord_type == POS_TYPE_MAP ) {
+                    coord.set_map_x ( (int32_t) result.contour[i].vertex[y].x );
+                    coord.set_map_y ( (int32_t) result.contour[i].vertex[y].y );
+                }  else {
+                    coord.set_geo_x ( result.contour[i].vertex[y].x );
+                    coord.set_geo_y ( result.contour[i].vertex[y].y );
+                }
 
                 sector.push_back(coord);
             }
 
             if ( is_area ) {
-                pos.x = result.contour[i].vertex[0].x;
-                pos.y = result.contour[i].vertex[0].y;
-                coord.set(coord_type, pos);
-                sector.push_back(coord);
+                sector.push_back ( sector.front() );
             }
 
             clippedLine.push_back(std::move(sector));

@@ -76,15 +76,15 @@ void CMapPainter::OnPaint ( void ) {
     bitmap.CreateCompatibleBitmap(&dc, m_client_rect.Width(), m_client_rect.Height());
     CBitmap* pOldBitmap = dcMem.SelectObject ( &bitmap );
 
-    paint_coord_t   pos;
-    geo_pixel_t     px;
-    COLORREF        outClr = 0;
+    geo_coord_t   pos;
+    geo_pixel_t   px;
+    COLORREF      outClr = 0;
 
     for (y = 0; y < m_client_rect.Height(); y++) {
         for (x = 0; x < m_client_rect.Width(); x++) {
 
-            pos.x = x;
-            pos.y = y;
+            pos.set_map_x ( x );
+            pos.set_map_y ( y );
 
             g_geo_processor.get_pix( pos, px );
             outClr = RGB ( px.getR(), px.getG(), px.getB() );
@@ -196,9 +196,9 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     static bool is_valid = false;
 
-    paint_rect_t    wnd;
-    CRect           client_rect;
-    geo_coord_t     center;
+    geo_rect_t    wnd;
+    CRect         client_rect;
+    geo_coord_t   center;
 
     if ( !is_valid ) {
         is_valid = true;
@@ -210,13 +210,13 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     GetClientRect ( client_rect );
 
-    wnd.min.x = 0;
-    wnd.min.y = 0;
-    wnd.max.x = client_rect.Width();
-    wnd.max.y = client_rect.Height();
+    wnd.min.set_map_x ( 0 );
+    wnd.min.set_map_y ( 0 );
+    wnd.max.set_map_x ( client_rect.Width()  );
+    wnd.max.set_map_y ( client_rect.Height() );
 
-    center.set_x ( pos_type_t::POS_TYPE_MAP, 1594414 );
-    center.set_y ( pos_type_t::POS_TYPE_MAP, 6453150 );
+    center.set_map_x ( 1594414 );
+    center.set_map_y ( 6453150 );
 
     g_geo_processor.load_idx ();
     g_geo_processor.process_map ( wnd, center, scale, angle );

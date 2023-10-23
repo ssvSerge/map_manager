@@ -28,9 +28,9 @@ typedef enum tag_pos_type_t {
     POS_TYPE_ANGLE,    
 }   pos_type_t;
 
-class map_pos_t {
+class geo_pos_t {
     public:
-        map_pos_t() {
+        geo_pos_t() {
             clear();
         }
 
@@ -43,12 +43,33 @@ class map_pos_t {
         double y;
 };
 
+class map_pos1_t {
+    public:
+        map_pos1_t() {
+            clear();
+        }
+
+        void clear() {
+            x = y = 0;
+        }
+
+        void operator= ( const map_pos1_t& _src ) {
+            this->x = _src.x;
+            this->y = _src.y;
+        }
+
+    public:
+        int32_t x;
+        int32_t y;
+};
+
+
 class geo_point_t {
 
     private:
-        map_pos_t   gps;
-        map_pos_t   map;
-        map_pos_t   ang;
+        map_pos1_t  map;
+        map_pos1_t  ang;
+        geo_pos_t   gps;
         pos_type_t  src;
 
     public:
@@ -71,55 +92,71 @@ class geo_point_t {
             src = _src;
         }
 
-        double x ( pos_type_t _src ) const {
-            const map_pos_t& storage = _get_src ( _src );
-            return storage.x;
+        double get_geo_x ( void ) const {
+            return gps.x;
         }
 
-        double x ( void ) const {
-            return x(src);
+        double get_geo_y ( void ) const {
+            return gps.y;
         }
 
-        double y ( pos_type_t _src ) const {
-            const map_pos_t& storage = _get_src(_src);
-            return storage.y;
+        int32_t get_map_x ( void ) const {
+            return map.x;
         }
 
-        double y ( void ) const {
-            return y(src);
+        int32_t get_map_y ( void ) const {
+            return map.y;
         }
 
-        void get ( const pos_type_t _src, map_pos_t& ref ) const {
-            const map_pos_t& storage = _get_src(_src);
-            ref = storage;
+        //--------------------------------------------------//
+
+        void get_geo ( geo_pos_t& _dst ) const {
+            _dst.x = gps.x;
+            _dst.y = gps.y;
         }
 
-        void set ( pos_type_t _src, map_pos_t _pos ) {
-            map_pos_t& storage = _get_src(_src);
-            storage = _pos;
+        void set_geo ( const geo_pos_t& _src ) {
+            this->gps = _src;
         }
 
-        void set ( map_pos_t pos ) {
-            set ( src, pos );
+        void set_geo_x ( double val ) {
+            gps.x = val;
         }
 
-        void set_x ( pos_type_t _src, double _x ) {
-            map_pos_t& storage = _get_src(_src);
-            storage.x = _x;
+        void set_geo_y ( double val ) {
+            gps.y = val;
         }
 
-        void set_x ( double _x ) {
-            set_x ( src, _x );
+        //--------------------------------------------------//
+
+        void get_map ( map_pos1_t& _dst ) const {
+            _dst.x = map.x;
+            _dst.y = map.y;
         }
 
-        void set_y ( pos_type_t _src, double _y ) {
-            map_pos_t& storage = _get_src(_src);
-            storage.y = _y;
+        void set_map ( const map_pos1_t& _src ) {
+            this->map = _src;
         }
 
-        void set_y ( double _y ) {
-            set_y ( src, _y );
+        void set_map_x ( int32_t val ) {
+            map.x = val;
         }
+
+        void set_map_y ( int32_t val ) {
+            map.y = val;
+        }
+
+        //--------------------------------------------------//
+
+        void set_angle ( const map_pos1_t& _ref ) {
+            this->ang = _ref;
+        }
+
+        void get_angle ( map_pos1_t& _dst ) const {
+            _dst = this->ang;
+        }
+
+        //--------------------------------------------------//
 
         void map_to_geo ( void ) {
             proj_2_geo ( map.x, map.y, gps.x, gps.y );
@@ -127,52 +164,40 @@ class geo_point_t {
 
         bool operator== ( const geo_point_t& _ref ) const {
 
-            const map_pos_t& storage_a = this->_get_src(src);
-            const map_pos_t& storage_b = _ref._get_src(src);
+            bool ret_val = true;
 
-            if ( storage_a.x != storage_b.x ) {
-                return false;
+            if ( src == POS_TYPE_GPS ) {
+                if ( this->gps.x != _ref.gps.x ) {
+                    ret_val = false;
+                } else
+                if ( this->gps.y != _ref.gps.y ) {
+                    ret_val = false;
+                }
+            } else
+            if ( src == POS_TYPE_MAP ) {
+                if ( this->map.x != _ref.map.x ) {
+                    ret_val = false;
+                } else
+                if ( this->map.y != _ref.map.y ) {
+                    ret_val = false;
+                }
+            } else {
+                assert ( false );
             }
 
-            if ( storage_a.y != storage_b.y ) {
-                return false;
-            }
-
-            return true;
+            return ret_val;
         }
 
-        bool operator!= (const geo_point_t& ref) const {
-            return !this->operator==(ref);
+        bool operator!= ( const geo_point_t& _ref ) const {
+            return !this->operator== ( _ref );
         };
 
-    private:
+        void operator= ( const geo_point_t& _ref ) {
 
-        map_pos_t& _get_src ( const pos_type_t _src ) {
-            switch (_src) {
-                case POS_TYPE_GPS:
-                    return gps;
-                case POS_TYPE_MAP:
-                    return map;
-                case POS_TYPE_ANGLE:
-                    return ang;
-                default:
-                    assert(false);
-                    return gps;
-            }
-        }
-
-        const map_pos_t& _get_src ( const pos_type_t _src ) const {
-            switch (_src) {
-                case POS_TYPE_GPS:
-                    return gps;
-                case POS_TYPE_MAP:
-                    return map;
-                case POS_TYPE_ANGLE:
-                    return ang;
-                default:
-                    assert(false);
-                    return gps;
-            }
+            this->src  = _ref.src;
+            this->gps  = _ref.gps;
+            this->map  = _ref.map;
+            this->ang  = _ref.ang;
         }
 
 };
@@ -272,45 +297,6 @@ typedef enum tag_obj_type {
 
 typedef std::vector<obj_type_t>       v_geo_obj_t;
 
-class paint_coord_t {
-
-    public:
-        paint_coord_t( int32_t in_x, int32_t in_y ) {
-            x = in_x;
-            y = in_y;
-        }
-
-        paint_coord_t() {
-            x = 0;
-            y = 0;
-        }
-
-        bool operator== ( const paint_coord_t& ref ) const {
-            
-            if ( (this->x != ref.x) || (this->y != ref.y) ) {
-                return false;
-            }
-
-            return true;
-        }
-
-        bool operator!= ( const paint_coord_t& ref ) const {
-            return ! this->operator==(ref);
-        }
-
-        void clear() {
-            x = 0;
-            y = 0;
-        }
-
-    public:
-        int32_t   x;
-        int32_t   y;
-};
-
-typedef std::vector<paint_coord_t>    v_paint_coord_t;
-typedef std::vector<v_paint_coord_t>  vv_paint_coord_t;
-
 class geo_rect_t {
 
     public:
@@ -326,19 +312,20 @@ class geo_rect_t {
 
         void load ( const char* const val ) {
 
-            double v1, v2, v3, v4, v5, v6, v7, v8;
+            double   v1, v2, v3, v4;
+            int32_t  v5, v6, v7, v8;
 
-            sscanf_s ( val, "%lf %lf %lf %lf %lf %lf %lf %lf", &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 );
+            sscanf_s ( val, "%lf %lf %lf %lf %d %d %d %d", &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 );
 
-            min.set_y ( POS_TYPE_GPS, v1 );
-            min.set_x ( POS_TYPE_GPS, v2 );
-            max.set_y ( POS_TYPE_GPS, v3 );
-            max.set_x ( POS_TYPE_GPS, v4 );
+            min.set_geo_y ( v1 );
+            min.set_geo_x ( v2 );
+            max.set_geo_y ( v3 );
+            max.set_geo_x ( v4 );
 
-            min.set_y ( POS_TYPE_MAP, v5 );
-            min.set_x ( POS_TYPE_MAP, v6 );
-            max.set_y ( POS_TYPE_MAP, v7 );
-            max.set_x ( POS_TYPE_MAP, v8 );
+            min.set_map_y ( v5 );
+            min.set_map_x ( v6 );
+            max.set_map_y ( v7 );
+            max.set_map_x ( v8 );
 
             min.reset_angle ();
             max.reset_angle ();
@@ -361,32 +348,57 @@ class geo_rect_t {
         }
 
         double width ( pos_type_t type ) const {
-            double offset = max.x(type) - min.x(type);
-            return offset;
+
+            double ret_val = 0;
+
+            if ( type == POS_TYPE_GPS ) {
+                ret_val = max.get_geo_x() - min.get_geo_x();
+            } else 
+            if ( type == POS_TYPE_MAP ) {
+                ret_val =  max.get_map_x() - min.get_map_x();
+            } else {
+                assert ( false );
+            }
+
+            return ret_val;
         }
 
-        double height( pos_type_t type ) const {
-            double offset = max.y(type) - min.y(type);
-            return offset;
+        double height ( pos_type_t type ) const {
+
+            double ret_val = 0;
+
+            if ( type == POS_TYPE_GPS ) {
+                ret_val = max.get_geo_y() - min.get_geo_y();
+            } else 
+            if ( type == POS_TYPE_MAP ) {
+                ret_val =  max.get_map_y() - min.get_map_y();
+            } else {
+                assert ( false );
+            }
+
+            return ret_val;
         }
 
-        bool is_overlapped ( const geo_rect_t& slice, const pos_type_t src ) const {
+        bool is_overlapped ( const pos_type_t src, const geo_rect_t& slice ) const {
 
-            if ( this->min.x(src) > slice.max.x(src) ) {
-                return false;
-            }
-            if ( this->max.x(src) < slice.min.x(src) ) {
-                return false;
+            bool ret_val = true;
+
+            if ( src == POS_TYPE_MAP ) {
+                if ( this->min.get_map_x() > slice.max.get_map_x() ) { ret_val = false; } else
+                if ( this->max.get_map_x() < slice.min.get_map_x() ) { ret_val = false; } else
+                if ( this->min.get_map_y() > slice.max.get_map_y() ) { ret_val = false; } else
+                if ( this->max.get_map_y() < slice.min.get_map_y() ) { ret_val = false; }
+            } else 
+            if ( src == POS_TYPE_GPS ) {
+                if ( this->min.get_geo_x() > slice.max.get_geo_x() ) { ret_val = false; } else
+                if ( this->max.get_geo_x() < slice.min.get_geo_x() ) { ret_val = false; } else
+                if ( this->min.get_geo_y() > slice.max.get_geo_y() ) { ret_val = false; } else
+                if ( this->max.get_geo_y() < slice.min.get_geo_y() ) { ret_val = false; }
+            } else {
+                assert ( false );
             }
 
-            if ( this->min.y(src) > slice.max.y(src) ) {
-                return false;
-            }
-            if ( this->max.y(src) < slice.min.y(src) ) {
-                return false;
-            }
-
-            return true;
+            return ret_val;
         }
 
     public:
@@ -395,6 +407,8 @@ class geo_rect_t {
 };
 
 typedef std::vector<geo_rect_t>       v_geo_rect_t;
+
+#if 0
 
 class paint_rect_t {
 
@@ -436,9 +450,12 @@ class paint_rect_t {
         }
 
     public:
-        paint_coord_t min;
-        paint_coord_t max;
+        geo_coord_t min;
+        geo_coord_t max;
 };
+
+#endif
+
 
 class geo_line_t {
     public:
@@ -472,15 +489,15 @@ class paint_line_t {
         void clear() {
             m_role = OBJID_ERROR;
             m_type = OBJID_ERROR;
-            m_fill.clear();
             m_paint.clear();
         }
 
     public:
         obj_type_t              m_role;      // ROLE:OUTER;ROLE:INNER
         obj_type_t              m_type;      // TYPE:ASPHALT
-        v_paint_coord_t         m_fill;      // fill-in coords
-        v_paint_coord_t         m_paint;     // paint coords
+        vv_geo_coord_t          m_paint;     // paint coords
+     // v_paint_coord_t         m_fill;      // fill-in coords
+     // v_paint_coord_t         m_paint;     // paint coords
 };
 
 typedef std::vector<paint_line_t>       v_paint_line_t;
@@ -513,6 +530,7 @@ class geo_entry_t {
 typedef std::vector<geo_entry_t>      v_geo_entry_t;
 typedef std::list<geo_entry_t>        l_geo_entry_t;
 
+#if 0
 class paint_entry_t {
 
     public:
@@ -534,6 +552,8 @@ class paint_entry_t {
 
 typedef std::vector<paint_entry_t>      v_paint_entry_t;
 typedef std::list<paint_entry_t>        l_paint_entry_t;
+
+#endif
 
 
 typedef struct tag_lex_ctx {
@@ -932,13 +952,16 @@ class geo_parser_t {
 
         void _load ( geo_coord_t& coords ) {
 
-            map_pos_t gps;
-            map_pos_t map;
-            sscanf_s ( m_geo_param.value.msg,  "%lf %lf %lf %lf",  &gps.y, &gps.x, &map.y, &map.x  ); 
-            // sscanf_s(m_geo_param.value.msg, "%lf %lf", &gps.y, &gps.x );
+            double  gps_y, gps_x;
+            int32_t map_y, map_x;
 
-            coords.set ( POS_TYPE_GPS, gps );
-            coords.set ( POS_TYPE_MAP, map );
+            sscanf_s ( m_geo_param.value.msg,  "%lf %lf %d %d",  &gps_y, &gps_x, &map_y, &map_x ); 
+
+            coords.set_geo_y ( gps_y );
+            coords.set_geo_x ( gps_x );
+            coords.set_map_y ( map_y );
+            coords.set_map_x ( map_x );
+
             coords.reset_angle();
         }
 
