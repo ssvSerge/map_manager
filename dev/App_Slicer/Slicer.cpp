@@ -24,8 +24,8 @@ size_t                  g_scan_id = 0;
 
 geo_pos_t               g_gps_min;
 geo_pos_t               g_gps_max;
-map_pos1_t              g_map_min;
-map_pos1_t              g_map_max;
+map_pos_t               g_map_min;
+map_pos_t               g_map_max;
 
 
 #if 0
@@ -130,7 +130,7 @@ static void _log_pair_i ( const char* const key, size_t val, bool cr ) {
 
 static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
 
-    map_pos1_t  map_min, map_max;
+    map_pos_t   map_min, map_max;
     geo_pos_t   gps_min, gps_max;
 
     std::string val;
@@ -143,10 +143,10 @@ static void _log_index ( const geo_rect_t& in_rect, size_t id ) {
         return;
     }
 
-    in_rect.min.get_geo ( gps_min );
-    in_rect.max.get_geo ( gps_max );
-    in_rect.min.get_map ( map_min );
-    in_rect.max.get_map ( map_max );
+    gps_min = in_rect.min.geo;
+    gps_max = in_rect.max.geo;
+    map_min = in_rect.min.map;
+    map_max = in_rect.max.map;
 
     val += _to_str_d ( gps_min.y );  val += " ";
     val += _to_str_d ( gps_min.x );  val += " ";
@@ -210,7 +210,7 @@ static void _log_region ( const geo_coord_t& coord_min, const geo_coord_t& coord
 
 static void _scan_rect ( const geo_rect_t& in_rect, v_geo_offset_t& result ) {
 
-    vv_geo_coord_t  tmp;
+    v_geo_line_t    tmp;
 
     geo_coord_t     dummy_pt;
     v_geo_coord_t   dummy_rect;
@@ -242,9 +242,10 @@ static void _scan_rect ( const geo_rect_t& in_rect, v_geo_offset_t& result ) {
                 continue;
             }
 
-            g_geo_processor.geo_intersect ( line->m_coords, in_rect, POS_TYPE_MAP, close_area, tmp );
-            if (tmp.size() > 0) {
-                result.push_back(record->m_data_off);
+            g_geo_processor.geo_intersect ( POS_TYPE_MAP, close_area, *line, in_rect, tmp );
+                
+            if ( tmp.size() > 0 ) {
+                result.push_back ( record->m_data_off );
             }
 
         }
@@ -290,7 +291,7 @@ static void _workder_func ( void ) {
 static void _find_box ( void ) {
 
     geo_pos_t  next_gps;
-    map_pos1_t next_map;
+    map_pos_t  next_map;
 
     bool first_entry = true;
 
@@ -298,8 +299,8 @@ static void _find_box ( void ) {
         for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
             for ( auto coord = line->m_coords.cbegin(); coord != line->m_coords.cend(); coord++ ) {
 
-                coord->get_geo ( next_gps );
-                coord->get_map ( next_map );
+                next_gps = coord->geo;
+                next_map = coord->map;
 
                 if ( first_entry ) {
 
@@ -372,10 +373,10 @@ static void _slicing ( void ) {
 
         for ( int32_t x = g_map_min.x; x <= g_map_max.x; x += g_step_hor ) {
 
-            map_rect.min.set_map_x ( x );
-            map_rect.min.set_map_y ( y );
-            map_rect.max.set_map_x ( x + g_step_hor );
-            map_rect.max.set_map_y ( y + g_step_ver );
+            map_rect.min.map.x = x;
+            map_rect.min.map.y = y;
+            map_rect.max.map.x = x + g_step_hor;
+            map_rect.max.map.y = y + g_step_ver;
 
             map_rect.min.map_to_geo();
             map_rect.max.map_to_geo();

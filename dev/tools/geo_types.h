@@ -43,9 +43,10 @@ class geo_pos_t {
         double y;
 };
 
-class map_pos1_t {
+class map_pos_t {
+
     public:
-        map_pos1_t() {
+        map_pos_t() {
             clear();
         }
 
@@ -53,7 +54,7 @@ class map_pos1_t {
             x = y = 0;
         }
 
-        void operator= ( const map_pos1_t& _src ) {
+        void operator= ( const map_pos_t& _src ) {
             this->x = _src.x;
             this->y = _src.y;
         }
@@ -63,13 +64,14 @@ class map_pos1_t {
         int32_t y;
 };
 
-
 class geo_point_t {
 
+    public:
+        map_pos_t   map;
+        map_pos_t   ang;
+        geo_pos_t   geo;
+
     private:
-        map_pos1_t  map;
-        map_pos1_t  ang;
-        geo_pos_t   gps;
         pos_type_t  src;
 
     public:
@@ -78,7 +80,8 @@ class geo_point_t {
         }
 
         void clear() {
-            gps.clear();
+            geo.clear();
+
             map.clear();
             ang.clear();
             src = POS_TYPE_UNKNOWN;
@@ -92,74 +95,47 @@ class geo_point_t {
             src = _src;
         }
 
-        double get_geo_x ( void ) const {
-            return gps.x;
+        void get ( pos_type_t _src, double& x, double& y ) const {
+
+            if ( _src == pos_type_t::POS_TYPE_GPS ) {
+                x = geo.x;
+                y = geo.y;
+            } else
+            if ( _src == pos_type_t::POS_TYPE_MAP ) {
+                x = map.x;
+                y = map.y;
+            } else
+            if (_src == pos_type_t::POS_TYPE_ANGLE ) {
+                x = ang.x;
+                y = ang.y;
+            } else {
+                assert(false);
+            }
+
         }
 
-        double get_geo_y ( void ) const {
-            return gps.y;
+        void set ( pos_type_t _src, double x, double y ) {
+
+            if ( _src == pos_type_t::POS_TYPE_GPS ) {
+                geo.x = x;
+                geo.y = y;
+            } else
+            if ( _src == pos_type_t::POS_TYPE_MAP ) {
+                map.x = static_cast<int32_t> (x + 0.5);
+                map.y = static_cast<int32_t> (y + 0.5);
+            } else
+            if (_src == pos_type_t::POS_TYPE_ANGLE ) {
+                ang.x = static_cast<int32_t> (x + 0.5);
+                ang.y = static_cast<int32_t> (y + 0.5);
+            } else {
+                assert(false);
+            }
+
         }
-
-        int32_t get_map_x ( void ) const {
-            return map.x;
-        }
-
-        int32_t get_map_y ( void ) const {
-            return map.y;
-        }
-
-        //--------------------------------------------------//
-
-        void get_geo ( geo_pos_t& _dst ) const {
-            _dst.x = gps.x;
-            _dst.y = gps.y;
-        }
-
-        void set_geo ( const geo_pos_t& _src ) {
-            this->gps = _src;
-        }
-
-        void set_geo_x ( double val ) {
-            gps.x = val;
-        }
-
-        void set_geo_y ( double val ) {
-            gps.y = val;
-        }
-
-        //--------------------------------------------------//
-
-        void get_map ( map_pos1_t& _dst ) const {
-            _dst.x = map.x;
-            _dst.y = map.y;
-        }
-
-        void set_map ( const map_pos1_t& _src ) {
-            this->map = _src;
-        }
-
-        void set_map_x ( int32_t val ) {
-            map.x = val;
-        }
-
-        void set_map_y ( int32_t val ) {
-            map.y = val;
-        }
-
-        //--------------------------------------------------//
-
-        void set_angle ( const map_pos1_t& _ref ) {
-            this->ang = _ref;
-        }
-
-        void get_angle ( map_pos1_t& _dst ) const {
-            _dst = this->ang;
-        }
-
         //--------------------------------------------------//
 
         void map_to_geo ( void ) {
-            proj_2_geo ( map.x, map.y, gps.x, gps.y );
+            proj_2_geo ( map.x, map.y, geo.x, geo.y );
         }
 
         bool operator== ( const geo_point_t& _ref ) const {
@@ -167,10 +143,10 @@ class geo_point_t {
             bool ret_val = true;
 
             if ( src == POS_TYPE_GPS ) {
-                if ( this->gps.x != _ref.gps.x ) {
+                if ( this->geo.x != _ref.geo.x ) {
                     ret_val = false;
                 } else
-                if ( this->gps.y != _ref.gps.y ) {
+                if ( this->geo.y != _ref.geo.y ) {
                     ret_val = false;
                 }
             } else
@@ -192,16 +168,17 @@ class geo_point_t {
             return !this->operator== ( _ref );
         };
 
-        void operator= ( const geo_point_t& _ref ) {
-
+        void operator=  ( const geo_point_t& _ref ) {
             this->src  = _ref.src;
-            this->gps  = _ref.gps;
+            this->geo  = _ref.geo;
             this->map  = _ref.map;
             this->ang  = _ref.ang;
         }
 
 };
 
+
+typedef map_pos_t                                   paint_pos_t;
 typedef geo_point_t                                 geo_coord_t;
 typedef std::vector<geo_coord_t>                    v_geo_coord_t;
 typedef std::vector<v_geo_coord_t>                  vv_geo_coord_t;
@@ -300,6 +277,16 @@ typedef std::vector<obj_type_t>       v_geo_obj_t;
 class geo_rect_t {
 
     public:
+        geo_rect_t () {
+        }
+
+        geo_rect_t ( pos_type_t pos_type ) {
+            min.clear();
+            max.clear();
+            min.set_src ( pos_type );
+            max.set_src ( pos_type );
+        }
+
         void clear ( void ) {
             min.clear();
             max.clear();
@@ -313,19 +300,19 @@ class geo_rect_t {
         void load ( const char* const val ) {
 
             double   v1, v2, v3, v4;
-            int32_t  v5, v6, v7, v8;
+            double   v5, v6, v7, v8;
 
-            sscanf_s ( val, "%lf %lf %lf %lf %d %d %d %d", &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 );
+            sscanf_s ( val, "%lf %lf %lf %lf %lf %lf %lf %lf", &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8 );
 
-            min.set_geo_y ( v1 );
-            min.set_geo_x ( v2 );
-            max.set_geo_y ( v3 );
-            max.set_geo_x ( v4 );
+            min.geo.y = v1;
+            min.geo.x = v2;
+            max.geo.y = v3;
+            max.geo.x = v4;
 
-            min.set_map_y ( v5 );
-            min.set_map_x ( v6 );
-            max.set_map_y ( v7 );
-            max.set_map_x ( v8 );
+            min.map.y = static_cast<int32_t> (v5 + 0.5);
+            min.map.x = static_cast<int32_t> (v6 + 0.5);
+            max.map.y = static_cast<int32_t> (v7 + 0.5);
+            max.map.x = static_cast<int32_t> (v8 + 0.5);
 
             min.reset_angle ();
             max.reset_angle ();
@@ -352,10 +339,10 @@ class geo_rect_t {
             double ret_val = 0;
 
             if ( type == POS_TYPE_GPS ) {
-                ret_val = max.get_geo_x() - min.get_geo_x();
+                ret_val = max.geo.x - min.geo.x;
             } else 
             if ( type == POS_TYPE_MAP ) {
-                ret_val =  max.get_map_x() - min.get_map_x();
+                ret_val =  max.map.x - min.map.x;
             } else {
                 assert ( false );
             }
@@ -368,10 +355,10 @@ class geo_rect_t {
             double ret_val = 0;
 
             if ( type == POS_TYPE_GPS ) {
-                ret_val = max.get_geo_y() - min.get_geo_y();
+                ret_val =  max.geo.y - min.geo.y;
             } else 
             if ( type == POS_TYPE_MAP ) {
-                ret_val =  max.get_map_y() - min.get_map_y();
+                ret_val =  max.map.y - min.map.y;
             } else {
                 assert ( false );
             }
@@ -384,16 +371,16 @@ class geo_rect_t {
             bool ret_val = true;
 
             if ( src == POS_TYPE_MAP ) {
-                if ( this->min.get_map_x() > slice.max.get_map_x() ) { ret_val = false; } else
-                if ( this->max.get_map_x() < slice.min.get_map_x() ) { ret_val = false; } else
-                if ( this->min.get_map_y() > slice.max.get_map_y() ) { ret_val = false; } else
-                if ( this->max.get_map_y() < slice.min.get_map_y() ) { ret_val = false; }
+                if ( this->min.map.x > slice.max.map.x ) { ret_val = false; } else
+                if ( this->max.map.x < slice.min.map.x ) { ret_val = false; } else
+                if ( this->min.map.y > slice.max.map.y ) { ret_val = false; } else
+                if ( this->max.map.y < slice.min.map.y ) { ret_val = false; }
             } else 
             if ( src == POS_TYPE_GPS ) {
-                if ( this->min.get_geo_x() > slice.max.get_geo_x() ) { ret_val = false; } else
-                if ( this->max.get_geo_x() < slice.min.get_geo_x() ) { ret_val = false; } else
-                if ( this->min.get_geo_y() > slice.max.get_geo_y() ) { ret_val = false; } else
-                if ( this->max.get_geo_y() < slice.min.get_geo_y() ) { ret_val = false; }
+                if ( this->min.geo.x > slice.max.geo.x ) { ret_val = false; } else
+                if ( this->max.geo.x < slice.min.geo.x ) { ret_val = false; } else
+                if ( this->min.geo.y > slice.max.geo.y ) { ret_val = false; } else
+                if ( this->max.geo.y < slice.min.geo.y ) { ret_val = false; }
             } else {
                 assert ( false );
             }
@@ -401,12 +388,19 @@ class geo_rect_t {
             return ret_val;
         }
 
+        void reset_angle ( void ) {
+            min.reset_angle();
+            max.reset_angle();
+        }
     public:
         geo_coord_t min;
         geo_coord_t max;
 };
 
 typedef std::vector<geo_rect_t>       v_geo_rect_t;
+
+typedef std::vector<paint_pos_t>      v_paint_pos_t;
+
 
 #if 0
 
@@ -456,7 +450,6 @@ class paint_rect_t {
 
 #endif
 
-
 class geo_line_t {
     public:
         geo_line_t() {
@@ -475,6 +468,7 @@ class geo_line_t {
         obj_type_t              m_type;      // TYPE:ASPHALT
         uint32_t                m_area;      // SIZE:33429
         v_geo_coord_t           m_coords;    // coords
+        v_geo_coord_t           m_fill_pos;  // pt to fill object
 };
 
 typedef std::vector<geo_line_t>       v_geo_line_t;
@@ -848,51 +842,6 @@ class geo_parser_t {
 
             switch ( code ) {
 
-                #if 0
-
-                case OBJID_IDX_MAP_BEGIN:
-                    geo_idx.m_map.min.clear();
-                    geo_idx.m_map.max.clear();
-                    geo_idx.m_map_x_cnt  = 0;
-                    geo_idx.m_map_x_step = 0;
-                    geo_idx.m_map_y_cnt  = 0;
-                    geo_idx.m_map_y_step = 0;
-                    break;
-
-                case OBJID_IDX_MAP_MIN:
-                    sscanf_s ( m_geo_param.value.msg, "%lf %lf %lf %lf", &p1, &p2, &p3, &p4 );
-                    geo_idx.m_map.min.set_y ( pos_type_t::POS_TYPE_GPS, p1 );
-                    geo_idx.m_map.min.set_x ( pos_type_t::POS_TYPE_GPS, p2 );
-                    geo_idx.m_map.min.set_y ( pos_type_t::POS_TYPE_MAP, p3 );
-                    geo_idx.m_map.min.set_x ( pos_type_t::POS_TYPE_MAP, p4 );
-                    break;
-
-                case OBJID_IDX_MAP_MAX:
-                    sscanf_s ( m_geo_param.value.msg, "%lf %lf %lf %lf", &p1, &p2, &p3, &p4 );
-                    geo_idx.m_map.max.set_y ( pos_type_t::POS_TYPE_GPS, p1 );
-                    geo_idx.m_map.max.set_x ( pos_type_t::POS_TYPE_GPS, p2 );
-                    geo_idx.m_map.max.set_y ( pos_type_t::POS_TYPE_MAP, p3 );
-                    geo_idx.m_map.max.set_x ( pos_type_t::POS_TYPE_MAP, p4 );
-                    break;
-
-                case OBJID_IDX_MAP_XCNT:
-                    sscanf_s ( m_geo_param.value.msg, "%d", &geo_idx.m_map_x_cnt );
-                    break;
-
-                case OBJID_IDX_MAP_YCNT:
-                    sscanf_s ( m_geo_param.value.msg, "%d", &geo_idx.m_map_y_cnt );
-                    break;
-
-                case OBJID_IDX_MAP_XSTEP:
-                    sscanf_s ( m_geo_param.value.msg, "%lf", &geo_idx.m_map_x_step );
-                    break;
-
-                case OBJID_IDX_MAP_YSTEP:
-                    sscanf_s ( m_geo_param.value.msg, "%lf", &geo_idx.m_map_y_step );
-                    break;
-
-                #endif
-
                 case OBJID_IDX_MAP_END:
                     eor = true;
                     break;
@@ -914,13 +863,6 @@ class geo_parser_t {
                     sscanf_s(m_geo_param.value.msg, "%d", &off);
                     geo_idx.m_list_off.push_back(off);
                     break;
-
-                #if 0
-                case OBJID_XREF:
-                    sscanf_s(m_geo_param.value.msg, "%lld", &ref);
-                    geo_idx.m_osm_id = ref;
-                    break;
-                #endif
 
                 case OBJID_IDX_MEMBERS_END:
                     break;
@@ -953,14 +895,14 @@ class geo_parser_t {
         void _load ( geo_coord_t& coords ) {
 
             double  gps_y, gps_x;
-            int32_t map_y, map_x;
+            double  map_y, map_x;
 
-            sscanf_s ( m_geo_param.value.msg,  "%lf %lf %d %d",  &gps_y, &gps_x, &map_y, &map_x ); 
+            sscanf_s ( m_geo_param.value.msg,  "%lf %lf %lf %lf",  &gps_y, &gps_x, &map_y, &map_x ); 
 
-            coords.set_geo_y ( gps_y );
-            coords.set_geo_x ( gps_x );
-            coords.set_map_y ( map_y );
-            coords.set_map_x ( map_x );
+            coords.geo.y = gps_y;
+            coords.geo.x = gps_x;
+            coords.map.y = static_cast<int32_t> (map_y + 0.5);
+            coords.map.x = static_cast<int32_t> (map_x + 0.5);
 
             coords.reset_angle();
         }

@@ -83,8 +83,8 @@ void CMapPainter::OnPaint ( void ) {
     for (y = 0; y < m_client_rect.Height(); y++) {
         for (x = 0; x < m_client_rect.Width(); x++) {
 
-            pos.set_map_x ( x );
-            pos.set_map_y ( y );
+            pos.map.x = ( x );
+            pos.map.y = ( y );
 
             g_geo_processor.get_pix( pos, px );
             outClr = RGB ( px.getR(), px.getG(), px.getB() );
@@ -185,20 +185,21 @@ BOOL CMapPainter::OnEraseBkgnd ( CDC* pDC ) {
     return CStatic::OnEraseBkgnd(pDC);
 }
 
-void CMapPainter::_calc_geo ( double lon, double lat, double scale ) {
+void CMapPainter::_calc_geo ( double lon, double lat, double scale ) const {
 
     (void) (lon);
     (void) (lat);
     (void) (scale);
 }
 
-void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double angle ) {
+void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double angle ) const {
 
     static bool is_valid = false;
 
     geo_rect_t    wnd;
     CRect         client_rect;
     geo_coord_t   center;
+    double        ang = angle;
 
     if ( !is_valid ) {
         is_valid = true;
@@ -210,19 +211,22 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     GetClientRect ( client_rect );
 
-    wnd.min.set_map_x ( 0 );
-    wnd.min.set_map_y ( 0 );
-    wnd.max.set_map_x ( client_rect.Width()  );
-    wnd.max.set_map_y ( client_rect.Height() );
+    wnd.min.map.x = 0;
+    wnd.min.map.y = 0;
+    wnd.max.map.x = client_rect.Width();
+    wnd.max.map.y = client_rect.Height();
 
-    center.set_map_x ( 1594414 );
-    center.set_map_y ( 6453150 );
+    center.set_src ( POS_TYPE_MAP );
+
+    center.map.x = 1594414;
+    center.map.y = 6453150;
+    ang          = 90;
 
     g_geo_processor.load_idx ();
-    g_geo_processor.process_map ( wnd, center, scale, angle );
+    g_geo_processor.process_map ( wnd, center, scale, ang );
 }
 
-void CMapPainter::GetBaseParams ( double& lon, double& lat, double& scale ) {
+void CMapPainter::GetBaseParams ( double& lon, double& lat, double& scale ) const {
 
     lon   = m_lon;
     lat   = m_lat;
