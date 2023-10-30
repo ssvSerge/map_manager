@@ -172,7 +172,7 @@ class geo_processor_t {
         void _poly_line ( const v_geo_coord_t& line, const int width, const geo_pixel_t color );
         void _fill_poly ( geo_line_t& region, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up );
         void _fill_poly ( const geo_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk );
-        void _line ( const geo_coord_t from, const geo_coord_t to, const geo_pixel_t color );
+        void _line ( const geo_coord_t& from, const geo_coord_t& to, const geo_pixel_t color );
         void _line ( const geo_coord_t from, const geo_coord_t to, int width, const geo_pixel_t color );
         void _process_pt_list ( const geo_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color );
 

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stack>
 #include <queue>
+#include <algorithm>
 
 #include <geo_processor.h>
 #include <geo_projection.h>
@@ -153,10 +154,10 @@ void geo_processor_t::get_pix ( const geo_coord_t& pos, geo_pixel_t& px ) const 
 
 void geo_processor_t::set_pix ( const geo_coord_t& pos, const geo_pixel_t& px ) {
 
-    if (pos.geo.x < 0) {
+    if ( pos.geo.x < 0 ) {
         return;
     }
-    if (pos.geo.y < 0) {
+    if ( pos.geo.y < 0 ) {
         return;
     }
     if ( pos.geo.x  >=  m_video_rect.max.map.x ) {
@@ -171,7 +172,7 @@ void geo_processor_t::set_pix ( const geo_coord_t& pos, const geo_pixel_t& px ) 
 
     _px_conv ( px, tmp );
 
-    offset = ( pos.map.y * m_video_rect.max.map.x ) + pos.map.x;
+    offset = ( pos.ang.y * m_video_rect.max.ang.x ) + pos.ang.x;
 
     m_video_buffer[offset] = tmp;
 }
@@ -645,6 +646,7 @@ void geo_processor_t::_alloc_img_buffer ( const geo_rect_t& geo_rect ) {
         return;
     }
 
+    m_video_rect = new_rect;
     m_video_buffer_size = alloc_size;
 
     if ( m_video_buffer != nullptr ) {
@@ -859,6 +861,7 @@ void geo_processor_t::_process_area ( geo_entry_t& geo_line, const bool force_cl
     geo_pixel_t fill_color;
 
     _map_color ( geo_line.m_default_type, border_color, fill_color );
+
     for ( size_t i = 0; i < geo_line.m_lines.size(); i++ ) {
         _poly_area ( geo_line.m_lines[i], border_color );
         _fill_poly ( geo_line.m_lines[i], border_color, fill_color, force_clr, mark_up );
@@ -972,40 +975,51 @@ void geo_processor_t::_fill_poly ( const geo_coord_t& pos, const geo_pixel_t br_
 
 
 
-void geo_processor_t::_line ( const geo_coord_t from, const geo_coord_t to, const geo_pixel_t color ) {
+void geo_processor_t::_line ( const geo_coord_t& from, const geo_coord_t& to, const geo_pixel_t color ) {
 
     geo_coord_t p1;
     geo_coord_t p2;
 
-    p1 = from;
-    p2 = to;
-
     int   error1;
     int   error2;
 
-    const int deltaX = static_cast<int> ( abs( p2.map.x - p1.map.x ) );
-    const int deltaY = static_cast<int> ( abs( p2.map.y - p1.map.y ) );
-    const int signX = ( p1.map.x  <  p2.map.x ) ? 1 : -1;
-    const int signY = ( p1.map.y  <  p2.map.y ) ? 1 : -1;
+    p1 = from;             
+    p2 = to;
+
+    p1.ang.x -= m_geo_wnd.min.ang.x;
+    p1.ang.y -= m_geo_wnd.min.ang.y;
+
+    p2.ang.x -= m_geo_wnd.min.ang.x;
+    p2.ang.y -= m_geo_wnd.min.ang.y;
+
+    assert ( p1.ang.x >= 0);
+    assert ( p1.ang.x < m_video_rect.max.map.x );
+    assert ( p1.ang.y >= 0);
+    assert ( p1.ang.y < m_video_rect.max.map.y );
+
+    const int  deltaX  =  abs ( p2.ang.x - p1.ang.x );
+    const int  deltaY  =  abs ( p2.ang.y - p1.ang.y );
+    const int  signX   =  ( p1.ang.x  <  p2.ang.x ) ? 1 : -1;
+    const int  signY   =  ( p1.ang.y  <  p2.ang.y ) ? 1 : -1;
 
     error1 = deltaX - deltaY;
 
     set_pix ( p2, color );
 
-    while ( ( p1.map.x != p2.map.x ) || (p1.map.y != p2.map.y) ) {
+    while ( ( p1.ang.x != p2.ang.x ) || (p1.ang.y != p2.ang.y) ) {
 
         set_pix ( p1, color );
 
         error2 = error1 * 2;
 
-        if (error2 > -deltaY) {
+        if ( error2 > -deltaY ) {
             error1   -= deltaY;
-            p1.map.x  = ( p1.map.x + signX );
+            p1.ang.x  = ( p1.ang.x + signX );
         }
 
-        if (error2 < deltaX) {
+        if ( error2 < deltaX ) {
             error1   += deltaX;
-            p1.map.y  = ( p1.map.y + signY );
+            p1.ang.y  = ( p1.ang.y + signY );
         }
     }
 }
