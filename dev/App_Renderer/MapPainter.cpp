@@ -220,7 +220,7 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     center.map.x = 1594414;
     center.map.y = 6453150;
-    ang          = 90;
+    ang          = 0;
 
     g_geo_processor.load_idx ();
     g_geo_processor.process_map ( wnd, center, scale, ang );

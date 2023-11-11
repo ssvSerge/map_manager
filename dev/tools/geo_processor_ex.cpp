@@ -8,7 +8,7 @@
 
 v_geo_coord_t   g_dummy_rect;
 v_geo_coord_t   g_dummy_line_in;
-v_geo_coord_t   g_dummy_line_out;
+vv_geo_coord_t  g_dummy_line_out;
 
 class gpc_allocator_t {
 
@@ -69,6 +69,7 @@ void __format ( const gpc_polygon& in_line, const gpc_polygon& rect, const gpc_p
             g_dummy_rect.push_back(coord);
         }
     }
+    g_dummy_rect.push_back ( g_dummy_rect.front() );
 
     for ( size_t i = 0; i < in_line.num_contours; i++ ) {
         for ( size_t j = 0; j < in_line.contour[i].num_vertices; j++ ) {
@@ -77,13 +78,19 @@ void __format ( const gpc_polygon& in_line, const gpc_polygon& rect, const gpc_p
             g_dummy_line_in.push_back(coord);
         }
     }
+    g_dummy_line_in.push_back (  g_dummy_line_in.front() );
 
     for ( size_t i = 0; i < out_line.num_contours; i++ ) {
+        v_geo_coord_t  tmp;
         for ( size_t j = 0; j < out_line.contour[i].num_vertices; j++ ) {
             coord.geo.x = out_line.contour[i].vertex[j].x;
             coord.geo.y = out_line.contour[i].vertex[j].y;
-            g_dummy_line_out.push_back(coord);
+            tmp.push_back(coord);
         }
+        tmp.push_back( tmp.front() );
+
+        g_dummy_line_out.push_back(tmp);
+
     }
 }
 
@@ -99,6 +106,8 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     gpc_allocator_t     clip;
     gpc_allocator_t     subject;
     gpc_polygon         result;
+
+    static int stop_cnt = 0;
 
     double  min_x;
     double  min_y;
@@ -134,6 +143,10 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     
     gpc_polygon_clip ( GPC_INT, &subject.data, &clip.data, &result );
 
+    if (result.num_contours > 2) {
+        stop_cnt++;
+    }
+
     #if 0
     __format ( subject.data, clip.data, result );
     #endif
@@ -141,12 +154,6 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     out_path.clear();
 
     geo_coord_t   coord;
-
-    static int stop_cnt = 0;
-
-    if ( result.num_contours > 2 ) {
-        stop_cnt++;
-    }
 
     for (size_t i = 0; i < result.num_contours; i++) {
 
@@ -160,7 +167,7 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
             continue;
         }
 
-        sector.m_coords.clear();
+        sector.m_coords.reserve( result.contour[i].num_vertices + 1 );
 
         for ( size_t y = 0; y < result.contour[i].num_vertices; y++ ) {
             coord.set ( coord_type, result.contour[i].vertex[y].x, result.contour[i].vertex[y].y );

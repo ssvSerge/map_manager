@@ -150,7 +150,7 @@ class geo_processor_t {
         void _filter_idx_by_rect ( const geo_rect_t& base_rect, const l_geo_idx_rec_t& rect_list, v_geo_offset_t& out_list ) const;
         void _load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache );
 
-        void _find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, int& x_step, int& y_step ) const;
+        void _find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, double& x_step, double& y_step ) const;
         void _px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const;
         void _px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const;
         void _alloc_img_buffer ( const geo_rect_t& geo_rect );
@@ -183,6 +183,12 @@ class geo_processor_t {
         // void _map_coords ( const v_geo_coord_t& geo_path, v_paint_coord_t& win_path );
         // void _win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const;
         void _generate_paint_pos ( geo_line_t& poly_line ) const;
+        // bool _is_wnd_invalid ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale ) const;
+        void _get_view_rect ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, geo_rect_t& view_wnd ) const;
+        bool _is_view_rect_valid ( const geo_rect_t& view_rect ) const;
+        bool _is_angle_valid ( const double angle ) const;
+        bool _is_scale_valid ( const double scale ) const;
+        void _extend_view_rect (const geo_coord_t& center, geo_rect_t& view_rect ) const;
         // bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
         // bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
         // void _map_pt_pos ( const geo_coord_t& point, const geo_rect_t& square, const pos_type_t src, pt_code_pos_t& code ) const;
@@ -192,13 +198,31 @@ class geo_processor_t {
         // void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
 
     private:
+        double                  m_x_step;               // шаг индексов по горизонтали.
+        double                  m_y_step;               // шаг индексов по вертикали.
+        double                  m_scale;                // текущее увеличение карты.
+        geo_rect_t              m_wnd;                  // Ѕазовое окно с координатами "0, 0".
+        geo_rect_t              m_wnd_map;              // ќкно, приведЄнное к GPS координатам.
+        geo_rect_t              m_wnd_map_ext;          // ќкно, расширенное дл€ вращени€.
+
+        double                  m_view_angle;           // текущий угол карты.
+        double                  m_view_angle_step;      // углова€ разница дл€ перерисовки карты.
+        double                  m_scale_step;           // разница увеличени€ дл€ перерисовки карты.
+
+     // geo_rect_t              m_geo_wnd_src;          // регион запрошенный изначально.
+     // geo_rect_t              m_geo_wnd_ext;          // регион расширенный дл€ вращени€.
+     // geo_rect_t              m_video_buff;           // буфер дл€ вывода на экран. то же самое, что m_geo_wnd_src?
+
+
+
+        double                  m_geo_rect_scale;
+
         std::string             m_map_file_name;
         std::ifstream           m_map_file;
         std::string             m_idx_file_name;
         std::ifstream           m_idx_file;
 
         geo_coord_t             m_geo_center;
-        geo_rect_t              m_geo_wnd;
         double                  m_geo_scale;
         double                  m_geo_angle;
         double                  m_geo_angle_sin;
@@ -212,7 +236,6 @@ class geo_processor_t {
 
         geo_pixel_int_t*        m_video_buffer;
         uint32_t                m_video_buffer_size;
-        geo_rect_t              m_video_rect;
 
 
         // geo_coord_t             m_paint_center;
