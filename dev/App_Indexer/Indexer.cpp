@@ -158,7 +158,7 @@ static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
     double projection_y;
     double projection_x;
 
-    geo_2_proj ( lat, lon, projection_x, projection_y );
+    geo_2_proj ( lon, lat, projection_x, projection_y );
 
     sprintf_s ( position, "%.7f %.7f %.1f %.1f", lat, lon, projection_y, projection_x );
     // sprintf_s(position, "%.7f %.7f", lat, lon );

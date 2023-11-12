@@ -41,9 +41,8 @@ void geo_processor_t::load_idx ( void ) {
 
     _load_idx ( m_idx_list );
 
-    geo_rect_t  map_rect;
-
-    _find_idx_rect ( m_idx_list, map_rect, m_x_step, m_y_step );
+    // geo_rect_t  map_rect;
+    // _find_idx_rect ( m_idx_list, map_rect, m_x_step, m_y_step );
 }
 
 void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord_t& center, const double scale, const double angle ) {
@@ -58,8 +57,8 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
     geo_rect_t      load_rect;
 
     map_center = center;
-    map_center.reset_angle();
     map_center.geo_to_map();
+    map_center.reset_angle();
 
     _process_rects ( map_center, scale, paint_wnd, map_rect, map_rect_ext );
     _extend_rect   ( map_center, map_rect_ext, load_rect );
@@ -78,6 +77,11 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
         m_wnd        =  paint_wnd;
         m_wnd_map    =  map_rect_ext;
         m_load_rect  =  load_rect;
+
+        m_load_rect.min.map_to_geo();
+        m_load_rect.min.reset_angle();
+        m_load_rect.max.map_to_geo();
+        m_load_rect.max.reset_angle();
 
         _alloc_img_buffer   ( m_wnd );
         _filter_idx_by_rect ( m_load_rect, m_idx_list, m_map_ids );
@@ -505,7 +509,7 @@ void geo_processor_t::_trim_rotated_map_by_rect ( void ) {
     geo_entry_t     out_record;
 
     m_paint_list.clear();
-    m_wnd_map_ext.reset_angle();
+    m_wnd_map.reset_angle();
 
     for (auto it_src = m_map_cache.cbegin(); it_src != m_map_cache.cend(); it_src++) {
 
@@ -514,13 +518,13 @@ void geo_processor_t::_trim_rotated_map_by_rect ( void ) {
         }
 
         if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
-            _trim_record ( m_wnd_map_ext, *it_src, true, out_record );
+            _trim_record ( m_wnd_map, *it_src, true, out_record );
         } else
         if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
-            _trim_record ( m_wnd_map_ext, *it_src, true, out_record );
+            _trim_record ( m_wnd_map, *it_src, true, out_record );
         } else
         if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
-            _trim_record ( m_wnd_map_ext, *it_src, false, out_record );
+            _trim_record ( m_wnd_map, *it_src, false, out_record );
         }
 
         if (out_record.m_lines.size() > 0) {

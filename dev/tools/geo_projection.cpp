@@ -16,7 +16,7 @@ static double rad2deg ( double radians ) {
 
 //---------------------------------------------------------------------------//
 
-void geo_2_proj ( const double lat, const double lon, double& x, double& y ) {
+void geo_2_proj ( const double lon, const double lat, double& x, double& y ) {
 
 	static const double scale_x = EARTH_R * M_PI / 180;
 

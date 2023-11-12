@@ -68,8 +68,8 @@ class geo_point_t {
 
     public:
         geo_pos_t   geo;
-        geo_pos_t   ang;
         map_pos_t   map;
+        geo_pos_t   ang;
 
     private:
         pos_type_t  src;
@@ -90,7 +90,8 @@ class geo_point_t {
         }
 
         void reset_angle() {
-            ang = geo;
+            ang.x = map.x;
+            ang.y = map.y;
         }
 
         void to_projection() {
@@ -154,7 +155,7 @@ class geo_point_t {
             double x;
             double y;
 
-            geo_2_proj ( ang.x, ang.y, x, y );
+            geo_2_proj ( geo.x, geo.y,  x, y );
 
             map.x = static_cast<int32_t> (x + 0.5);
             map.y = static_cast<int32_t> (y + 0.5);
@@ -165,7 +166,7 @@ class geo_point_t {
             double x;
             double y;
 
-            proj_2_geo ( map.x, map.y, x, y );
+            proj_2_geo ( map.x, map.y,  x, y );
 
             geo.x = x;
             geo.y = y;
