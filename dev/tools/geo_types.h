@@ -69,7 +69,7 @@ class geo_point_t {
     public:
         geo_pos_t   geo;
         map_pos_t   map;
-        geo_pos_t   ang;
+        map_pos_t   ang;
 
     private:
         pos_type_t  src;

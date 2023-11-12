@@ -181,6 +181,7 @@ class geo_processor_t {
         void _find_scale_pixel ( const geo_coord_t& center, const double scale );
         void _calc_geo_rect ( const geo_coord_t& center, const geo_rect_t& wnd );
         void _process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const;
+        bool _pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) const;
 
         // void _map_idx ( const geo_rect_t rect,  const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx );
         // void _calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd );
@@ -237,7 +238,7 @@ class geo_processor_t {
         std::string             m_idx_file_name;
         std::ifstream           m_idx_file;
 
-        geo_coord_t             m_geo_center;
+     // geo_coord_t             m_geo_center;
         double                  m_geo_scale;
         double                  m_geo_angle;
         double                  m_geo_angle_sin;

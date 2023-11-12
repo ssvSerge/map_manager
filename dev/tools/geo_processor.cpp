@@ -991,7 +991,7 @@ void geo_processor_t::_rotate_coord ( geo_coord_t& coord ) const {
     double  rotated_y = 0;
 
     pt = coord.map;
-    center = m_geo_center.map;
+    center = m_center.map;
 
     translated_x = pt.x - center.x;
     translated_y = pt.y - center.y;
@@ -1021,6 +1021,15 @@ void geo_processor_t::_trim_record ( const geo_rect_t& rect_path, const geo_entr
     for ( auto it_in_line = in_path.m_lines.cbegin(); it_in_line != in_path.m_lines.cend(); it_in_line++ ) {
         geo_intersect ( POS_TYPE_ANGLE, is_area, *it_in_line, rect_path, res );
         for ( size_t i = 0; i < res.size(); i++ ) {
+
+            #if 1
+                for ( size_t coord_id = 0; coord_id < res[i].m_coords.size(); coord_id++ ) {
+                    if ( !_pt_in_rect ( res[i].m_coords[coord_id].ang, m_wnd_map)) {
+                        assert( false );
+                    }
+                }
+            #endif
+
             out_path.m_lines.push_back( std::move(res[i]) );
         }
     }
@@ -1067,6 +1076,7 @@ void geo_processor_t::_poly_area ( const geo_line_t& poly_line, const geo_pixel_
 
 void geo_processor_t::_fill_poly ( geo_line_t& poly_line, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up ) {
 
+    #if 0
     if ( poly_line.m_fill_pos.size() == 0 ) {
         _generate_paint_pos ( poly_line );
     }
@@ -1080,6 +1090,7 @@ void geo_processor_t::_fill_poly ( geo_line_t& poly_line, const geo_pixel_t bk_c
             set_pix ( *paint_pt, geo_pixel_t(255, 0, 0) );
         }
     }
+    #endif
 }
 
 void geo_processor_t::_fill_poly ( const geo_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk ) {
@@ -1157,11 +1168,11 @@ void geo_processor_t::_line ( const geo_coord_t& from, const geo_coord_t& to, co
     p1 = from;             
     p2 = to;
 
-    p1.ang.x -= m_wnd.min.ang.x;
-    p1.ang.y -= m_wnd.min.ang.y;
+    p1.ang.x -= m_wnd_map.min.ang.x;
+    p1.ang.y -= m_wnd_map.min.ang.y;
 
-    p2.ang.x -= m_wnd.min.ang.x;
-    p2.ang.y -= m_wnd.min.ang.y;
+    p2.ang.x -= m_wnd_map.min.ang.x;
+    p2.ang.y -= m_wnd_map.min.ang.y;
 
     assert ( p1.ang.x >= 0);
     assert ( p1.ang.x < m_wnd.max.map.x );
@@ -1319,6 +1330,25 @@ void geo_processor_t::_generate_paint_pos ( geo_line_t& poly_line ) const {
     }
 
     #endif
+}
+
+bool geo_processor_t::_pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) const {
+
+    if (pt.x < wnd.min.ang.x) {
+        return false;
+    }
+    if (pt.x > wnd.max.ang.x ) {
+        return false;
+    }
+
+    if (pt.y < wnd.min.ang.y) {
+        return false;
+    }
+    if (pt.y > wnd.max.ang.y) {
+        return false;
+    }
+
+    return true;
 }
 
 #if 0
