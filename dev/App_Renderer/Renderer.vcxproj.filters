@@ -62,6 +62,9 @@
     <ClCompile Include="..\tools\gpc.c">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\tools\geo_projection.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="App_Renderer.rc">

@@ -67,9 +67,9 @@ class map_pos_t {
 class geo_point_t {
 
     public:
-        map_pos_t   map;
-        map_pos_t   ang;
         geo_pos_t   geo;
+        geo_pos_t   ang;
+        map_pos_t   map;
 
     private:
         pos_type_t  src;
@@ -78,6 +78,8 @@ class geo_point_t {
         geo_point_t() {
             clear();
         }
+
+        //--------------------------------------------------//
 
         void clear() {
             geo.clear();
@@ -88,8 +90,20 @@ class geo_point_t {
         }
 
         void reset_angle() {
-            ang = map;
+            ang = geo;
         }
+
+        void to_projection() {
+
+            double x, y;
+
+            geo_2_proj ( ang.x, ang.y,  x, y );
+
+            map.x = static_cast<int32_t> (x + 0.5);
+            map.y = static_cast<int32_t> (y + 0.5);
+        }
+
+        //--------------------------------------------------//
 
         void set_src ( pos_type_t _src ) {
             src = _src;
@@ -135,9 +149,29 @@ class geo_point_t {
 
         //--------------------------------------------------//
 
-        void map_to_geo ( void ) {
-            proj_2_geo ( map.x, map.y, geo.x, geo.y );
+        void geo_to_map ( void ) {
+
+            double x;
+            double y;
+
+            geo_2_proj ( ang.x, ang.y, x, y );
+
+            map.x = static_cast<int32_t> (x + 0.5);
+            map.y = static_cast<int32_t> (y + 0.5);
         }
+
+        void map_to_geo ( void ) {
+
+            double x;
+            double y;
+
+            proj_2_geo ( map.x, map.y, x, y );
+
+            geo.x = x;
+            geo.y = y;
+        }
+
+        //--------------------------------------------------//
 
         bool operator== ( const geo_point_t& _ref ) const {
 
@@ -176,6 +210,7 @@ class geo_point_t {
             this->ang  = _ref.ang;
         }
 
+        //--------------------------------------------------//
 };
 
 

@@ -109,6 +109,8 @@ class geo_pixel_t {
 
 typedef uint16_t geo_pixel_int_t;
 
+typedef std::vector<geo_pixel_int_t>    video_buff_t;
+
 typedef enum tag_pt_code_pos {
     CODE_POS_IN,
     CODE_POS_LEFT,
@@ -149,6 +151,7 @@ class geo_processor_t {
         void _load_idx ( l_geo_idx_rec_t& idx_list );
         void _filter_idx_by_rect ( const geo_rect_t& base_rect, const l_geo_idx_rec_t& rect_list, v_geo_offset_t& out_list ) const;
         void _load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache );
+        void _extend_rect ( const geo_coord_t& center, const geo_rect_t& src_rect, geo_rect_t& dst_rect ) const;
 
         void _find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, double& x_step, double& y_step ) const;
         void _px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const;
@@ -175,6 +178,9 @@ class geo_processor_t {
         void _line ( const geo_coord_t& from, const geo_coord_t& to, const geo_pixel_t color );
         void _line ( const geo_coord_t from, const geo_coord_t to, int width, const geo_pixel_t color );
         void _process_pt_list ( const geo_coord_t base, const v_paint_offset_t& shift_list, const geo_pixel_t color );
+        void _find_scale_pixel ( const geo_coord_t& center, const double scale );
+        void _calc_geo_rect ( const geo_coord_t& center, const geo_rect_t& wnd );
+        void _process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const;
 
         // void _map_idx ( const geo_rect_t rect,  const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx );
         // void _calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd );
@@ -188,7 +194,8 @@ class geo_processor_t {
         bool _is_view_rect_valid ( const geo_rect_t& view_rect ) const;
         bool _is_angle_valid ( const double angle ) const;
         bool _is_scale_valid ( const double scale ) const;
-        void _extend_view_rect (const geo_coord_t& center, geo_rect_t& view_rect ) const;
+        void _extend_view_rect ( const geo_coord_t& center, geo_rect_t& view_rect ) const;
+        // void _geo_rect_to_view ( const geo_coord_t& center, const geo_rect_t& screen_wnd, geo_rect_t& paint_wnd );
         // bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
         // bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
         // void _map_pt_pos ( const geo_coord_t& point, const geo_rect_t& square, const pos_type_t src, pt_code_pos_t& code ) const;
@@ -200,10 +207,18 @@ class geo_processor_t {
     private:
         double                  m_x_step;               // шаг индексов по горизонтали.
         double                  m_y_step;               // шаг индексов по вертикали.
+
+        geo_coord_t             m_center;               // 
         double                  m_scale;                // текущее увеличение карты.
-        geo_rect_t              m_wnd;                  // Базовое окно с координатами "0, 0".
+        geo_rect_t              m_wnd;                  // Окно вывода с координатами "0, 0".
         geo_rect_t              m_wnd_map;              // Окно, приведённое к GPS координатам.
         geo_rect_t              m_wnd_map_ext;          // Окно, расширенное для вращения.
+        geo_rect_t              m_load_rect;            // Регион для загрузки.
+
+        double                  m_geo_step_x;           // GPS Шаг по горизонтали на пиксел.
+        double                  m_geo_step_y;           // GPS Шаг по вертикали на пиксел.
+        double                  m_prj_step_x;           // Mercator Шаг по горизонтали на пиксел.
+        double                  m_prj_step_y;           // Mercator Шаг по вертикали на пиксел.
 
         double                  m_view_angle;           // текущий угол карты.
         double                  m_view_angle_step;      // угловая разница для перерисовки карты.
@@ -234,8 +249,7 @@ class geo_processor_t {
 
         l_geo_idx_rec_t         m_idx_list;
 
-        geo_pixel_int_t*        m_video_buffer;
-        uint32_t                m_video_buffer_size;
+        video_buff_t            m_video_buffer;
 
 
         // geo_coord_t             m_paint_center;

@@ -379,7 +379,10 @@ static void _slicing ( void ) {
             map_rect.max.map.y = y + g_step_ver;
 
             map_rect.min.map_to_geo();
+            map_rect.min.reset_angle();
+
             map_rect.max.map_to_geo();
+            map_rect.max.reset_angle();
 
             g_slicer_rects.push_back ( map_rect );
 
@@ -412,7 +415,7 @@ static void _slicing ( void ) {
         delete workders_list[i];
     }
 
-    for (size_t i = 0; i < g_slicer_rects.size(); i++) {
+    for ( size_t i = 0; i < g_slicer_rects.size(); i++ ) {
         _log_index ( g_slicer_rects[i], i );
     }
 

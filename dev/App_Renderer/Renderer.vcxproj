@@ -125,6 +125,7 @@
   <ItemGroup>
     <ClCompile Include="..\tools\geo_processor.cpp" />
     <ClCompile Include="..\tools\geo_processor_ex.cpp" />
+    <ClCompile Include="..\tools\geo_projection.cpp" />
     <ClCompile Include="..\tools\gpc.c" />
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Dlg.cpp" />

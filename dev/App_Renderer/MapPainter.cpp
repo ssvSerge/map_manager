@@ -218,8 +218,9 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     center.set_src ( POS_TYPE_MAP );
 
-    center.map.x = 1594414;
-    center.map.y = 6453150;
+    // 50.036852, 14.339209
+    center.geo.x = 14.339209;
+    center.geo.y = 50.036852;
     ang          = 0;
 
     g_geo_processor.load_idx ();
