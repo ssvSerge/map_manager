@@ -101,6 +101,41 @@ static void _reset ( gpc_polygon& res ) {
     res.contour = nullptr;
 }
 
+static bool _pt_in_rect(const geo_rect_t& rect, const gpc_vertex& vertex ) {
+
+    if ( vertex.x <  rect.min.ang.x ) {
+        return false;
+    }
+    if ( vertex.x >= rect.max.ang.x ) {
+        return false;
+    }
+
+    if ( vertex.y <  rect.min.ang.y ) {
+        return false;
+    }
+    if ( vertex.y >= rect.max.ang.y ) {
+        return false;
+    }
+
+    return true;
+}
+
+static void _validate_result ( const geo_rect_t& rect, const gpc_polygon& result ) {
+
+    bool is_pt_valid;
+
+    for ( int contour_id = 0; contour_id < result.num_contours; contour_id++ ) {
+
+        for (int vertex_id = 0; vertex_id < result.contour[contour_id].num_vertices; vertex_id++) {
+            is_pt_valid = _pt_in_rect ( rect, result.contour[contour_id].vertex[vertex_id] );
+            if ( !is_pt_valid ) {
+                assert(false);
+            }
+        }
+    }
+
+}
+
 void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& inp_path, const geo_rect_t& rect, v_geo_line_t& out_path ) const {
 
     gpc_allocator_t     clip;
@@ -124,6 +159,9 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     rect.min.get ( coord_type, min_x, min_y );
     rect.max.get ( coord_type, max_x, max_y );
 
+    max_x -= 1;
+    max_y -= 1;
+
     clip.add ( 0, min_x, min_y );
     clip.add ( 1, max_x, min_y );
     clip.add ( 2, max_x, max_y );
@@ -143,9 +181,14 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     
     gpc_polygon_clip ( GPC_INT, &subject.data, &clip.data, &result );
 
-    if (result.num_contours > 2) {
+    if (result.num_contours > 2) {  
         stop_cnt++;
     }
+
+    #if 1
+        _validate_result ( rect, result );
+    #endif
+
 
     #if 0
     __format ( subject.data, clip.data, result );

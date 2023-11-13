@@ -76,15 +76,15 @@ void CMapPainter::OnPaint ( void ) {
     bitmap.CreateCompatibleBitmap(&dc, m_client_rect.Width(), m_client_rect.Height());
     CBitmap* pOldBitmap = dcMem.SelectObject ( &bitmap );
 
-    geo_coord_t   pos;
+    map_pos_t     pos;
     geo_pixel_t   px;
     COLORREF      outClr = 0;
 
     for (y = 0; y < m_client_rect.Height(); y++) {
         for (x = 0; x < m_client_rect.Width(); x++) {
 
-            pos.map.x = ( x );
-            pos.map.y = ( y );
+            pos.x = ( x );
+            pos.y = ( y );
 
             g_geo_processor.get_pix( pos, px );
             outClr = RGB ( px.getR(), px.getG(), px.getB() );

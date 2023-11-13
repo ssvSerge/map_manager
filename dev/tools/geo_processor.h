@@ -141,8 +141,8 @@ class geo_processor_t {
     public:
         void close ( void );
         void set_names ( const char* const idx_file_name, const char* const map_file_name );
-        void get_pix ( const geo_coord_t& pos, geo_pixel_t& px ) const;
-        void set_pix ( const geo_coord_t& pos, const geo_pixel_t& px );
+        void get_pix ( const map_pos_t& pos, geo_pixel_t& px ) const;
+        void set_pix ( const map_pos_t& pos, const geo_pixel_t& px );
         void load_idx ( void );
         void process_map ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, const double angle );
         void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
@@ -211,10 +211,9 @@ class geo_processor_t {
 
         geo_coord_t             m_center;               // 
         double                  m_scale;                // текущее увеличение карты.
-        geo_rect_t              m_wnd;                  // Окно вывода с координатами "0, 0".
-        geo_rect_t              m_wnd_map;              // Окно, приведённое к GPS координатам.
-        geo_rect_t              m_wnd_map_ext;          // Окно, расширенное для вращения.
-        geo_rect_t              m_load_rect;            // Регион для загрузки.
+        geo_rect_t              m_view_out;             // Окно вывода с координатами "0, 0".
+        geo_rect_t              m_view_geo;             // Окно, приведённое к GPS координатам.
+        geo_rect_t              m_view_load;            // Регион для загрузки.
 
         double                  m_geo_step_x;           // GPS Шаг по горизонтали на пиксел.
         double                  m_geo_step_y;           // GPS Шаг по вертикали на пиксел.
