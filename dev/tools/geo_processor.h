@@ -182,6 +182,14 @@ class geo_processor_t {
         void _calc_geo_rect ( const geo_coord_t& center, const geo_rect_t& wnd );
         void _process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const;
         bool _pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) const;
+        void _generate_paint_pos(geo_line_t& poly_line) const;
+        void _get_view_rect ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, geo_rect_t& view_wnd ) const;
+        bool _is_view_rect_valid ( const geo_rect_t& view_rect ) const;
+        bool _is_angle_valid ( const double angle ) const;
+        bool _is_scale_valid ( const double scale ) const;
+        void _extend_view_rect ( const geo_coord_t& center, geo_rect_t& view_rect ) const;
+        bool _is_pt_on_segment ( const geo_coord_t& begin, const geo_coord_t& end, const geo_coord_t& pt ) const;
+        bool _pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& point ) const;
 
         // void _map_idx ( const geo_rect_t rect,  const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx );
         // void _calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd );
@@ -189,16 +197,10 @@ class geo_processor_t {
         // void _reset_map ( void );
         // void _map_coords ( const v_geo_coord_t& geo_path, v_paint_coord_t& win_path );
         // void _win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const;
-        void _generate_paint_pos ( geo_line_t& poly_line ) const;
         // bool _is_wnd_invalid ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale ) const;
-        void _get_view_rect ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, geo_rect_t& view_wnd ) const;
-        bool _is_view_rect_valid ( const geo_rect_t& view_rect ) const;
-        bool _is_angle_valid ( const double angle ) const;
-        bool _is_scale_valid ( const double scale ) const;
-        void _extend_view_rect ( const geo_coord_t& center, geo_rect_t& view_rect ) const;
+
+        
         // void _geo_rect_to_view ( const geo_coord_t& center, const geo_rect_t& screen_wnd, geo_rect_t& paint_wnd );
-        // bool _is_pt_on_segment ( const paint_coord_t begin, const paint_coord_t end, const paint_coord_t pt ) const;
-        // bool _pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt) const;
         // void _map_pt_pos ( const geo_coord_t& point, const geo_rect_t& square, const pos_type_t src, pt_code_pos_t& code ) const;
         // bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, const pos_type_t src, geo_coord_t& point) const;
         // bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, const pos_type_t src, geo_coord_t& point ) const;

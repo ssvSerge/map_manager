@@ -687,134 +687,134 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
         //                          A    R    G    B    //
         //----------------------------------------------//
         case OBJID_TYPE_FOREST:       
-            GEO_RGB ( fill_color,   255, 173, 209, 158 );
-            GEO_RGB ( border_color, 255, 163, 199, 148 );
+            GEO_RGB ( fill_color,   255, 173, 209, 158 )
+            GEO_RGB ( border_color, 255, 163, 199, 148 )
             break;
 
         case OBJID_TYPE_GRASS:        
-            GEO_RGB ( fill_color,   255, 205, 235, 176 );
-            GEO_RGB ( border_color, 255, 185, 215, 156 );
+            GEO_RGB ( fill_color,   255, 205, 235, 176 )
+            GEO_RGB ( border_color, 255, 185, 215, 156 )
             break;
 
         case OBJID_TYPE_ASPHALT:      
-            GEO_RGB ( fill_color,   255, 174, 174, 179 );
-            GEO_RGB ( border_color, 255, 221, 221, 232 );
+            GEO_RGB ( fill_color,   255, 174, 174, 179 )
+            GEO_RGB ( border_color, 255, 201, 201, 202 )
             break;
 
         case OBJID_TYPE_BUILDING:     
-            GEO_RGB ( fill_color,   255, 217, 208, 201 );
-            GEO_RGB ( border_color, 255, 195, 154, 100 );
+            GEO_RGB ( fill_color,   255, 217, 208, 201 )
+            GEO_RGB ( border_color, 255, 195, 154, 100 )
             break;
 
         case OBJID_TYPE_WATER:        
-            GEO_RGB ( fill_color,   255, 100, 100, 200 );
-            GEO_RGB ( border_color, 255,   0,   0,   0 );   
+            GEO_RGB ( fill_color,   255, 100, 100, 200 )
+            GEO_RGB ( border_color, 255,   0,   0,   0 )   
             break;
 
         case OBJID_TYPE_GENERAL:      
-            GEO_RGB ( fill_color,   255,  80, 120,  80 );
-            GEO_RGB ( border_color, 255, 150, 150, 250 );
+            GEO_RGB ( fill_color,   255,  80, 120,  80 )
+            GEO_RGB ( border_color, 255, 150, 150, 250 )
             break;
 
         case OBJID_TYPE_MOUNTAIN:     
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_STONE:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_SAND:         
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_UNDEFINED:    
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_FOOTWAY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_ROAD:         
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_SECONDARY:    
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_TRUNK:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_MOTORWAY:     
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_PRIMARY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_TERTIARY:     
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_RAILWAY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_RIVER:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_BRIDGE:       
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_TYPE_TUNNEL:       
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_RECORD_AREA:       
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_RECORD_BUILDING:   
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
         case OBJID_RECORD_HIGHWAY:    
         case OBJID_TYPE_STREET:
         case OBJID_TYPE_SERVICE:
         case OBJID_TYPE_RESIDENTIAL:
-            GEO_RGB ( fill_color,   255, 174, 174, 179 );
-            GEO_RGB ( border_color, 255, 221, 221, 232 );
+            GEO_RGB ( fill_color,   255, 174, 174, 179 )
+            GEO_RGB ( border_color, 255, 221, 221, 232 )
             break;
 
         case OBJID_TYPE_TRACK:
             break;
 
         default:
-            GEO_RGB ( fill_color, 255, 255, 255, 255 );
-            GEO_RGB ( border_color, 0,   0,   0,   0 );
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
     }
 
@@ -1044,7 +1044,7 @@ void geo_processor_t::_process_area ( geo_entry_t& geo_line, const bool force_cl
 
     for ( size_t i = 0; i < geo_line.m_lines.size(); i++ ) {
         _poly_area ( geo_line.m_lines[i], border_color );
-        // _fill_poly ( geo_line.m_lines[i], border_color, fill_color, force_clr, mark_up );
+        _fill_poly ( geo_line.m_lines[i], border_color, fill_color, force_clr, mark_up );
     }
 }
 
@@ -1074,7 +1074,6 @@ void geo_processor_t::_poly_area ( const geo_line_t& poly_line, const geo_pixel_
 
 void geo_processor_t::_fill_poly ( geo_line_t& poly_line, const geo_pixel_t bk_clr, const geo_pixel_t fill_clr, const bool force_clr, const bool mark_up ) {
 
-    #if 0
     if ( poly_line.m_fill_pos.size() == 0 ) {
         _generate_paint_pos ( poly_line );
     }
@@ -1085,10 +1084,9 @@ void geo_processor_t::_fill_poly ( geo_line_t& poly_line, const geo_pixel_t bk_c
 
     if ( mark_up ) {
         for ( auto paint_pt = poly_line.m_fill_pos.cbegin(); paint_pt != poly_line.m_fill_pos.cend(); paint_pt++ ) {
-            set_pix ( *paint_pt, geo_pixel_t(255, 0, 0) );
+            set_pix ( paint_pt->ang, geo_pixel_t(255, 0, 0) );
         }
     }
-    #endif
 }
 
 void geo_processor_t::_fill_poly ( const geo_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk ) {
@@ -1288,13 +1286,15 @@ void geo_processor_t::_process_pt_list ( const geo_coord_t base, const v_paint_o
 
 void geo_processor_t::_generate_paint_pos ( geo_line_t& poly_line ) const {
 
-    (void) (poly_line);
+    size_t i1;
+    size_t i2;
+    size_t i3;
 
-    #if 0
-    size_t i1, i2, i3;
-    paint_coord_t med;
+    geo_coord_t med;
 
-    v_paint_coord_t test;
+    const v_geo_coord_t& region = poly_line.m_coords;
+    v_geo_coord_t& coords_list  = poly_line.m_fill_pos;
+
 
     coords_list.clear();
 
@@ -1308,26 +1308,23 @@ void geo_processor_t::_generate_paint_pos ( geo_line_t& poly_line ) const {
         i2 = i - 1;
         i3 = i - 0;
 
-        med.x = (region[i3].x + region[i1].x) / 2;
-        med.y = (region[i3].y + region[i1].y) / 2;
+        med.ang.x = ( region[i3].ang.x + region[i1].ang.x) / 2;
+        med.ang.y = ( region[i3].ang.y + region[i1].ang.y) / 2;
 
-        test.push_back(med);
-
-        if (_is_pt_on_segment(region[i1], region[i2], med)) {
+        if ( _is_pt_on_segment(region[i1], region[i2], med) ) {
             continue;
         }
 
-        if (_is_pt_on_segment(region[i2], region[i3], med)) {
+        if ( _is_pt_on_segment(region[i2], region[i3], med) ) {
             continue;
         }
 
-        if (_pt_in_poly(region, med)) {
+        if ( _pt_in_poly(region, med) ) {
             coords_list.push_back(med);
         }
 
     }
 
-    #endif
 }
 
 bool geo_processor_t::_pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) const {
@@ -1348,6 +1345,74 @@ bool geo_processor_t::_pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) 
 
     return true;
 }
+
+bool geo_processor_t::_is_pt_on_segment (const geo_coord_t& begin, const geo_coord_t& end, const geo_coord_t& pt ) const {
+
+    const map_pos_t& segmentStart = begin.ang;
+    const map_pos_t& segmentEnd   = end.ang;
+    const map_pos_t& point        = pt.ang;
+
+    const double p1 = (point.y - segmentStart.y);
+    const double p2 = (segmentEnd.x - segmentStart.x);
+    const double p3 = (point.x - segmentStart.x);
+    const double p4 = (segmentEnd.y - segmentStart.y);
+
+    const double crossProduct = p1 * p2 - p3 * p4;
+
+    if ( crossProduct != 0 ) {
+        return false;
+    }
+
+    const double dotProduct = p3 * p2 + p1 * p4;
+    if (dotProduct < 0) {
+        return false;
+    }
+
+    const double squaredLength = p2 * p2 + p4 * p4;
+    if ( dotProduct > squaredLength ) {
+        return false;
+    }
+
+    return true;
+}
+
+bool geo_processor_t::_pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& point ) const {
+
+    size_t   j = polygon.size() - 2;
+    bool     oddNodes = false;
+    double   a;
+    double   b;
+    double   c;
+    double   d;
+
+    const map_pos_t& pt = point.ang;
+
+    for (size_t i = 0; i < polygon.size() - 1; i++ ) {
+
+        const map_pos_t& pi = polygon[i].ang;
+        const map_pos_t& pj = polygon[j].ang;
+
+        if ( pi.y < pt.y && pj.y >= pt.y || pj.y < pt.y && pi.y >= pt.y ) {
+
+            a = pt.y - pi.y;
+            b = pj.y - pi.y;
+            c = pj.x - pi.x;
+            d = a / b * c;
+            d += pi.x;
+
+            if (d < pt.x) {
+                oddNodes = !oddNodes;
+            }
+
+        }
+
+        j = i;
+
+    }
+
+    return oddNodes;
+}
+
 
 #if 0
 
@@ -1572,57 +1637,6 @@ void geo_processor_t::_generate_paint_pos ( const v_paint_coord_t& region, v_pai
         }
 
     }
-}
-
-bool geo_processor_t::_is_pt_on_segment ( const paint_coord_t segmentStart, const paint_coord_t segmentEnd, const paint_coord_t point ) const {
-
-    const double p1 = ( point.y       -  segmentStart.y );
-    const double p2 = ( segmentEnd.x  -  segmentStart.x );
-    const double p3 = ( point.x       -  segmentStart.x );
-    const double p4 = ( segmentEnd.y  -  segmentStart.y );
-
-    const double crossProduct = p1 * p2 - p3 * p4;
-    if ( crossProduct != 0 ) {
-        return false;
-    }
-
-    const double dotProduct = p3 * p2 + p1 * p4;
-    if ( dotProduct < 0) {
-        return false;
-    }
-
-    const double squaredLength = p2 * p2 + p4 * p4;
-    if ( dotProduct > squaredLength ) {
-        return false;
-    }
-
-    return true;
-}
-
-bool geo_processor_t::_pt_in_poly ( const v_paint_coord_t& polygon, const paint_coord_t& pt ) const {
-
-    size_t   i;
-    size_t   j = polygon.size() - 2;
-    bool     oddNodes = false;
-    double   a, b, c, d;
-
-    for (i = 0; i < polygon.size() - 1; i++) {
-        if (polygon[i].y < pt.y && polygon[j].y >= pt.y || polygon[j].y < pt.y && polygon[i].y >= pt.y) {
-
-            a  = pt.y         - polygon[i].y;
-            b  = polygon[j].y - polygon[i].y;
-            c  = polygon[j].x - polygon[i].x;
-            d  = (a) / (b) * (c);
-            d += polygon[i].x;
-
-            if ( d < pt.x) {
-                oddNodes = !oddNodes;
-            }
-        }
-        j = i;
-    }
-
-    return oddNodes;
 }
 
 void geo_processor_t::_clip_poly_line ( const v_geo_coord_t& polyline, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const {
