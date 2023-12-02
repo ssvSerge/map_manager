@@ -59,6 +59,16 @@ class map_pos_t {
             this->y = _src.y;
         }
 
+        bool operator== ( const map_pos_t& _src ) const {
+            if (_src.x != x) {
+                return false;
+            }
+            if (_src.y != y) {
+                return false;
+            }
+            return true;
+        }
+
     public:
         int32_t x;
         int32_t y;
@@ -67,9 +77,9 @@ class map_pos_t {
 class geo_point_t {
 
     public:
-        geo_pos_t   geo;
-        map_pos_t   map;
         map_pos_t   ang;
+        map_pos_t   map;
+        geo_pos_t   geo;
 
     private:
         pos_type_t  src;
