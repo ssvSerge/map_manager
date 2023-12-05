@@ -8,26 +8,33 @@
 #include <geo_processor.h>
 #include <geo_projection.h>
 
-//---------------------------------------------------------------------------//
 
-#define GEO_RGB(var,in_a,in_r,in_g,in_b)     { var.setR(in_r); var.setG(in_g); var.setB(in_b); }
-#define GEO_INSIDE          (0) // 0000
-#define GEO_LEFT            (1) // 0001
-#define GEO_RIGHT           (2) // 0010
-#define GEO_BOTTOM          (4) // 0100
-#define GEO_TOP             (8) // 1000
+#define GEO_RGB(dst,_a,_r,_g,_b)   { dst.a=_a; dst.r=_r; dst.g=_g; dst.b=_b; }
+
+
+typedef agg::renderer_base<pixfmt> ren_base;
+
 
 //---------------------------------------------------------------------------//
-
-static const geo_pixel_t   g_color_none  (242, 239, 233);
-
-//---------------------------------------------------------------------------//
-
-//---------------------------------------------------------------------------//
-
 
 geo_processor_t::geo_processor_t() {
     close();
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::close ( void ) {
+
+    m_view_angle_step = 0.5;
+    m_scale_step = 0.1;
+
+    m_x_step = 0;
+    m_y_step = 0;
+    m_view_angle = 0;
+
+    m_view_out.clear();
+    m_view_geo.clear();
+    // m_video_buffer.clear();
 }
 
 //---------------------------------------------------------------------------//
@@ -37,16 +44,56 @@ void geo_processor_t::set_names ( const char* const idx_file_name, const char* c
     m_map_file_name = map_file_name;
     m_idx_file_name = idx_file_name;
 
-    m_map_file.open ( m_map_file_name, std::ios_base::binary );
+    m_map_file.open(m_map_file_name, std::ios_base::binary);
 }
+
+//---------------------------------------------------------------------------//
 
 void geo_processor_t::load_idx ( void ) {
 
     _load_idx ( m_idx_list );
-
-    // geo_rect_t  map_rect;
-    // _find_idx_rect ( m_idx_list, map_rect, m_x_step, m_y_step );
 }
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::get_pix ( const map_pos_t& pos, geo_pixel_t& px ) const {
+
+    bool is_error = false;
+
+    px.clear();
+
+    if ( pos.x < 0 ) {
+        is_error = true;
+    } else
+    if ( pos.y < 0 ) {
+        is_error = true;
+    } else
+    if ( pos.x >= m_view_out.max.map.x ) {
+        is_error = true;
+    } else
+    if ( pos.y >= m_view_out.max.map.y ) {
+        is_error = true;
+    }
+
+    if ( !is_error ) {
+
+        // int32_t offset;
+        // 
+        // assert ( m_view_out.min.map.x == 0 );
+        // assert ( m_view_out.min.map.y == 0 );
+        // 
+        // offset  = pos.y * m_view_out.max.map.x;
+        // offset += pos.x;
+        // 
+        // geo_pixel_int_t tmp;
+        // tmp = m_video_buffer[offset];
+        // 
+        // _px_conv ( tmp, px );
+    }
+
+}
+
+//---------------------------------------------------------------------------//
 
 void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord_t& center, const double scale, const double angle ) {
 
@@ -98,11 +145,7 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
     }
 
     if ( angle_update ) {
-        _set_angle ( angle );
-        _rotate_map_by_angle ();
-        _trim_rotated_map_by_rect ();
         map_redraw = true;
-
     }
 
     if ( map_redraw ) {
@@ -112,73 +155,95 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
     }
 }
 
-void geo_processor_t::get_pix ( const map_pos_t& pos, geo_pixel_t& px ) const {
+//---------------------------------------------------------------------------//
 
-    bool is_error = false;
+void geo_processor_t::_load_idx ( l_geo_idx_rec_t& idx_list ) {
 
-    px.clear();
+    geo_parser_t    parser;
+    geo_idx_rec_t   geo_idx;
+    geo_offset_t    file_offset = 0;
+    char            ch;
+    bool            eoc;
+    bool            eor;
 
-    if ( pos.x < 0 ) {
-        is_error = true;
-    } else
-    if ( pos.y < 0 ) {
-        is_error = true;
-    } else
-    if ( pos.x >= m_view_out.max.map.x ) {
-        is_error = true;
-    } else
-    if ( pos.y >= m_view_out.max.map.y ) {
-        is_error = true;
+    idx_list.clear();
+
+    m_idx_file.open(m_idx_file_name, std::ios_base::binary);
+
+    while (m_idx_file.read(&ch, 1)) {
+
+        parser.load_param(ch, eoc, file_offset);
+        file_offset++;
+
+        if (!eoc) {
+            continue;
+        }
+
+        parser.process_idx(geo_idx, eor);
+
+        if (!eor) {
+            continue;
+        }
+
+        idx_list.push_back(geo_idx);
     }
 
-    if ( !is_error ) {
+    m_idx_file.close();
+}
 
-        int32_t offset;
+//---------------------------------------------------------------------------//
 
-        assert ( m_view_out.min.map.x == 0 );
-        assert ( m_view_out.min.map.y == 0 );
+bool geo_processor_t::_is_view_rect_valid ( const geo_rect_t& view_rect ) const {
 
-        offset  = pos.y * m_view_out.max.map.x;
-        offset += pos.x;
-
-        geo_pixel_int_t tmp;
-        tmp = m_video_buffer[offset];
-
-        _px_conv ( tmp, px );
+    if ( view_rect.min.map.x <= m_view_geo.min.map.x ) {
+        return false;
+    }
+    if ( view_rect.max.map.x >= m_view_geo.max.map.x ) {
+        return false;
     }
 
+    if ( view_rect.min.map.y <= m_view_geo.min.map.y ) {
+        return false;
+    }
+    if ( view_rect.max.map.y >= m_view_geo.max.map.y ) {
+        return false;
+    }
+
+    return true;
 }
 
-void geo_processor_t::set_pix ( const map_pos_t& pos, const geo_pixel_t& px ) {
+//---------------------------------------------------------------------------//
 
-    assert ( pos.x >= 0 );
-    assert ( pos.x < m_view_out.max.map.x );
-    assert ( pos.y >= 0 );
-    assert ( pos.y < m_view_out.max.map.y );
+bool geo_processor_t::_is_scale_valid ( const double scale ) const {
 
-    geo_pixel_int_t   tmp;
-    _px_conv(px, tmp);
+    double delta = scale - m_scale;
 
-    int32_t offset;
+    if ( delta < 0 ) {
+        delta = -delta;
+    }
 
-    offset  = pos.y * m_view_out.max.map.x;
-    offset += pos.x;
+    if ( m_scale_step < delta ) {
+        return false;
+    }
 
-    m_video_buffer[offset] = tmp;
+    return true;
 }
 
-void geo_processor_t::close ( void ) {
+//---------------------------------------------------------------------------//
 
-    m_view_angle_step   = 0.5; 
-    m_scale_step        = 0.1;
+bool geo_processor_t::_is_angle_valid ( const double angle ) const {
 
-    m_x_step     = 0;
-    m_y_step     = 0;    
-    m_view_angle = 0;  
+    double delta = angle - m_view_angle;
 
-    m_view_out.clear();
-    m_view_geo.clear();
-    m_video_buffer.clear();
+    if ( delta < 0 ) {
+        delta = -delta;
+    }
+
+    if ( m_view_angle_step < delta ) {
+        return false;
+    }
+
+    return true;
 }
 
 //---------------------------------------------------------------------------//
@@ -199,6 +264,125 @@ void geo_processor_t::_extend_rect ( const geo_coord_t& center, const geo_rect_t
     dst_rect.max.map.y = center.map.y + shift_ver;
     dst_rect.max.reset_angle();
 }
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache ) {
+
+    geo_entry_t     new_entry;
+    bool            already_known;
+
+    for ( auto map_entry_it = map_cache.begin(); map_entry_it != map_cache.end(); map_entry_it++ ) {
+        map_entry_it->m_to_display = false;
+        map_entry_it->m_miss_cnt++;
+    }
+
+    for ( auto id = map_entries.cbegin(); id != map_entries.cend(); id++ ) {
+
+        already_known = false;
+
+        for ( auto idx_it = map_cache.begin(); idx_it != map_cache.end(); idx_it++ ) {
+            if ( idx_it->m_data_off == *id ) {
+                already_known = true;
+                idx_it->m_to_display = true;
+                idx_it->m_miss_cnt = 0;
+                break;
+            }
+        }
+
+        if ( !already_known ) {
+            new_entry.clear();
+            _load_map_entry(*id, new_entry);
+            new_entry.m_to_display = true;
+            new_entry.m_miss_cnt   = 0;
+            map_cache.push_back(new_entry);
+        }
+    }
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_entry_t& map_entry ) {
+
+    geo_parser_t parser;
+
+    char    ch = 0;
+    bool    eoc = false;
+    bool    eor = false;
+
+    m_map_file.seekg ( map_entry_offset, std::fstream::beg );
+
+    while (m_map_file.read(&ch, 1)) {
+
+        parser.load_param(ch, eoc, 0);
+        if (!eoc) {
+            continue;
+        }
+
+        parser.process_map(map_entry, eor);
+        if (!eor) {
+            continue;
+        }
+
+        break;
+    }
+
+    map_entry.m_data_off = map_entry_offset;
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_filter_idx_by_rect ( const geo_rect_t& base_rect, const l_geo_idx_rec_t& rect_list, v_geo_offset_t& out_list ) const {
+
+    std::set<geo_offset_t> nodes_list;
+    size_t  insert_cnt  = 0;
+    size_t  objects_cnt = 0;
+
+    out_list.clear();
+
+    for ( auto it = rect_list.cbegin(); it != rect_list.cend(); it++ ) {
+        if ( _is_overlapped(base_rect, POS_TYPE_MAP, it->m_rect) ) {
+            for (auto ref = it->m_list_off.cbegin(); ref != it->m_list_off.cend(); ref++ ) {
+                insert_cnt++;
+                nodes_list.insert ( *ref );
+            }
+        }
+    }
+
+    objects_cnt = nodes_list.size();
+
+    out_list.reserve ( objects_cnt );
+    for ( auto it = nodes_list.cbegin(); it != nodes_list.cend(); it++ ) {
+        out_list.push_back ( *it );
+    }
+                                            
+    return;
+}
+
+//---------------------------------------------------------------------------//
+
+bool geo_processor_t::_is_overlapped(const geo_rect_t& window, const pos_type_t pos_type, const geo_rect_t& slice) const {
+    return window.is_overlapped(pos_type, slice);
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_alloc_img_buffer(const geo_rect_t& geo_rect) {
+
+    assert(geo_rect.min.map.x == 0);
+    assert(geo_rect.min.map.y == 0);
+
+    // size_t buffer_size = geo_rect.max.map.x * geo_rect.max.map.y;
+    // 
+    // if (buffer_size == m_video_buffer.size()) {
+    //     return;
+    // }
+    // 
+    // m_video_buffer.resize(buffer_size);
+    // _fill_solid(g_color_none);
+}
+
+//---------------------------------------------------------------------------//
 
 void geo_processor_t::_process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const {
 
@@ -232,6 +416,307 @@ void geo_processor_t::_process_rects ( const geo_coord_t& center, const double s
     map_rect_ext.max.map.y = center.map.y + rect_offset;
     map_rect_ext.max.reset_angle();
 }
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_draw_area ( void ) {
+
+    unsigned int            new_path_id;
+    agg_path_attributes     area_attribs;
+    agg::path_commands_e    cmd;
+    size_t                  last_id;
+
+    for ( auto it_src = m_map_cache.cbegin(); it_src != m_map_cache.cend(); it_src++ ) {
+
+        if ( ! it_src->m_to_display ) {
+            continue;
+        }
+
+        if ( it_src->m_record_type != OBJID_RECORD_AREA ) {
+            continue;
+        }
+
+        _map_color ( it_src->m_default_type, area_attribs.stroke_color, area_attribs.fill_color );
+        area_attribs.stroke_width = 1;
+
+        for ( size_t line_id = 0; line_id < it_src->m_lines.size(); line_id++ ) {
+
+            new_path_id = m_agg_paths.start_new_path();
+            area_attribs.idx = new_path_id;
+
+            m_agg_paths_attribs.push_back(area_attribs);
+
+            last_id = it_src->m_lines[line_id].m_coords.size() - 2; // !!! 2 !!!
+
+            for ( size_t coord_id = 0; coord_id <= last_id; coord_id++ ) {
+
+                if ( coord_id == 0 ) {
+                    cmd = agg::path_cmd_move_to;
+                } else 
+                if ( coord_id == last_id ) {
+                    cmd = static_cast<agg::path_commands_e> ( agg::path_cmd_end_poly + agg::path_flags_close );
+                } else {
+                    cmd = agg::path_cmd_line_to;
+                }
+
+                m_agg_paths.m_vertices.add_vertex ( 
+                    it_src->m_lines[line_id].m_coords[coord_id].map.x,
+                    it_src->m_lines[line_id].m_coords[coord_id].map.y,
+                    cmd
+                );
+
+            }
+        }
+
+    }
+
+    typedef agg::renderer_base<pixfmt> ren_base;
+
+    pixfmt                  pixf( m_rbuf_window );
+    ren_base                rbase(pixf);
+    agg_trans_roundoff      roundoff;
+    agg::trans_affine       mtx;
+    agg::filling_rule_e     pflag;
+    double                  angle = 0;
+
+    m_dx = 0;
+    m_dy = 0;
+
+    m_rasterizer.gamma(agg::gamma_none());
+    rbase.clear(agg::srgba8(255, 255, 255));
+    m_rasterizer.filling_rule(agg::fill_non_zero);
+
+    mtx.reset();
+    mtx *= agg::trans_affine_rotation ( angle * agg::pi / 180.0);
+    mtx *= agg::trans_affine_translation ( m_dx / 2, m_dy / 2 );
+    mtx *= agg::trans_affine_scaling(m_rbuf_window.width() / m_dx * 2, m_rbuf_window.height() / m_dy * 2);
+
+    agg::conv_transform<agg::path_storage> fill(m_agg_paths, mtx);
+    agg::conv_transform <agg::conv_transform<agg::path_storage>, agg_trans_roundoff> fill_roundoff(fill, roundoff);
+    agg::conv_stroke <agg::conv_transform<agg::path_storage>>  stroke(fill);
+    agg::conv_stroke<agg::conv_transform<agg::conv_transform<agg::path_storage>, agg_trans_roundoff>> stroke_roundoff(fill_roundoff);
+
+    agg::scanline_p8 scanline;
+
+    pflag = agg::fill_non_zero;
+    for ( size_t i = 0; i < m_agg_paths_attribs.size(); i++) {
+
+        m_rasterizer.filling_rule ( pflag );
+        m_rasterizer.add_path ( fill, m_agg_paths_attribs[i].idx );
+
+        agg::render_scanlines_aa_solid(m_rasterizer, scanline, rbase, m_agg_paths_attribs[i].fill_color );
+
+        if ( m_agg_paths_attribs[i].stroke_width > 0.001 ) {
+            stroke.width ( m_agg_paths_attribs[i].stroke_width * mtx.scale() );
+            stroke_roundoff.width ( m_agg_paths_attribs[i].stroke_width * mtx.scale());
+            agg::render_scanlines_aa_solid ( m_rasterizer, scanline, rbase, m_agg_paths_attribs[i].stroke_color );
+        }
+
+    }
+
+    return;
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_draw_building ( void ) {
+
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_draw_roads ( void ) {
+
+}
+
+//---------------------------------------------------------------------------//
+
+void geo_processor_t::_map_color ( const obj_type_t& obj_type, agg::srgba8& border_color, agg::srgba8& fill_color ) const {
+
+    switch ( obj_type ) {
+
+        //----------------------------------------------//
+        //                          A    R    G    B    //
+        //----------------------------------------------//
+        case OBJID_TYPE_FOREST:       
+            GEO_RGB ( fill_color,   255, 173, 209, 158 )
+            GEO_RGB ( border_color, 255, 163, 199, 148 )
+            break;
+
+        case OBJID_TYPE_GRASS:        
+            GEO_RGB ( fill_color,   255, 205, 235, 176 )
+            GEO_RGB ( border_color, 255, 185, 215, 156 )
+            break;
+
+        case OBJID_TYPE_ASPHALT:      
+            GEO_RGB ( fill_color,   255, 174, 174, 179 )
+            GEO_RGB ( border_color, 255, 201, 201, 202 )
+            break;
+
+        case OBJID_TYPE_BUILDING:     
+            GEO_RGB ( fill_color,   255, 217, 208, 201 )
+            GEO_RGB ( border_color, 255, 195, 154, 100 )
+            break;
+
+        case OBJID_TYPE_WATER:        
+            GEO_RGB ( fill_color,   255, 100, 100, 200 )
+            GEO_RGB ( border_color, 255,   0,   0,   0 )   
+            break;
+
+        case OBJID_TYPE_GENERAL:      
+            GEO_RGB ( fill_color,   255,  80, 120,  80 )
+            GEO_RGB ( border_color, 255, 150, 150, 250 )
+            break;
+
+        case OBJID_TYPE_MOUNTAIN:     
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_STONE:        
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_SAND:         
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_UNDEFINED:    
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_FOOTWAY:      
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_ROAD:         
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_SECONDARY:    
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_TRUNK:        
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_MOTORWAY:     
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_PRIMARY:      
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_TERTIARY:     
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_RAILWAY:      
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_RIVER:        
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_BRIDGE:       
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_TYPE_TUNNEL:       
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_RECORD_AREA:       
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_RECORD_BUILDING:   
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+
+        case OBJID_RECORD_HIGHWAY:    
+        case OBJID_TYPE_STREET:
+        case OBJID_TYPE_SERVICE:
+        case OBJID_TYPE_RESIDENTIAL:
+            GEO_RGB ( fill_color,   255, 174, 174, 179 )
+            GEO_RGB ( border_color, 255, 221, 221, 232 )
+            break;
+
+        case OBJID_TYPE_TRACK:
+            break;
+
+        default:
+            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( border_color, 0,   0,   0,   0 )
+            break;
+    }
+
+}
+
+
+
+
+#if 0
+
+//---------------------------------------------------------------------------//
+
+#define GEO_RGB(var,in_a,in_r,in_g,in_b)     { var.setR(in_r); var.setG(in_g); var.setB(in_b); }
+#define GEO_INSIDE          (0) // 0000
+#define GEO_LEFT            (1) // 0001
+#define GEO_RIGHT           (2) // 0010
+#define GEO_BOTTOM          (4) // 0100
+#define GEO_TOP             (8) // 1000
+
+//---------------------------------------------------------------------------//
+
+static const geo_pixel_t   g_color_none  (242, 239, 233);
+
+//---------------------------------------------------------------------------//
+
+
+
+
+//---------------------------------------------------------------------------//
+
+
+void geo_processor_t::set_pix ( const map_pos_t& pos, const geo_pixel_t& px ) {
+
+    assert ( pos.x >= 0 );
+    assert ( pos.x < m_view_out.max.map.x );
+    assert ( pos.y >= 0 );
+    assert ( pos.y < m_view_out.max.map.y );
+
+    geo_pixel_int_t   tmp;
+    _px_conv(px, tmp);
+
+    int32_t offset;
+
+    offset  = pos.y * m_view_out.max.map.x;
+    offset += pos.x;
+
+    m_video_buffer[offset] = tmp;
+}
+
+//---------------------------------------------------------------------------//
 
 void geo_processor_t::_find_scale_pixel ( const geo_coord_t& center, const double scale ) {
 
@@ -303,55 +788,6 @@ void geo_processor_t::_calc_geo_rect ( const geo_coord_t& center, const geo_rect
     #endif
 }
 
-bool geo_processor_t::_is_view_rect_valid ( const geo_rect_t& view_rect ) const {
-
-    if ( view_rect.min.map.x <= m_view_geo.min.map.x ) {
-        return false;
-    }
-    if ( view_rect.max.map.x >= m_view_geo.max.map.x ) {
-        return false;
-    }
-
-    if ( view_rect.min.map.y <= m_view_geo.min.map.y ) {
-        return false;
-    }
-    if ( view_rect.max.map.y >= m_view_geo.max.map.y ) {
-        return false;
-    }
-
-    return true;
-}
-
-bool geo_processor_t::_is_angle_valid ( const double angle ) const {
-
-    double delta = angle - m_view_angle;
-
-    if ( delta < 0 ) {
-        delta = -delta;
-    }
-
-    if ( m_view_angle_step < delta ) {
-        return false;
-    }
-
-    return true;
-}
-
-bool geo_processor_t::_is_scale_valid ( const double scale ) const {
-
-    double delta = scale - m_scale;
-
-    if ( delta < 0 ) {
-        delta = -delta;
-    }
-
-    if ( m_scale_step < delta ) {
-        return false;
-    }
-
-    return true;
-}
-
 void geo_processor_t::_get_view_rect ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, geo_rect_t& view_wnd ) const {
 
     static const auto sqrt_scale = std::sqrt(2) / 2;
@@ -388,100 +824,6 @@ void geo_processor_t::_extend_view_rect ( const geo_coord_t& center, geo_rect_t&
     view_rect.min.map.y = static_cast<int32_t> ( 0.5 + center.map.y - y_ext );
     view_rect.max.map.x = static_cast<int32_t> ( 0.5 + center.map.x + x_ext );
     view_rect.max.map.y = static_cast<int32_t> ( 0.5 + center.map.y + y_ext );
-}
-
-void geo_processor_t::_load_idx ( l_geo_idx_rec_t& idx_list ) {
-
-    geo_parser_t    parser;
-    geo_idx_rec_t   geo_idx;
-    geo_offset_t    file_offset = 0;
-    char            ch;
-    bool            eoc;
-    bool            eor;
-
-    idx_list.clear();
-
-    m_idx_file.open ( m_idx_file_name, std::ios_base::binary );
-
-    while ( m_idx_file.read(&ch, 1) ) {
-
-        parser.load_param(ch, eoc, file_offset);
-        file_offset++;
-
-        if ( !eoc ) {
-            continue;
-        }
-
-        parser.process_idx ( geo_idx, eor );
-
-        if ( !eor ) {
-            continue;
-        }
-
-        idx_list.push_back(geo_idx);
-    }
-
-    m_idx_file.close();
-}
-
-void geo_processor_t::_filter_idx_by_rect ( const geo_rect_t& base_rect, const l_geo_idx_rec_t& rect_list, v_geo_offset_t& out_list ) const {
-
-    std::set<geo_offset_t> nodes_list;
-    size_t  insert_cnt  = 0;
-    size_t  objects_cnt = 0;
-
-    out_list.clear();
-
-    for ( auto it = rect_list.cbegin(); it != rect_list.cend(); it++ ) {
-        if ( _is_overlapped(base_rect, POS_TYPE_MAP, it->m_rect) ) {
-            for (auto ref = it->m_list_off.cbegin(); ref != it->m_list_off.cend(); ref++ ) {
-                insert_cnt++;
-                nodes_list.insert ( *ref );
-            }
-        }
-    }
-
-    objects_cnt = nodes_list.size();
-
-    out_list.reserve ( objects_cnt );
-    for ( auto it = nodes_list.cbegin(); it != nodes_list.cend(); it++ ) {
-        out_list.push_back ( *it );
-    }
-                                            
-    return;
-}
-
-void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache ) {
-
-    geo_entry_t     new_entry;
-    bool            already_known;
-
-    for ( auto map_entry_it = map_cache.begin(); map_entry_it != map_cache.end(); map_entry_it++ ) {
-        map_entry_it->m_to_display = false;
-        map_entry_it->m_miss_cnt++;
-    }
-
-    for ( auto id = map_entries.cbegin(); id != map_entries.cend(); id++ ) {
-
-        already_known = false;
-
-        for ( auto idx_it = map_cache.begin(); idx_it != map_cache.end(); idx_it++ ) {
-            if ( idx_it->m_data_off == *id ) {
-                already_known = true;
-                idx_it->m_to_display = true;
-                idx_it->m_miss_cnt = 0;
-                break;
-            }
-        }
-
-        if ( !already_known ) {
-            new_entry.clear();
-            _load_map_entry(*id, new_entry);
-            new_entry.m_to_display = true;
-            new_entry.m_miss_cnt   = 0;
-            map_cache.push_back(new_entry);
-        }
-    }
 }
 
 void geo_processor_t::_rotate_map_by_angle ( void ) {
@@ -672,147 +1014,6 @@ void geo_processor_t::_draw_roads ( void ) {
 
 //---------------------------------------------------------------------------//
 
-void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const {
-
-    switch ( obj_type ) {
-
-        //----------------------------------------------//
-        //                          A    R    G    B    //
-        //----------------------------------------------//
-        case OBJID_TYPE_FOREST:       
-            GEO_RGB ( fill_color,   255, 173, 209, 158 )
-            GEO_RGB ( border_color, 255, 163, 199, 148 )
-            break;
-
-        case OBJID_TYPE_GRASS:        
-            GEO_RGB ( fill_color,   255, 205, 235, 176 )
-            GEO_RGB ( border_color, 255, 185, 215, 156 )
-            break;
-
-        case OBJID_TYPE_ASPHALT:      
-            GEO_RGB ( fill_color,   255, 174, 174, 179 )
-            GEO_RGB ( border_color, 255, 201, 201, 202 )
-            break;
-
-        case OBJID_TYPE_BUILDING:     
-            GEO_RGB ( fill_color,   255, 217, 208, 201 )
-            GEO_RGB ( border_color, 255, 195, 154, 100 )
-            break;
-
-        case OBJID_TYPE_WATER:        
-            GEO_RGB ( fill_color,   255, 100, 100, 200 )
-            GEO_RGB ( border_color, 255,   0,   0,   0 )   
-            break;
-
-        case OBJID_TYPE_GENERAL:      
-            GEO_RGB ( fill_color,   255,  80, 120,  80 )
-            GEO_RGB ( border_color, 255, 150, 150, 250 )
-            break;
-
-        case OBJID_TYPE_MOUNTAIN:     
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_STONE:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_SAND:         
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_UNDEFINED:    
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_FOOTWAY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_ROAD:         
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_SECONDARY:    
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_TRUNK:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_MOTORWAY:     
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_PRIMARY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_TERTIARY:     
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_RAILWAY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_RIVER:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_BRIDGE:       
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_TYPE_TUNNEL:       
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_RECORD_AREA:       
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_RECORD_BUILDING:   
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-
-        case OBJID_RECORD_HIGHWAY:    
-        case OBJID_TYPE_STREET:
-        case OBJID_TYPE_SERVICE:
-        case OBJID_TYPE_RESIDENTIAL:
-            GEO_RGB ( fill_color,   255, 174, 174, 179 )
-            GEO_RGB ( border_color, 255, 221, 221, 232 )
-            break;
-
-        case OBJID_TYPE_TRACK:
-            break;
-
-        default:
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
-            GEO_RGB ( border_color, 0,   0,   0,   0 )
-            break;
-    }
-
-}
-
 void geo_processor_t::_set_angle ( const double angle ) {
 
     constexpr double pi_rad_scale = 0.01745329251994329576923690768489;
@@ -882,10 +1083,6 @@ void geo_processor_t::_px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) 
     to.setB(tmp);
 }
 
-bool geo_processor_t::_is_overlapped ( const geo_rect_t& window, const pos_type_t pos_type, const geo_rect_t& slice ) const {
-    return window.is_overlapped ( pos_type, slice );
-}
-
 void geo_processor_t::_find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, double& x_step, double& y_step ) const {
 
     geo_pos_t   rect_geo_min;
@@ -943,34 +1140,6 @@ void geo_processor_t::_find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_
     map_rect.max.geo  =  rect_geo_max;
     map_rect.min.map  =  rect_map_min;
     map_rect.max.map  =  rect_map_max;
-}
-
-void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_entry_t& map_entry ) {
-
-    geo_parser_t parser;
-
-    char    ch = 0;
-    bool    eoc = false;
-    bool    eor = false;
-
-    m_map_file.seekg ( map_entry_offset, std::fstream::beg );
-
-    while (m_map_file.read(&ch, 1)) {
-
-        parser.load_param(ch, eoc, 0);
-        if (!eoc) {
-            continue;
-        }
-
-        parser.process_map(map_entry, eor);
-        if (!eor) {
-            continue;
-        }
-
-        break;
-    }
-
-    map_entry.m_data_off = map_entry_offset;
 }
 
 void geo_processor_t::_rotate_geo_line ( v_geo_coord_t& coords ) const {
@@ -1630,6 +1799,7 @@ bool geo_processor_t::_are_collinear ( const geo_coord_t& p1, const geo_coord_t&
     return (my_delta < min_delta);
 }
 
+#endif
 
 
 #if 0

@@ -6,6 +6,8 @@
 
 #include <gpc.h>
 
+#if 0
+
 v_geo_coord_t   g_dummy_rect;
 v_geo_coord_t   g_dummy_line_in;
 vv_geo_coord_t  g_dummy_line_out;
@@ -226,5 +228,7 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
 
     gpc_free_polygon ( &result );
 }
+
+#endif
 
 //---------------------------------------------------------------------------//

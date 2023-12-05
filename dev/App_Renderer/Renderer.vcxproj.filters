@@ -16,6 +16,9 @@
     <Filter Include="lib">
       <UniqueIdentifier>{1efe7dda-3ca0-4c05-8219-9c4b71e78072}</UniqueIdentifier>
     </Filter>
+    <Filter Include="lib\agg">
+      <UniqueIdentifier>{8e2ffecd-c754-41b6-ad6d-fe2535d4ea0a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -64,6 +67,84 @@
     </ClCompile>
     <ClCompile Include="..\tools\geo_projection.cpp">
       <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_arc.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_arrowhead.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_bezier_arc.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_bspline.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_color_rgba.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_curves.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_embedded_raster_fonts.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_gsv_text.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_image_filters.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_line_aa_basics.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_line_profile_aa.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_rounded_rect.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_sqrt_tables.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_trans_affine.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_trans_double_path.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_trans_single_path.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_trans_warp_magnifier.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_bspline.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_contour.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_dash.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_markers_term.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_smooth_poly1.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_stroke.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vpgen_clip_polygon.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vpgen_clip_polyline.cpp">
+      <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vpgen_segmentator.cpp">
+      <Filter>lib\agg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

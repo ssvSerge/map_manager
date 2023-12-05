@@ -49,13 +49,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)tools;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tools;$(SolutionDir)lib\aag\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_bin\_obj\$(ProjectName)_$(Platform)_$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)tools;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)tools;$(SolutionDir)lib\aag\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -66,7 +66,7 @@
       </PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4127; 5054; 4996; 5055; 4267; 4244</DisableSpecificWarnings>
       <BrowseInformation>true</BrowseInformation>
     </ClCompile>
     <Link>
@@ -94,7 +94,7 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4127; 5054; 4996; 5055; 4267; 4244</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -122,6 +122,32 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\lib\aag\src\agg_arc.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_arrowhead.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_bezier_arc.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_bspline.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_color_rgba.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_curves.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_embedded_raster_fonts.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_gsv_text.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_image_filters.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_line_aa_basics.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_line_profile_aa.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_rounded_rect.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_sqrt_tables.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_trans_affine.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_trans_double_path.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_trans_single_path.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_trans_warp_magnifier.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_bspline.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_contour.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_dash.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_markers_term.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_smooth_poly1.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_stroke.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vpgen_clip_polygon.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vpgen_clip_polyline.cpp" />
+    <ClCompile Include="..\lib\aag\src\agg_vpgen_segmentator.cpp" />
     <ClCompile Include="..\tools\geo_processor.cpp" />
     <ClCompile Include="..\tools\geo_processor_ex.cpp" />
     <ClCompile Include="..\tools\geo_projection.cpp" />
