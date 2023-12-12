@@ -317,7 +317,7 @@ class geo_processor_t {
         void process_map ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, const double angle );
 
 //      void set_pix ( const map_pos_t& pos, const geo_pixel_t& px );
-//      void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
+        void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
 
     private:
         void _load_idx ( l_geo_idx_rec_t& idx_list );

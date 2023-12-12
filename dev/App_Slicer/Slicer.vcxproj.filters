@@ -17,6 +17,12 @@
     <ClCompile Include="..\tools\gpc.c">
       <Filter>lib</Filter>
     </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_trans_affine.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\agg_vcgen_stroke.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="lib">

@@ -6,12 +6,6 @@
 
 #include <gpc.h>
 
-#if 0
-
-v_geo_coord_t   g_dummy_rect;
-v_geo_coord_t   g_dummy_line_in;
-vv_geo_coord_t  g_dummy_line_out;
-
 class gpc_allocator_t {
 
     public:
@@ -56,46 +50,6 @@ class gpc_allocator_t {
         std::vector<gpc_vertex>         m_vertex;
 };
 
-void __format ( const gpc_polygon& in_line, const gpc_polygon& rect, const gpc_polygon& out_line ) {
-
-    geo_coord_t coord;
-
-    g_dummy_rect.clear();
-    g_dummy_line_in.clear();
-    g_dummy_line_out.clear();
-
-    for ( size_t i = 0; i < rect.num_contours; i++ ) {
-        for ( size_t j = 0; j < rect.contour[i].num_vertices; j++ ) {
-            coord.geo.x = rect.contour[i].vertex[j].x;
-            coord.geo.y = rect.contour[i].vertex[j].y;
-            g_dummy_rect.push_back(coord);
-        }
-    }
-    g_dummy_rect.push_back ( g_dummy_rect.front() );
-
-    for ( size_t i = 0; i < in_line.num_contours; i++ ) {
-        for ( size_t j = 0; j < in_line.contour[i].num_vertices; j++ ) {
-            coord.geo.x = in_line.contour[i].vertex[j].x;
-            coord.geo.y = in_line.contour[i].vertex[j].y;
-            g_dummy_line_in.push_back(coord);
-        }
-    }
-    g_dummy_line_in.push_back (  g_dummy_line_in.front() );
-
-    for ( size_t i = 0; i < out_line.num_contours; i++ ) {
-        v_geo_coord_t  tmp;
-        for ( size_t j = 0; j < out_line.contour[i].num_vertices; j++ ) {
-            coord.geo.x = out_line.contour[i].vertex[j].x;
-            coord.geo.y = out_line.contour[i].vertex[j].y;
-            tmp.push_back(coord);
-        }
-        tmp.push_back( tmp.front() );
-
-        g_dummy_line_out.push_back(tmp);
-
-    }
-}
-
 static void _reset ( gpc_polygon& res ) {
 
     res.num_contours = 0;
@@ -138,6 +92,58 @@ static void _validate_result ( const geo_rect_t& rect, const gpc_polygon& result
 
 }
 
+
+
+
+#if 0
+
+v_geo_coord_t   g_dummy_rect;
+v_geo_coord_t   g_dummy_line_in;
+vv_geo_coord_t  g_dummy_line_out;
+
+void __format ( const gpc_polygon& in_line, const gpc_polygon& rect, const gpc_polygon& out_line ) {
+
+    geo_coord_t coord;
+
+    g_dummy_rect.clear();
+    g_dummy_line_in.clear();
+    g_dummy_line_out.clear();
+
+    for ( size_t i = 0; i < rect.num_contours; i++ ) {
+        for ( size_t j = 0; j < rect.contour[i].num_vertices; j++ ) {
+            coord.geo.x = rect.contour[i].vertex[j].x;
+            coord.geo.y = rect.contour[i].vertex[j].y;
+            g_dummy_rect.push_back(coord);
+        }
+    }
+    g_dummy_rect.push_back ( g_dummy_rect.front() );
+
+    for ( size_t i = 0; i < in_line.num_contours; i++ ) {
+        for ( size_t j = 0; j < in_line.contour[i].num_vertices; j++ ) {
+            coord.geo.x = in_line.contour[i].vertex[j].x;
+            coord.geo.y = in_line.contour[i].vertex[j].y;
+            g_dummy_line_in.push_back(coord);
+        }
+    }
+    g_dummy_line_in.push_back (  g_dummy_line_in.front() );
+
+    for ( size_t i = 0; i < out_line.num_contours; i++ ) {
+        v_geo_coord_t  tmp;
+        for ( size_t j = 0; j < out_line.contour[i].num_vertices; j++ ) {
+            coord.geo.x = out_line.contour[i].vertex[j].x;
+            coord.geo.y = out_line.contour[i].vertex[j].y;
+            tmp.push_back(coord);
+        }
+        tmp.push_back( tmp.front() );
+
+        g_dummy_line_out.push_back(tmp);
+
+    }
+}
+
+#endif
+
+
 void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& inp_path, const geo_rect_t& rect, v_geo_line_t& out_path ) const {
 
     gpc_allocator_t     clip;
@@ -177,7 +183,7 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     subject.alloc ( pt_cnt );
 
     for ( size_t i = 0; i < pt_cnt; i++ ) {
-        inp_path.m_coords[i].get(coord_type, pos_x, pos_y);
+        inp_path.m_coords[i].get ( coord_type, pos_x, pos_y );
         subject.add ( i, pos_x, pos_y );
     }
     
@@ -193,14 +199,14 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
 
 
     #if 0
-    __format ( subject.data, clip.data, result );
+        __format ( subject.data, clip.data, result );
     #endif
 
     out_path.clear();
 
     geo_coord_t   coord;
 
-    for (size_t i = 0; i < result.num_contours; i++) {
+    for ( size_t i = 0; i < result.num_contours; i++ ) {
 
         geo_line_t    sector;
 
@@ -229,6 +235,5 @@ void geo_processor_t::geo_intersect ( const pos_type_t coord_type, bool is_area,
     gpc_free_polygon ( &result );
 }
 
-#endif
 
 //---------------------------------------------------------------------------//

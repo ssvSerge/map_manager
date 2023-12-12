@@ -2,6 +2,10 @@
 #include <algorithm>
 #include <mutex>
 
+#define AGG_BGR24
+#include <platform/agg_platform_support.h>
+#include <formats/pixel_formats.h>
+
 #include <lex_keys.h>
 #include <geo_types.h>
 #include <geo_projection.h>
@@ -27,8 +31,8 @@ geo_pos_t               g_gps_max;
 map_pos_t               g_map_min;
 map_pos_t               g_map_max;
 
-
 #if 0
+
 #define CNT(x)      ( sizeof(x) / sizeof(x[0]) )
 
 
@@ -88,7 +92,6 @@ static void _scan_rect ( const geo_rect_t& in_rect, size_t id ) {
 }
 
 #endif
-
 
 static std::string _to_str_d ( double val ) {
 
