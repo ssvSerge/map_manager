@@ -8,23 +8,23 @@
 
 #include "MapPainter.h"
 
-// #include <GeographicLib/Geodesic.hpp>
-// #include <idx_file.h>
+#define NAME_IDX      "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_idx.txt"
+#define NAME_MAP      "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_map.txt"
 
-#define NAME_IDX    "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_idx.txt"
-#define NAME_MAP    "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_map.txt"
+#define CURSOR_MOVE   (1)
+#define CURSOR_WAIT   (2)
+#define CURSOR_AUTO   (3)
 
 
 IMPLEMENT_DYNAMIC ( CMapPainter, CStatic )
 
 BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
     ON_WM_PAINT()
-    ON_WM_MOUSEHOVER()
-    ON_WM_MOUSELEAVE()
     ON_WM_LBUTTONDOWN()
     ON_WM_LBUTTONUP()
     ON_WM_MOUSEMOVE()
     ON_WM_ERASEBKGND()
+    ON_WM_SETCURSOR()
 END_MESSAGE_MAP()
 
 static geo_processor_t    g_geo_processor;
@@ -35,14 +35,20 @@ CMapPainter::CMapPainter () {
     m_bMouseTracking = false;
     m_BasePosition.x = 200;
     m_BasePosition.y = 200;
-    m_DeltaX	     = 0;
-    m_DeltaY	     = 0;
-    m_lon		     = 0;
-    m_lat		     = 0;
-    m_scale		     = 0;
+    m_DeltaX         = 0;
+    m_DeltaY         = 0;
     m_delta_hor      = 0;
     m_delta_ver      = 0;
     m_paint_dc       = nullptr;
+
+    m_base_lon       = 14.339209;
+    m_base_lat       = 50.036852;
+    m_shift_lon      = 0;
+    m_shift_lat      = 0;
+    m_scale		     = 1;
+    m_angle          = 0;
+
+    return;
 }
 
 CMapPainter::~CMapPainter () {
@@ -51,6 +57,34 @@ CMapPainter::~CMapPainter () {
 }
 
 void CMapPainter::OnPaint ( void ) {
+
+    if ( m_DragActive ) {
+
+        m_shift_lon = 0;
+        m_shift_lat = 0;
+
+    } else {
+
+        double org_lon   = 0;
+        double org_lat   = 0;
+        double shift_lon = 0;
+        double shift_lat = 0;
+
+        org_lon = m_base_lon;
+        org_lat = m_base_lat;
+
+        g_geo_processor.get_shifts ( org_lon, org_lat, shift_lon, shift_lat );
+
+        shift_lon   = m_DeltaX / m_scale;
+        shift_lat   = m_DeltaY / m_scale;
+
+        m_shift_lon = shift_lon;
+        m_shift_lat = shift_lat;
+
+    }
+
+
+    #if 0
 
     int	x;
     int	y;
@@ -96,54 +130,23 @@ void CMapPainter::OnPaint ( void ) {
 
     dc.BitBlt (m_client_rect.left, m_client_rect.top, m_client_rect.Width(), m_client_rect.Height(), &dcMem, 0, 0, SRCCOPY);
     dcMem.SelectObject(pOldBitmap);
-}
 
-void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {
+    #endif
 
-    CStatic::OnMouseMove ( nFlags, point );
-
-    if ( m_DragActive ) {
-        m_DeltaX  =  point.x - m_PickPoint.x;
-        m_DeltaY  =  point.y - m_PickPoint.y;
-        Invalidate(1);
-        UpdateWindow();
-    }
-}
-
-void CMapPainter::OnMouseHover ( UINT nFlags, CPoint point ) {
-    CStatic::OnMouseHover(nFlags, point);
-}
-
-void CMapPainter::OnMouseLeave ( void ) {
-
-    TRACKMOUSEEVENT tme;
-
-    CStatic::OnMouseLeave();
-
-    if ( m_bMouseTracking ) {
-
-        m_bMouseTracking = FALSE;
-
-        tme.cbSize    = sizeof(TRACKMOUSEEVENT);
-        tme.dwFlags   = TME_CANCEL;
-        tme.hwndTrack = this->m_hWnd;
-
-        _TrackMouseEvent(&tme);
-    }
 }
 
 void CMapPainter::OnLButtonDown ( UINT nFlags, CPoint point ) {
 
-    TRACKMOUSEEVENT tme;
-
     CStatic::OnLButtonDown ( nFlags, point );
-
-    m_PickPoint = point;
-    m_DragActive = true;
 
     if ( !m_bMouseTracking ) {
 
         m_bMouseTracking = TRUE;
+
+        m_cursor_type = CURSOR_MOVE;
+        ::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_SIZE));
+
+        TRACKMOUSEEVENT tme;
 
         tme.cbSize    = sizeof(TRACKMOUSEEVENT);
         tme.dwFlags   = TME_LEAVE;
@@ -151,33 +154,84 @@ void CMapPainter::OnLButtonDown ( UINT nFlags, CPoint point ) {
 
         _TrackMouseEvent(&tme);
     }
+
+    m_DragActive = true;
+    m_PickPoint = point;
+
+    return;
 }
 
 void CMapPainter::OnLButtonUp ( UINT nFlags, CPoint point ) {
 
-    (void)(nFlags);
-    (void)(point);
+    CStatic::OnLButtonUp(nFlags, point);
 
-    double new_hor;
-    double new_ver;
+    if ( m_bMouseTracking ) {
+
+        m_bMouseTracking = FALSE;
+
+        m_cursor_type = CURSOR_AUTO;
+        ::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
+
+        TRACKMOUSEEVENT tme;
+
+        tme.cbSize = sizeof(TRACKMOUSEEVENT);
+        tme.dwFlags = TME_CANCEL;
+        tme.hwndTrack = this->m_hWnd;
+
+        _TrackMouseEvent(&tme);
+    }
 
     if ( m_DragActive ) {
 
         m_DragActive = false;
 
-        new_hor = m_lon + m_delta_hor * m_DeltaX;
-        new_ver = m_lat + m_delta_ver * m_DeltaY;
+        m_base_lon   += m_shift_lon;
+        m_shift_lon   = 0;
 
-        m_BasePosition.x = m_BasePosition.x + m_DeltaX;
-        m_BasePosition.y = m_BasePosition.y + m_DeltaY;
-
-        m_lon = new_hor;
-        m_lat = new_ver;
+        m_base_lat   += m_shift_lat;
+        m_shift_lat   = 0;
 
         Invalidate(1);
         UpdateWindow();
-
         GetParent()->PostMessage(WM_MAP_UPDATE, 0, 0);
+    }
+}
+
+void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {
+
+    CStatic::OnMouseMove ( nFlags, point );
+
+    if ( m_DragActive ) {
+
+        double step_x  = 0;
+        double step_y  = 0;
+
+        m_DeltaX  =  point.x - m_PickPoint.x;
+        m_DeltaY  =  point.y - m_PickPoint.y;
+
+        g_geo_processor.get_shifts ( point.x + m_DeltaX, point.y + m_DeltaY, step_x, step_y );
+
+        m_shift_lon = (m_DeltaX / m_scale) * step_x;
+        m_shift_lat = (m_DeltaY / m_scale) * step_y;
+
+        SetBaseParams (m_shift_lon, m_shift_lat, m_scale, m_angle );
+
+        Invalidate(1);
+        UpdateWindow();
+        GetParent()->PostMessage(WM_MAP_UPDATE, 0, 0);
+
+    } else {
+
+        if ( m_shift_lon != 0 ) {
+            m_base_lon += m_shift_lon;
+            m_shift_lon = 0;
+        }
+
+        if ( m_shift_lat != 0 ) {
+            m_base_lat += m_shift_lat;
+            m_shift_lat = 0;
+        }
+
     }
 }
 
@@ -185,14 +239,7 @@ BOOL CMapPainter::OnEraseBkgnd ( CDC* pDC ) {
     return CStatic::OnEraseBkgnd(pDC);
 }
 
-void CMapPainter::_calc_geo ( double lon, double lat, double scale ) const {
-
-    (void) (lon);
-    (void) (lat);
-    (void) (scale);
-}
-
-void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double angle ) const {
+void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double angle ) {
 
     static bool is_valid = false;
 
@@ -201,13 +248,13 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
     geo_coord_t   center;
     double        ang = angle;
 
+    AfxGetApp()->DoWaitCursor(1);
+
     if ( !is_valid ) {
         is_valid = true;
         g_geo_processor.set_names ( NAME_IDX, NAME_MAP );
+        g_geo_processor.load_idx();
     }
-
-    (void)(lon);
-    (void)(lat);
 
     GetClientRect ( client_rect );
 
@@ -217,19 +264,43 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
     wnd.max.map.y = client_rect.Height();
 
     center.set_src ( POS_TYPE_MAP );
+    center.geo.x = lon;
+    center.geo.y = lat;
 
-    // 50.036852, 14.339209
-    center.geo.x = 14.339209;
-    center.geo.y = 50.036852;
-    ang          = 15;
+    ang = angle;
 
-    g_geo_processor.load_idx ();
     g_geo_processor.process_map ( wnd, center, scale, ang );
+
+    AfxGetApp()->DoWaitCursor(-1);
+
+    return;
 }
 
 void CMapPainter::GetBaseParams ( double& lon, double& lat, double& scale ) const {
 
-    lon   = m_lon;
-    lat   = m_lat;
+    lon   = m_base_lon + m_shift_lon;
+    lat   = m_base_lat + m_shift_lat;
     scale = m_scale;
+}
+
+BOOL CMapPainter::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
+
+    switch (m_cursor_type) {
+        case 1:
+            ::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_IBEAM));
+            return true;
+
+        case 2:
+            ::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
+            return true;
+
+        case 3:
+            ::SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
+            return true;
+
+        default:
+            return CStatic::OnSetCursor(pWnd, nHitTest, message);
+
+    }
+
 }

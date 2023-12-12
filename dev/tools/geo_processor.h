@@ -262,6 +262,7 @@ class geo_processor_t {
         void load_idx ( void );
         void process_map ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, const double angle );
         void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
+        void get_shifts ( const double lat, const double lon, double& shift_x, double shift_y );
 
     private:
         void _load_idx ( l_geo_idx_rec_t& idx_list );
@@ -291,8 +292,6 @@ class geo_processor_t {
         void _poly_line ( const v_geo_coord_t& line, const int width, const geo_pixel_t color );
         void _fill_poly ( geo_line_t& region, const geo_pixel_t border_clr, const geo_pixel_t fill_clr );
         void _fill_poly ( const geo_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk );
-        void _line ( const geo_coord_t& from, const geo_coord_t& to, const geo_pixel_t color );
-        void _line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t color );
         void _find_scale_pixel ( const geo_coord_t& center, const double scale );
         void _calc_geo_rect ( const geo_coord_t& center, const geo_rect_t& wnd );
         void _process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const;
@@ -314,6 +313,11 @@ class geo_processor_t {
         void _intersection ( const segment_t& s1, const segment_t& s2, map_pos_t& result );
         void _commit_intersection ( const map_pos_t& base, size_t y, const geo_pixel_t& clr );
         void _add_intersection ( const map_pos_t& base, const map_pos_t& pos, intersection_type_t type );
+
+        void _line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t color );
+        void drawLineOverlap ( unsigned int aXStart, unsigned int aYStart, unsigned int aXEnd, unsigned int aYEnd, uint8_t aOverlap, geo_pixel_t aColor );
+        void drawLine (int aXStart, int aYStart, int aXEnd, int aYEnd, geo_pixel_t color );
+        void fillRect (int aXStart, int aYStart, int aXEnd, int aYEnd, geo_pixel_t aColor );
 
         // void _generate_paint_pos(geo_line_t& poly_line) const;
         // bool _find_pt_in_poly ( const map_pos_t& p1, const map_pos_t& p2, const map_pos_t& p3, map_pos_t& inside ) const;
