@@ -31,6 +31,7 @@ class CMapPainter : public CStatic {
 
     public:
         afx_msg void OnPaint       ( void );
+        afx_msg void OnSize        ( UINT nType, int cx, int cy );
         afx_msg void OnMouseHover  ( UINT nFlags, CPoint point);
         afx_msg void OnMouseLeave  ( void );
         afx_msg void OnLButtonDown ( UINT nFlags, CPoint point );
@@ -41,7 +42,11 @@ class CMapPainter : public CStatic {
     private:
         void _calc_geo ( double lon, double lat, double scale ) const;
 
+        void _video_init ( void );
+        void _video_render ( void );
+
     private:
+        bool            m_isVideoActive;
         bool			m_bMouseTracking;
         CPoint			m_PickPoint;
         bool			m_DragActive;

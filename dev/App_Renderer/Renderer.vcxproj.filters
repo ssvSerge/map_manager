@@ -19,6 +19,9 @@
     <Filter Include="lib\agg">
       <UniqueIdentifier>{8e2ffecd-c754-41b6-ad6d-fe2535d4ea0a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="lib\agg\platform">
+      <UniqueIdentifier>{fbcbea4f-835c-4080-a136-73cb00803b3d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -145,6 +148,9 @@
     </ClCompile>
     <ClCompile Include="..\lib\aag\src\agg_vpgen_segmentator.cpp">
       <Filter>lib\agg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\aag\src\platform\agg_win32_bmp.cpp">
+      <Filter>lib\agg\platform</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

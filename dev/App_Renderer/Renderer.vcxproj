@@ -148,6 +148,7 @@
     <ClCompile Include="..\lib\aag\src\agg_vpgen_clip_polygon.cpp" />
     <ClCompile Include="..\lib\aag\src\agg_vpgen_clip_polyline.cpp" />
     <ClCompile Include="..\lib\aag\src\agg_vpgen_segmentator.cpp" />
+    <ClCompile Include="..\lib\aag\src\platform\agg_win32_bmp.cpp" />
     <ClCompile Include="..\tools\geo_processor.cpp" />
     <ClCompile Include="..\tools\geo_processor_ex.cpp" />
     <ClCompile Include="..\tools\geo_projection.cpp" />

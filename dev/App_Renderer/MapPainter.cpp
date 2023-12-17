@@ -8,8 +8,8 @@
 
 #include "MapPainter.h"
 
-// #include <GeographicLib/Geodesic.hpp>
-// #include <idx_file.h>
+#include <platform/agg_platform_support.h>
+#include <util/agg_color_conv.h>
 
 #define NAME_IDX    "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_idx.txt"
 #define NAME_MAP    "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_map.txt"
@@ -25,9 +25,20 @@ BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
     ON_WM_LBUTTONUP()
     ON_WM_MOUSEMOVE()
     ON_WM_ERASEBKGND()
+    ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 static geo_processor_t    g_geo_processor;
+
+
+void CMapPainter::_video_init ( void ) {
+
+}
+
+void CMapPainter::_video_render ( void ) {
+
+    return;
+}
 
 CMapPainter::CMapPainter () {
 
@@ -43,6 +54,7 @@ CMapPainter::CMapPainter () {
     m_delta_hor      = 0;
     m_delta_ver      = 0;
     m_paint_dc       = nullptr;
+    m_isVideoActive  = false;
 }
 
 CMapPainter::~CMapPainter () {
@@ -50,52 +62,49 @@ CMapPainter::~CMapPainter () {
     g_geo_processor.close();
 }
 
+static void convert_pmap ( agg::rendering_buffer* dst, const agg::rendering_buffer* src, agg::pix_format_e format) {
+
+    switch (format) {
+        case agg::pix_format_rgb24:
+            convert<agg::pixfmt_sbgr24, agg::pixfmt_rgb24>(dst, src);
+            break;
+
+        case agg::pix_format_bgr24:
+            convert<agg::pixfmt_sbgr24, agg::pixfmt_bgr24>(dst, src);
+            break;
+    }
+}
+
 void CMapPainter::OnPaint ( void ) {
 
-    int	x;
-    int	y;
+    static bool                     is_init = false;
+    static agg::pixel_map           pmap_tmp;
+    static agg::rendering_buffer    rbuf_tmp;
 
-    CPaintDC dc ( this );
+    CPaintDC dc(this);
+    CRect Rect;
 
-    m_paint_dc = &dc;
+    GetClientRect(&Rect);
 
-    x = m_BasePosition.x;
-    y = m_BasePosition.y;
-
-    if ( m_DragActive ) {
-        x += m_DeltaX;
-        y += m_DeltaY;
+    if ( !is_init ) {
+        is_init = true;
+        int sys_bpp = 24;
+        pmap_tmp.create ( Rect.Width(), Rect.Height(), agg::org_e(sys_bpp) );
+        rbuf_tmp.attach ( pmap_tmp.buf(), pmap_tmp.width(), pmap_tmp.height(), -pmap_tmp.stride() );
+        g_geo_processor.set_screen_params ( Rect.Width(), Rect.Height() );
     }
 
-    GetClientRect ( m_client_rect );
+    g_geo_processor.paint();
 
-    CDC dcMem;
-    CBitmap bitmap;
+    convert_pmap ( &rbuf_tmp, &g_geo_processor.m_rbuf_window, pix_format );
 
-    dcMem.CreateCompatibleDC( &dc );
-    bitmap.CreateCompatibleBitmap(&dc, m_client_rect.Width(), m_client_rect.Height());
-    CBitmap* pOldBitmap = dcMem.SelectObject ( &bitmap );
+    pmap_tmp.draw(dc.m_hDC);
+}
 
-    map_pos_t     pos;
-    geo_pixel_t   px;
-    COLORREF      outClr = 0;
+void CMapPainter::OnSize ( UINT nType, int cx, int cy ) {
 
-    for (y = 0; y < m_client_rect.Height(); y++) {
-        for (x = 0; x < m_client_rect.Width(); x++) {
-
-            pos.x = ( x );
-            pos.y = ( y );
-
-            g_geo_processor.get_pix( pos, px );
-            outClr = RGB ( px.getR(), px.getG(), px.getB() );
-
-            dcMem.SetPixel ( x, m_client_rect.Height() - y - 1, outClr );
-            // dc.SetPixel ( x, m_client_rect.Height() - y - 2, RGB(0, 0, 0) );
-        }
-    }
-
-    dc.BitBlt (m_client_rect.left, m_client_rect.top, m_client_rect.Width(), m_client_rect.Height(), &dcMem, 0, 0, SRCCOPY);
-    dcMem.SelectObject(pOldBitmap);
+    CStatic::OnSize ( nType, cx, cy );
+    return;
 }
 
 void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {
@@ -182,7 +191,9 @@ void CMapPainter::OnLButtonUp ( UINT nFlags, CPoint point ) {
 }
 
 BOOL CMapPainter::OnEraseBkgnd ( CDC* pDC ) {
-    return CStatic::OnEraseBkgnd(pDC);
+    (void) (pDC);
+    // return CStatic::OnEraseBkgnd(pDC);
+    return TRUE;
 }
 
 void CMapPainter::_calc_geo ( double lon, double lat, double scale ) const {

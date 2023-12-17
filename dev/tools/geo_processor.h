@@ -16,9 +16,11 @@
 #include <agg_conv_stroke.h>
 #include <agg_conv_transform.h>
 #include <agg_path_storage.h>
+#include <agg_rasterizer_scanline_aa.h>
 
 #define AGG_BGR24
 #include <platform/agg_platform_support.h>
+#include <platform/win32/agg_win32_bmp.h>
 #include <formats/pixel_formats.h>
 
 
@@ -294,7 +296,7 @@ struct agg_path_attributes {
     }
 };
 
-typedef std::vector< agg_path_attributes> v_agg_path_attributes;
+typedef std::vector<agg_path_attributes> v_agg_path_attributes;
 
 struct agg_trans_roundoff {
     static void transform(double* x, double* y) {
@@ -315,9 +317,10 @@ class geo_processor_t {
         void load_idx(void);
         void get_pix ( const map_pos_t& pos, geo_pixel_t& px ) const;
         void process_map ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, const double angle );
-
 //      void set_pix ( const map_pos_t& pos, const geo_pixel_t& px );
         void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
+        void set_screen_params ( uint32_t width, uint32_t height );
+        void paint();
 
     private:
         void _load_idx ( l_geo_idx_rec_t& idx_list );
@@ -386,6 +389,17 @@ class geo_processor_t {
 //      void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
 //      void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
 
+    public:
+        agg::pixel_map          m_pmap_window;
+        agg::rendering_buffer   m_rbuf_window;
+        agg::rasterizer_scanline_aa<> m_rasterizer;
+        uint32_t                m_bpp;
+        agg::scanline_p8        m_scanline;
+        agg::path_storage       m_agg_paths;
+        v_agg_path_attributes   m_agg_paths_attribs_ex;
+        double                  m_dx;
+        double                  m_dy;
+
     private:
         std::string             m_map_file_name;
         std::ifstream           m_map_file;
@@ -406,12 +420,6 @@ class geo_processor_t {
         l_geo_entry_t           m_map_cache;
         l_geo_idx_rec_t         m_idx_list;
 
-        agg::path_storage       m_agg_paths;
-        v_agg_path_attributes   m_agg_paths_attribs;
-        agg::rendering_buffer   m_rbuf_window;
-        agg::rasterizer_scanline_aa<> m_rasterizer;
-        double                  m_dx;
-        double                  m_dy;
 
 
 //      double                  m_geo_step_x;           // GPS Шаг по горизонтали на пиксел.
