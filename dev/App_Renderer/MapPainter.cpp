@@ -99,6 +99,25 @@ void CMapPainter::OnPaint ( void ) {
     convert_pmap ( &rbuf_tmp, &g_geo_processor.m_rbuf_window, pix_format );
 
     pmap_tmp.draw(dc.m_hDC);
+
+    CPen pen(PS_SOLID, 0, RGB(0, 0, 0));
+    dc.SelectObject(&pen);
+
+    
+    int len     = 20;
+
+    int min_x   = Rect.Width()  / 2 - (len / 2);
+    int mid_x   = Rect.Width()  / 2;
+    int max_x   = Rect.Width()  / 2 + (len / 2);
+
+    int min_y   = Rect.Height() / 2 - (len / 2);
+    int mid_y   = Rect.Height() / 2;
+    int max_y   = Rect.Height() / 2 + (len / 2);
+
+    dc.MoveTo ( min_x,  mid_y );
+    dc.LineTo ( max_x,  mid_y );
+    dc.MoveTo ( mid_x,  min_y );
+    dc.LineTo ( mid_x,  max_y );
 }
 
 void CMapPainter::OnSize ( UINT nType, int cx, int cy ) {

@@ -12,68 +12,75 @@
 
 
 #define GEO_RGB(dst,_a,_r,_g,_b)   { dst.a=_a; dst.r=_r; dst.g=_g; dst.b=_b; }
-#define AGG_POLY_SIZE(p)           (sizeof(p) / (sizeof(*p) * 2))
+#define AGG_POLY_SIZE(p)           (sizeof(p) / (sizeof(p[0]) * 2))
 
 
-static double g_poly_bulb[] = {
-    -6,-67,    -6,-71,   -7,-74,    -8,-76,    -10,-79,
-    -10,-82,   -9,-84,   -6,-86,    -4,-87,    -2,-86,
-    -1,-86,     1,-84,    2,-82,     2,-79,     0,-77,
-    -2,-73,    -2,-71,   -2,-69,    -3,-67,    -4,-65
+double g_shift_x = 10000;
+double g_shift_y = 10000;
+
+double g_poly_rect[] = {
+      -10,-10,   
+      -10,+10,   
+      +10,+10,   
+      +10,-10
 };
-static double g_poly_beam1[] = {
-    -14,-84,-22,-85,-23,-87,-22,-88,-21,-88
+
+
+double g_poly_bulb[] = {
+      -6,-67,-6,-71,-7,-74,-8,-76,-10,-79,-10,-82,-9,-84,-6,-86,-4,-87,-2,-86,-1,-86,1,-84,2,-82,2,-79,0,-77,-2,-73,-2,-71,-2,-69,-3,-67,-4,-65
 };
+
+double g_poly_beam1[] = {
+      -14,-84,-22,-85,-23,-87,-22,-88,-21,-88
+};
+
 static double g_poly_beam2[] = {
-   -10,-92,   -14,-96,   -14,-98,   -12,-99,   -11,-97
+      -10,-92,-14,-96,-14,-98,-12,-99,-11,-97
 };
+
 static double g_poly_beam3[] = {
-   -1,-92,     -2,-98,    0,-100,    2,-100,    1,-98
+      -1,-92,-2,-98,0,-100,2,-100,1,-98
 };
+
 static double g_poly_beam4[] = {
-    5,-89,      11,-94,   13,-93,    13,-92,    12,-91
+      5,-89,11,-94,13,-93,13,-92,12,-91
 };
+
 static double g_poly_fig1[] = {
-    1,-48,-3,-54,-7,-58,-12,-58,-17,-55,-20,-52,-21,-47,
-    -20,-40,-17,-33,-11,-28,-6,-26,-2,-25,2,-26,4,-28,5,
-    -33,5,-39,3,-44,12,-48,12,-50,12,-51,3,-46
+      1,-48,-3,-54,-7,-58,-12,-58,-17,-55,-20,-52,-21,-47,-20,-40,-17,-33,-11,-28,-6,-26,-2,-25,2,-26,4,-28,5,-33,5,-39,3,-44,12,-48,12,-50,12,-51,3,-46
 };
+
 static double g_poly_fig2[] = {
-    11,-27,6,-23,4,-22,3,-19,5,
-    -16,6,-15,11,-17,19,-23,25,-30,32,-38,32,-41,32,-50,30,-64,32,-72,
-    32,-75,31,-77,28,-78,26,-80,28,-87,27,-89,25,-88,24,-79,24,-76,23,
-    -75,20,-76,17,-76,17,-74,19,-73,22,-73,24,-71,26,-69,27,-64,28,-55,
-    28,-47,28,-40,26,-38,20,-33,14,-30
+      11,-27,6,-23,4,-22,3,-19,5,-16,6,-15,11,-17,19,-23,25,-30,32,-38,32,-41,32,-50,30,-64,32,-72,32,-75,31,-77,28,-78,26,-80,28,-87,27,-89,25,-88,24,-79,24,-76,23,-75,20,-76,17,-76,17,-74,19,-73,22,-73,24,-71,26,-69,27,-64,28,-55,28,-47,28,-40,26,-38,20,-33,14,-30
 };
+
 static double g_poly_fig3[] = {
-    -6,-20,-9,-21,-15,-21,-20,-17,
-    -28,-8,-32,-1,-32,1,-30,6,-26,8,-20,10,-16,12,-14,14,-15,16,-18,20,
-    -22,20,-25,19,-27,20,-26,22,-23,23,-18,23,-14,22,-11,20,-10,17,-9,14,
-    -11,11,-16,9,-22,8,-26,5,-28,2,-27,-2,-23,-8,-19,-11,-12,-14,-6,-15,
-    -6,-18
+      -6,-20,-9,-21,-15,-21,-20,-17,-28,-8,-32,-1,-32,1,-30,6,-26,8,-20,10,-16,12,-14,14,-15,16,-18,20,-22,20,-25,19,-27,20,-26,22,-23,23,-18,23,-14,22,-11,20,-10,17,-9,14,-11,11,-16,9,-22,8,-26,5,-28,2,-27,-2,-23,-8,-19,-11,-12,-14,-6,-15,-6,-18
 };
+
 static double g_poly_fig4[] = {
-    11,-6,8,-16,5,-21,-1,-23,-7,
-   -22,-10,-17,-9,-10,-8,0,-8,10,-10,18,-11,22,-10,26,-7,28,-3,30,0,31,
-    5,31,10,27,14,18,14,11,11,2
+      11,-6,8,-16,5,-21,-1,-23,-7,-22,-10,-17,-9,-10,-8,0,-8,10,-10,18,-11,22,-10,26,-7,28,-3,30,0,31,5,31,10,27,14,18,14,11,11,2
 };
+
 static double g_poly_fig5[] = {
-    0,22,-5,21,-8,22,-9,26,-8,49,
-    -8,54,-10,64,-10,75,-9,81,-10,84,-16,89,-18,95,-18,97,-13,100,-12,99,
-    -12,95,-10,90,-8,87,-6,86,-4,83,-3,82,-5,80,-6,79,-7,74,-6,63,-3,52,
-    0,42,1,31
+      0,22,-5,21,-8,22,-9,26,-8,49,-8,54,-10,64,-10,75,-9,81,-10,84,-16,89,-18,95,-18,97,-13,100,-12,99,-12,95,-10,90,-8,87,-6,86,-4,83,-3,82,-5,80,-6,79,-7,74,-6,63,-3,52,0,42,1,31
 };
+
 static double g_poly_fig6[] = {
-    12,31,12,24,8,21,3,21,2,24,3,
-    30,5,40,8,47,10,56,11,64,11,71,10,76,8,77,8,79,10,81,13,82,17,82,26,
-    84,28,87,32,86,33,81,32,80,25,79,17,79,14,79,13,76,14,72,14,64,13,55,
-    12,44,12,34
+      12,31,12,24,8,21,3,21,2,24,3,30,5,40,8,47,10,56,11,64,11,71,10,76,8,77,8,79,10,81,13,82,17,82,26,84,28,87,32,86,33,81,32,80,25,79,17,79,14,79,13,76,14,72,14,64,13,55,12,44,12,34
 };
-
-
 
 
 typedef agg::renderer_base<pixfmt> ren_base;
+
+
+void _update_array ( double* ptr, size_t cnt ) {
+
+    for ( size_t i = 0; i < cnt*2; i += 2 ) {
+        ptr[i + 0] += g_shift_x;
+        ptr[i + 1] += g_shift_y;
+    }
+}
 
 
 //---------------------------------------------------------------------------//
@@ -220,7 +227,7 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
 
 //---------------------------------------------------------------------------//
 
-void geo_processor_t::set_screen_params(uint32_t w, uint32_t h) {
+void geo_processor_t::set_screen_params ( uint32_t w, uint32_t h ) {
 
     int path_id;
 
@@ -230,7 +237,33 @@ void geo_processor_t::set_screen_params(uint32_t w, uint32_t h) {
     m_pmap_window.create(w, h, agg::org_e(m_bpp));
     m_rbuf_window.attach(m_pmap_window.buf(), m_pmap_window.width(), m_pmap_window.height(), -m_pmap_window.stride());
 
+    _update_array ( g_poly_rect,  AGG_POLY_SIZE(g_poly_rect)  );
+
+    _update_array ( g_poly_bulb,  AGG_POLY_SIZE(g_poly_bulb)  );
+    _update_array ( g_poly_beam1, AGG_POLY_SIZE(g_poly_beam1) );
+    _update_array ( g_poly_beam2, AGG_POLY_SIZE(g_poly_beam2) );
+    _update_array ( g_poly_beam3, AGG_POLY_SIZE(g_poly_beam3) );
+    _update_array ( g_poly_beam4, AGG_POLY_SIZE(g_poly_beam4) );
+
+    _update_array ( g_poly_fig1,  AGG_POLY_SIZE(g_poly_fig1)  );
+    _update_array ( g_poly_fig2,  AGG_POLY_SIZE(g_poly_fig2)  );
+    _update_array ( g_poly_fig3,  AGG_POLY_SIZE(g_poly_fig3)  );
+    _update_array ( g_poly_fig4,  AGG_POLY_SIZE(g_poly_fig4)  );
+    _update_array ( g_poly_fig5,  AGG_POLY_SIZE(g_poly_fig5)  );
+    _update_array ( g_poly_fig6,  AGG_POLY_SIZE(g_poly_fig6)  );
+
+
     {   agg_path_attributes next_attrib;
+        path_id = m_agg_paths.start_new_path();
+        next_attrib.idx          = path_id;
+        next_attrib.fill_color   = agg::srgba8( 0, 0, 255 );
+        next_attrib.stroke_color = agg::srgba8( 255, 0, 0 );
+        next_attrib.stroke_width = 1;
+        m_agg_paths_attribs_ex.push_back(next_attrib);
+        m_agg_paths.concat_poly(g_poly_rect, AGG_POLY_SIZE(g_poly_rect), true);
+    }
+
+    if (0) {   agg_path_attributes next_attrib;
         path_id = m_agg_paths.start_new_path();
         next_attrib.idx          = path_id;
         next_attrib.fill_color   = agg::srgba8( 255, 255, 0 );
@@ -240,7 +273,7 @@ void geo_processor_t::set_screen_params(uint32_t w, uint32_t h) {
         m_agg_paths.concat_poly(g_poly_bulb, AGG_POLY_SIZE(g_poly_bulb), true);
     }
 
-    {   agg_path_attributes next_attrib;
+    if (0) {   agg_path_attributes next_attrib;
         path_id = m_agg_paths.start_new_path();
         next_attrib.idx          = path_id;
         next_attrib.fill_color   = agg::srgba8( 255, 255, 200 );
@@ -253,7 +286,7 @@ void geo_processor_t::set_screen_params(uint32_t w, uint32_t h) {
         m_agg_paths.concat_poly ( g_poly_beam4, AGG_POLY_SIZE(g_poly_beam4), true );
     }
 
-    {   agg_path_attributes next_attrib;
+    if (0) {   agg_path_attributes next_attrib;
         path_id = m_agg_paths.start_new_path();
         next_attrib.idx          = path_id;
         next_attrib.fill_color   = agg::srgba8( 0, 0, 0 );
@@ -298,9 +331,13 @@ void geo_processor_t::paint() {
 
     mtx.reset();
 
+    m_dx = (-1 * g_shift_x)  + (925 / 2); // 1596233;
+    m_dy = (-1 * g_shift_y)  + (698 / 2); // 6452660;
+
+
     mtx *= agg::trans_affine_rotation    ( g_angle * agg::pi / 180.0 );
-    mtx *= agg::trans_affine_translation ( m_dx / 2, m_dy / 2 + 10 );
-    mtx *= agg::trans_affine_scaling     ( m_rbuf_window.width() / m_dx  / g_scale, m_rbuf_window.height() / m_dy / g_scale );
+    mtx *= agg::trans_affine_translation ( m_dx, m_dy );
+    mtx *= agg::trans_affine_scaling     ( 1, 1 );
 
     for ( size_t i = 0; i < m_agg_paths_attribs_ex.size(); i++ ) {
 
