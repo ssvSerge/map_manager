@@ -305,6 +305,13 @@ struct agg_trans_roundoff {
     }
 };
 
+typedef agg::conv_transform<agg::path_storage>   agg_fill_t;
+
+typedef agg::conv_stroke<agg::conv_transform<agg::path_storage>>  agg_conv_stroke_t;
+
+typedef agg::renderer_base<pixfmt> agg_ren_base;
+
+typedef agg::trans_affine          agg_trans_affine_t;
 
 class geo_processor_t {
 
@@ -334,8 +341,8 @@ class geo_processor_t {
         void _load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache );
         void _load_map_entry ( const uint32_t map_entry, geo_entry_t& map_record );
         bool _is_overlapped ( const geo_rect_t& window, const pos_type_t pos_type, const geo_rect_t& slice ) const;
-        void _draw_area ( void );
-        void _draw_building ( void );
+        void _draw_areas ( const agg_trans_affine_t& mtx, agg_ren_base& rbase, agg_fill_t& fill, agg_conv_stroke_t& stroke );
+        void _draw_buildings ( void );
         void _draw_roads ( void );
         void _map_color ( const obj_type_t& obj_type, agg::srgba8& border_color, agg::srgba8& fill_color ) const;
 
@@ -396,7 +403,9 @@ class geo_processor_t {
         uint32_t                m_bpp;
         agg::scanline_p8        m_scanline;
         agg::path_storage       m_agg_paths;
-        v_agg_path_attributes   m_agg_paths_attribs_ex;
+        v_agg_path_attributes   m_agg_attribs_area;
+        v_agg_path_attributes   m_agg_attribs_building;
+        v_agg_path_attributes   m_agg_attribs_roads;
         double                  m_dx;
         double                  m_dy;
 
