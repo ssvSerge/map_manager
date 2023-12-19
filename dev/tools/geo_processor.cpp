@@ -33,9 +33,6 @@ static const geo_pixel_t   g_color_none  (242, 239, 233);
 
 //---------------------------------------------------------------------------//
 
-//---------------------------------------------------------------------------//
-
-
 geo_processor_t::geo_processor_t() {
     close();
 }
@@ -1223,7 +1220,7 @@ void geo_processor_t::_clear_intersection ( void ) {
     m_intersection_map.clear();
 }
 
-void geo_processor_t::_add_intersection (const map_pos_t& base, const map_pos_t& pos, intersection_type_t type ) {
+void geo_processor_t::_add_intersection ( const map_pos_t& base, const map_pos_t& pos, intersection_type_t type ) {
 
     size_t x_idx = pos.x - base.x;
 
@@ -1259,7 +1256,7 @@ void geo_processor_t::_intersection ( const segment_t& s1, const segment_t& s2, 
     result.x = (int)(rX + 0.5);
 }
 
-void geo_processor_t::_commit_intersection (const map_pos_t& base, size_t y, const geo_pixel_t& clr ) {
+void geo_processor_t::_commit_intersection ( const map_pos_t& base, size_t y, const geo_pixel_t& clr ) {
 
     int  points_cnt   = 0;
     bool pending_up   = false;
@@ -1436,7 +1433,7 @@ bool geo_processor_t::_pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) 
     return true;
 }
 
-bool geo_processor_t::_is_pt_on_segment (const geo_coord_t& begin, const geo_coord_t& end, const geo_coord_t& pt ) const {
+bool geo_processor_t::_is_pt_on_segment ( const geo_coord_t& begin, const geo_coord_t& end, const geo_coord_t& pt ) const {
 
     const map_pos_t& segmentStart = begin.ang;
     const map_pos_t& segmentEnd   = end.ang;

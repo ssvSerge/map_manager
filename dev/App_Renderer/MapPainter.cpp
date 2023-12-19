@@ -29,6 +29,214 @@ END_MESSAGE_MAP()
 
 static geo_processor_t    g_geo_processor;
 
+class paint_ctx_t {
+    public:
+        uint32_t        m_img_size;
+        uint32_t        m_full_size;
+        BITMAPINFO*     m_bmp;
+        uint8_t*        m_buf;
+        void*           img_ptr;
+        HBITMAP         hBitmap;
+        uint32_t        cli_w;
+        uint32_t        cli_h;
+};
+
+class clr_t {
+
+    public:
+        clr_t() {
+            r = g = b = 0;
+        }
+
+        clr_t (uint8_t _r, uint8_t _g, uint8_t _b ) {
+            r = _r;
+            g = _g;
+            b = _b;
+        }
+
+    public:
+        uint8_t      b;
+        uint8_t      g;
+        uint8_t      r;
+};
+
+#pragma pack(1)
+typedef struct tag_screen_pix {
+    uint8_t      b;
+    uint8_t      g;
+    uint8_t      r;
+}   screen_pix_t;
+#pragma pack()
+
+
+static paint_ctx_t   g_paint_ctx;
+
+static uint32_t _calc_row_len ( uint32_t width, uint32_t bits_per_pixel ) {
+
+    unsigned n = width;
+    unsigned k;
+
+    switch (bits_per_pixel) {
+    case  1: k = n;
+        n = n >> 3;
+        if (k & 7) n++;
+        break;
+
+    case  4: k = n;
+        n = n >> 1;
+        if (k & 3) n++;
+        break;
+
+    case  8:
+        break;
+
+    case 16: n *= 2;
+        break;
+
+    case 24: n *= 3;
+        break;
+
+    case 32: n *= 4;
+        break;
+
+    case 48: n *= 6;
+        break;
+
+    case 64: n *= 8;
+        break;
+
+    case 96: n *= 12;
+        break;
+
+    case 128: n *= 16;
+        break;
+
+    default: n = 0;
+        break;
+    }
+    return ((n + 3) >> 2) << 2;
+}
+
+static uint32_t _calc_palette_size ( uint32_t clr_used, uint32_t bits_per_pixel ) {
+    int palette_size = 0;
+    if (bits_per_pixel <= 8) {
+        palette_size = clr_used;
+        if (palette_size == 0) {
+            palette_size = 1 << bits_per_pixel;
+        }
+    }
+    return palette_size;
+}
+
+static uint32_t _calc_palette_size ( BITMAPINFO* bmp) {
+    if (bmp == 0) {
+        return 0;
+    }
+    return _calc_palette_size ( bmp->bmiHeader.biClrUsed, bmp->bmiHeader.biBitCount );
+}
+
+static uint32_t _calc_full_size ( BITMAPINFO* bmp ) {
+    if (bmp == 0) {
+        return 0;
+    }
+    return sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * _calc_palette_size(bmp) + bmp->bmiHeader.biSizeImage;
+}
+
+static uint32_t _calc_header_size ( BITMAPINFO* bmp ) {
+    if (bmp == 0) {
+        return 0;
+    }
+    return sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * _calc_palette_size(bmp);
+}
+
+static uint8_t* _calc_img_ptr ( BITMAPINFO* bmp ) {
+    if (bmp == 0) {
+        return 0;
+    }
+    return ((unsigned char*)bmp) + _calc_header_size(bmp);
+}
+
+static void _create_dib_section ( HDC dc, uint32_t width, uint32_t height, uint32_t bits_per_pixel, paint_ctx_t& ctx ) {
+
+    uint32_t    line_len   =  0;
+    uint32_t    img_size   =  0;
+    uint32_t    rgb_size   =  0;
+    uint32_t    full_size  =  0;
+    BITMAPINFO* bmp     =  nullptr;
+    void*       img_ptr =  0;
+
+    line_len   =  _calc_row_len(width, bits_per_pixel);
+    img_size   =  line_len * height;
+    rgb_size   =  _calc_palette_size(0, bits_per_pixel) * sizeof(RGBQUAD);
+    full_size  =  sizeof(BITMAPINFOHEADER) + rgb_size + img_size;
+
+    bmp = (BITMAPINFO*) new unsigned char[full_size];
+
+    memset ( bmp, 0xFF, full_size );
+
+    bmp->bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
+    bmp->bmiHeader.biWidth         = width;
+    bmp->bmiHeader.biHeight        = height;
+    bmp->bmiHeader.biPlanes        = 1;
+    bmp->bmiHeader.biBitCount      = (unsigned short)bits_per_pixel;
+    bmp->bmiHeader.biCompression   = 0;
+    bmp->bmiHeader.biSizeImage     = img_size;
+    bmp->bmiHeader.biXPelsPerMeter = 0;
+    bmp->bmiHeader.biYPelsPerMeter = 0;
+    bmp->bmiHeader.biClrUsed       = 0;
+    bmp->bmiHeader.biClrImportant  = 0;
+
+    HBITMAP h_bitmap = ::CreateDIBSection ( dc, bmp, DIB_RGB_COLORS, &img_ptr, NULL, 0 );
+
+    if ( img_ptr ) {
+        ctx.m_img_size   =  _calc_row_len ( width, bits_per_pixel ) * height;
+        ctx.m_full_size  =  _calc_full_size(bmp);
+        ctx.m_bmp        =  bmp;
+        ctx.m_buf        =  _calc_img_ptr(bmp);
+        ctx.hBitmap      =  h_bitmap;
+        ctx.img_ptr      =  img_ptr;
+        ctx.cli_w        =  width;
+        ctx.cli_h        =  height;
+
+    }
+
+    return;
+}
+
+static void _put_pixel ( int32_t x, int32_t y, clr_t& clr ) {
+
+    if (x >= g_paint_ctx.m_bmp->bmiHeader.biWidth) {
+        return;
+    }
+    if (y >= g_paint_ctx.m_bmp->bmiHeader.biHeight) {
+        return;
+    }
+
+    y = g_paint_ctx.m_bmp->bmiHeader.biHeight - 1 - y;
+
+    int32_t line_len  = _calc_row_len ( g_paint_ctx.m_bmp->bmiHeader.biWidth, g_paint_ctx.m_bmp->bmiHeader.biBitCount);
+    int32_t offset    = line_len * y;
+    screen_pix_t* map = (screen_pix_t*)(g_paint_ctx.m_buf + offset);
+
+    map[x].r  =  clr.r;
+    map[x].g  =  clr.g;
+    map[x].b  =  clr.b;
+}
+
+static void _draw ( HDC dc ) {
+
+    unsigned bmp_width   =  g_paint_ctx.m_bmp->bmiHeader.biWidth;
+    unsigned bmp_height  =  g_paint_ctx.m_bmp->bmiHeader.biHeight;
+    unsigned dvc_width   =  g_paint_ctx.m_bmp->bmiHeader.biWidth;
+    unsigned dvc_height  =  g_paint_ctx.m_bmp->bmiHeader.biHeight;
+
+    dvc_width  = bmp_width;
+    dvc_height = bmp_height;
+
+    ::SetStretchBltMode ( dc, COLORONCOLOR );
+    ::SetDIBitsToDevice ( dc, 0, 0, dvc_width, dvc_height, 0, 0, 0, bmp_height, g_paint_ctx.m_buf, g_paint_ctx.m_bmp, DIB_RGB_COLORS );
+}
+
 CMapPainter::CMapPainter () {
 
     m_DragActive     = false;
@@ -47,6 +255,7 @@ CMapPainter::CMapPainter () {
     m_shift_lat      = 0;
     m_scale		     = 1;
     m_angle          = 0;
+    m_cursor_type    = 0;
 
     return;
 }
@@ -57,6 +266,28 @@ CMapPainter::~CMapPainter () {
 }
 
 void CMapPainter::OnPaint ( void ) {
+
+    static bool is_init = false;
+
+    CRect clientRect;
+    CPaintDC dc(this);
+
+    GetClientRect ( &clientRect );
+
+    if ( ! is_init ) {
+        is_init = true;
+
+        clr_t clr (0x40, 0x20, 0x10);
+
+        _create_dib_section (dc.m_hDC, clientRect.Width(), clientRect.Height(), 24, g_paint_ctx );
+
+        for (int y = 0; y < 10; y++) {
+            for (int x = 0; x < 10; x++) {
+                _put_pixel ( x, y, clr );
+            }
+        }
+
+    }
 
     if ( m_DragActive ) {
 
@@ -82,6 +313,8 @@ void CMapPainter::OnPaint ( void ) {
         m_shift_lat = shift_lat;
 
     }
+
+    _draw ( dc.m_hDC );
 
 
     #if 0
