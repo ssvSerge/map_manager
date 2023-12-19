@@ -15,8 +15,8 @@
 #define AGG_POLY_SIZE(p)           (sizeof(p) / (sizeof(p[0]) * 2))
 
 
-double g_shift_x = 10000;
-double g_shift_y = 10000;
+double g_shift_x = 1000;
+double g_shift_y = 1000;
 
 double g_poly_rect[] = {
       -10,-10,   
@@ -312,7 +312,7 @@ void geo_processor_t::paint() {
     static double g_angle  = 0;
     static double g_scale  = 1;
 
-    g_angle++;
+    g_angle += 1;
     if (g_angle >= 360) {
         g_angle = 0;
     }
@@ -337,7 +337,7 @@ void geo_processor_t::paint() {
 
     mtx *= agg::trans_affine_rotation    ( g_angle * agg::pi / 180.0 );
     mtx *= agg::trans_affine_translation ( m_dx, m_dy );
-    mtx *= agg::trans_affine_scaling     ( 1, 1 );
+    mtx *= agg::trans_affine_scaling     ( 0.8, 0.8 );
 
     for ( size_t i = 0; i < m_agg_paths_attribs_ex.size(); i++ ) {
 
