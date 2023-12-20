@@ -263,6 +263,9 @@ class geo_processor_t {
         void process_map ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, const double angle );
         void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
         void get_shifts ( const double lat, const double lon, double& shift_x, double shift_y );
+        void video_alloc ( int32_t x, int32_t y );
+        void unpack ( uint16_t packed_clr, uint8_t& r, uint8_t& g, uint8_t& b );
+        void pack ( uint8_t r, uint8_t g, uint8_t b, uint16_t& packed_clr );
 
     private:
         void _load_idx ( l_geo_idx_rec_t& idx_list );
@@ -336,6 +339,10 @@ class geo_processor_t {
         // void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
         // void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
 
+
+    public:
+        video_buff_t            m_video_buffer;
+
     private:
         double                  m_x_step;               // шаг индексов по горизонтали.
         double                  m_y_step;               // шаг индексов по вертикали.
@@ -379,8 +386,6 @@ class geo_processor_t {
         l_geo_entry_t           m_paint_list;
 
         l_geo_idx_rec_t         m_idx_list;
-
-        video_buff_t            m_video_buffer;
 
         v_intersection_info     m_intersection_map;
 

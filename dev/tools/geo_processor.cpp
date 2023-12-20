@@ -166,7 +166,6 @@ void geo_processor_t::set_pix ( const map_pos_t& pos, const geo_pixel_t& px ) {
     if ((pos.x >= 0) && (pos.x < m_view_out.max.map.x)) {
         if ((pos.y >= 0) && (pos.y < m_view_out.max.map.y)) {
 
-            uint16_t* dummy;
             geo_pixel_int_t   tmp;
             _px_conv(px, tmp);
 
@@ -175,11 +174,8 @@ void geo_processor_t::set_pix ( const map_pos_t& pos, const geo_pixel_t& px ) {
             offset = pos.y * m_view_out.max.map.x;
             offset += pos.x;
 
-            dummy = (uint16_t*) m_video_buffer.data();
-
             m_video_buffer[offset] = tmp;
 
-            dummy = dummy;
         }
     }
 
@@ -216,6 +212,45 @@ void geo_processor_t::get_shifts ( const double x, const double y, double& shift
     shift_y = dist_px_y / dist_y;
 
     return;
+}
+
+void geo_processor_t::video_alloc ( int32_t _x, int32_t _y ) {
+
+    m_view_out.min.map.x =  0;
+    m_view_out.min.map.y =  0;
+    m_view_out.max.map.x = _x;
+    m_view_out.max.map.y = _y;
+
+    m_video_buffer.clear();
+    m_video_buffer.resize( sizeof(uint16_t) * _x * _y );
+
+    for ( size_t i = 0; i < m_video_buffer.size(); i++ ) {
+        m_video_buffer[i] = 0xffff;
+    }
+}
+
+void geo_processor_t::unpack ( uint16_t clr, uint8_t& r, uint8_t& g, uint8_t& b ) {
+
+    uint32_t _clr = clr;
+
+    _clr <<= 3;
+    b = static_cast<uint8_t> (_clr & 0xF8);
+
+    _clr >>= 6;
+    g = static_cast<uint8_t> (_clr & 0xFC);
+
+    _clr >>= 5;
+    r = static_cast<uint8_t> (_clr & 0xF8);
+
+    return;
+}
+
+void geo_processor_t::pack ( uint8_t r, uint8_t g, uint8_t b, uint16_t& packed_clr ) {
+
+    packed_clr   = 0;
+    packed_clr  |=  (r & 0xf8) <<  8;
+    packed_clr  |=  (g & 0xfc) << 11;
+    packed_clr  |=  (b >> 3) & 0x1F;
 }
 
 //---------------------------------------------------------------------------//

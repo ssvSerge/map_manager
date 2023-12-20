@@ -276,96 +276,59 @@ void CMapPainter::OnPaint ( void ) {
 
     if ( ! is_init ) {
         is_init = true;
-
-        clr_t clr (0x40, 0x20, 0x10);
-
         _create_dib_section (dc.m_hDC, clientRect.Width(), clientRect.Height(), 24, g_paint_ctx );
-
-        for (int y = 0; y < 10; y++) {
-            for (int x = 0; x < 10; x++) {
-                _put_pixel ( x, y, clr );
-            }
-        }
-
+        g_geo_processor.video_alloc ( clientRect.Width(), clientRect.Height() );
     }
 
-    if ( m_DragActive ) {
+    // if ( m_DragActive ) {
+    // 
+    //     m_shift_lon = 0;
+    //     m_shift_lat = 0;
+    // 
+    // } else {
+    // 
+    //     double org_lon   = 0;
+    //     double org_lat   = 0;
+    //     double shift_lon = 0;
+    //     double shift_lat = 0;
+    // 
+    //     org_lon = m_base_lon;
+    //     org_lat = m_base_lat;
+    // 
+    //     g_geo_processor.get_shifts ( org_lon, org_lat, shift_lon, shift_lat );
+    // 
+    //     shift_lon   = m_DeltaX / m_scale;
+    //     shift_lat   = m_DeltaY / m_scale;
+    // 
+    //     m_shift_lon = shift_lon;
+    //     m_shift_lat = shift_lat;
+    //                                      
+    // }
 
-        m_shift_lon = 0;
-        m_shift_lat = 0;
+    int32_t  dst_line_len  =  _calc_row_len(g_paint_ctx.m_bmp->bmiHeader.biWidth, g_paint_ctx.m_bmp->bmiHeader.biBitCount);
+    int32_t  max_offset    =  clientRect.Width() * clientRect.Height();
 
-    } else {
+    uint16_t*        src_ptr  =  nullptr;
+    screen_pix_t*    dst_ptr  =  nullptr;
+    map_pos_t        pos;
+    geo_pixel_t      px;
 
-        double org_lon   = 0;
-        double org_lat   = 0;
-        double shift_lon = 0;
-        double shift_lat = 0;
+    if ( max_offset == g_geo_processor.m_video_buffer.size() ) {
 
-        org_lon = m_base_lon;
-        org_lat = m_base_lat;
+        for ( int32_t y = 0; y < clientRect.Height(); y++ ) {
 
-        g_geo_processor.get_shifts ( org_lon, org_lat, shift_lon, shift_lat );
+            dst_ptr = (screen_pix_t*) ( g_paint_ctx.m_buf + dst_line_len*y );
+            src_ptr = (uint16_t*)     ( &g_geo_processor.m_video_buffer [ y * clientRect.Width() ] );
 
-        shift_lon   = m_DeltaX / m_scale;
-        shift_lat   = m_DeltaY / m_scale;
-
-        m_shift_lon = shift_lon;
-        m_shift_lat = shift_lat;
-
+            for (int32_t x = 0; x < clientRect.Width(); x++) {
+                g_geo_processor.unpack ( src_ptr[x], dst_ptr[x].r, dst_ptr[x].g, dst_ptr[x].b );
+            }
+        }
     }
 
     _draw ( dc.m_hDC );
 
-
-    #if 0
-
-    int	x;
-    int	y;
-
-    CPaintDC dc ( this );
-
-    m_paint_dc = &dc;
-
-    x = m_BasePosition.x;
-    y = m_BasePosition.y;
-
-    if ( m_DragActive ) {
-        x += m_DeltaX;
-        y += m_DeltaY;
-    }
-
-    GetClientRect ( m_client_rect );
-
-    CDC dcMem;
-    CBitmap bitmap;
-
-    dcMem.CreateCompatibleDC( &dc );
-    bitmap.CreateCompatibleBitmap(&dc, m_client_rect.Width(), m_client_rect.Height());
-    CBitmap* pOldBitmap = dcMem.SelectObject ( &bitmap );
-
-    map_pos_t     pos;
-    geo_pixel_t   px;
-    COLORREF      outClr = 0;
-
-    for (y = 0; y < m_client_rect.Height(); y++) {
-        for (x = 0; x < m_client_rect.Width(); x++) {
-
-            pos.x = ( x );
-            pos.y = ( y );
-
-            g_geo_processor.get_pix( pos, px );
-            outClr = RGB ( px.getR(), px.getG(), px.getB() );
-
-            dcMem.SetPixel ( x, m_client_rect.Height() - y - 1, outClr );
-            // dc.SetPixel ( x, m_client_rect.Height() - y - 2, RGB(0, 0, 0) );
-        }
-    }
-
-    dc.BitBlt (m_client_rect.left, m_client_rect.top, m_client_rect.Width(), m_client_rect.Height(), &dcMem, 0, 0, SRCCOPY);
-    dcMem.SelectObject(pOldBitmap);
-
-    #endif
-
+    return;
 }
 
 void CMapPainter::OnLButtonDown ( UINT nFlags, CPoint point ) {
@@ -516,7 +479,7 @@ void CMapPainter::GetBaseParams ( double& lon, double& lat, double& scale ) cons
     scale = m_scale;
 }
 
-BOOL CMapPainter::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message) {
+BOOL CMapPainter::OnSetCursor ( CWnd* pWnd, UINT nHitTest, UINT message ) {
 
     switch (m_cursor_type) {
         case 1:
