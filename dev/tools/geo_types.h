@@ -183,7 +183,7 @@ class geo_point_t {
         }
 
         //--------------------------------------------------//
-
+        
         bool operator== ( const geo_point_t& _ref ) const {
 
             bool ret_val = true;

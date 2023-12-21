@@ -300,9 +300,10 @@ class geo_processor_t {
         void _process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const;
         bool _pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) const;
         void _get_view_rect ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, geo_rect_t& view_wnd ) const;
-        bool _is_view_rect_valid ( const geo_rect_t& view_rect ) const;
+        bool _is_view_rect_valid ( const geo_coord_t& pos ) const;
         bool _is_angle_valid ( const double angle ) const;
         bool _is_scale_valid ( const double scale ) const;
+        bool _is_map_rect_valid ( const geo_coord_t& center, double scale ) const;
         void _extend_view_rect ( const geo_coord_t& center, geo_rect_t& view_rect ) const;
         bool _is_pt_on_segment ( const geo_coord_t& begin, const geo_coord_t& end, const geo_coord_t& pt ) const;
         bool _pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& point ) const;
@@ -316,6 +317,8 @@ class geo_processor_t {
         void _intersection ( const segment_t& s1, const segment_t& s2, map_pos_t& result );
         void _commit_intersection ( const map_pos_t& base, size_t y, const geo_pixel_t& clr );
         void _add_intersection ( const map_pos_t& base, const map_pos_t& pos, intersection_type_t type );
+
+        void _prepare_rects ( const geo_coord_t& center, const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect );
 
         void _line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t color );
         void drawLineOverlap ( unsigned int aXStart, unsigned int aYStart, unsigned int aXEnd, unsigned int aYEnd, uint8_t aOverlap, geo_pixel_t aColor );
@@ -347,11 +350,16 @@ class geo_processor_t {
         double                  m_x_step;               // шаг индексов по горизонтали.
         double                  m_y_step;               // шаг индексов по вертикали.
 
-        geo_coord_t             m_center;               // 
-        double                  m_scale;                // текущее увеличение карты.
-        geo_rect_t              m_view_out;             // Окно вывода с координатами "0, 0".
-        geo_rect_t              m_view_geo;             // Окно, приведённое к GPS координатам.
-        geo_rect_t              m_view_load;            // Регион для загрузки.
+        geo_coord_t             m_center;               // положение человека.
+        geo_rect_t              m_screen_rect;          // размер окна (базовая координата 0,0).
+        geo_rect_t              m_view_rect;            // текущее окно (размеры совпадают с размерами экрана).
+        geo_rect_t              m_view_rect_ext;        // расширенное окно. 2 * в ширину и длину (с учётом вращения).
+        geo_rect_t              m_cache_rect;           // окно заргузки. 2 * m_view_rect_ext.
+
+
+        geo_rect_t              m_view_out1;            // Окно вывода с координатами "0, 0".
+        geo_rect_t              m_view_geo1;            // Окно, приведённое к GPS координатам.
+        geo_rect_t              m_view_load1;           // Регион для загрузки.
 
         double                  m_geo_step_x;           // GPS Шаг по горизонтали на пиксел.
         double                  m_geo_step_y;           // GPS Шаг по вертикали на пиксел.
@@ -362,27 +370,24 @@ class geo_processor_t {
         double                  m_view_angle_step;      // угловая разница для перерисовки карты.
         double                  m_scale_step;           // разница увеличения для перерисовки карты.
 
-        map_pos_t               m_min1;
-        map_pos_t               m_max1;
-     // matrix_t                m_matrix;
-
-
-
-        double                  m_geo_rect_scale;
+//      map_pos_t               m_min;
+//      map_pos_t               m_max;
+//      matrix_t                m_matrix;
+//      double                  m_geo_rect_scale;
+//      geo_coord_t             m_geo_center;
 
         std::string             m_map_file_name;
         std::ifstream           m_map_file;
         std::string             m_idx_file_name;
         std::ifstream           m_idx_file;
 
-     // geo_coord_t             m_geo_center;
-        double                  m_geo_scale;
         double                  m_geo_angle;
+        double                  m_geo_scale;
         double                  m_geo_angle_sin;
         double                  m_geo_angle_cos;
 
         v_geo_offset_t          m_map_ids;
-        l_geo_entry_t           m_map_cache;
+        l_geo_entry_t           m_cache_map;
         l_geo_entry_t           m_paint_list;
 
         l_geo_idx_rec_t         m_idx_list;

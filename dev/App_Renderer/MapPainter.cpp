@@ -280,31 +280,6 @@ void CMapPainter::OnPaint ( void ) {
         g_geo_processor.video_alloc ( clientRect.Width(), clientRect.Height() );
     }
 
-    // if ( m_DragActive ) {
-    // 
-    //     m_shift_lon = 0;
-    //     m_shift_lat = 0;
-    // 
-    // } else {
-    // 
-    //     double org_lon   = 0;
-    //     double org_lat   = 0;
-    //     double shift_lon = 0;
-    //     double shift_lat = 0;
-    // 
-    //     org_lon = m_base_lon;
-    //     org_lat = m_base_lat;
-    // 
-    //     g_geo_processor.get_shifts ( org_lon, org_lat, shift_lon, shift_lat );
-    // 
-    //     shift_lon   = m_DeltaX / m_scale;
-    //     shift_lat   = m_DeltaY / m_scale;
-    // 
-    //     m_shift_lon = shift_lon;
-    //     m_shift_lat = shift_lat;
-    //                                      
-    // }
-
     int32_t  dst_line_len  =  _calc_row_len(g_paint_ctx.m_bmp->bmiHeader.biWidth, g_paint_ctx.m_bmp->bmiHeader.biBitCount);
     int32_t  max_offset    =  clientRect.Width() * clientRect.Height();
 
