@@ -413,11 +413,12 @@ BOOL CMapPainter::OnEraseBkgnd ( CDC* pDC ) {
 void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double angle ) {
 
     static bool is_valid = false;
+    static double _ang   = 0;
 
     geo_rect_t    wnd;
     CRect         client_rect;
     geo_coord_t   center;
-    double        ang = angle;
+    double        ang = _ang;
 
     AfxGetApp()->DoWaitCursor(1);
 
@@ -440,7 +441,8 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
 
     ang = angle;
 
-    g_geo_processor.process_map ( center, scale, ang );
+    g_geo_processor.process_map ( center, scale, _ang );
+    _ang += 15;
 
     AfxGetApp()->DoWaitCursor(-1);
 
