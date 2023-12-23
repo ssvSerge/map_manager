@@ -16,6 +16,11 @@
 #define IDC_CMD_MAP                     1006
 #define IDC_EDIT_SCALE2                 1007
 #define IDC_EDIT_ANGLE                  1007
+#define IDC_CMD_ZOOM_IN                 1008
+#define IDC_CMD_ANGLE_PLUS              1009
+#define IDC_CMD_ZOOM_OUT                1010
+#define IDC_CMD_ANGLE_MINUS2            1011
+#define IDC_CMD_ANGLE_MINUS             1011
 
 // Next default values for new objects
 // 

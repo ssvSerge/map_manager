@@ -21,6 +21,10 @@ BEGIN_MESSAGE_MAP(CAppRendererDlg, CDialogEx)
     ON_EN_UPDATE(IDC_EDIT_SCALE, &CAppRendererDlg::OnEnUpdateEditScale)
     ON_BN_CLICKED(IDC_CMD_MAP,   &CAppRendererDlg::OnBnClickedCmdMap)
     ON_MESSAGE(WM_MAP_UPDATE,    &CAppRendererDlg::OnMapUpdate)
+    ON_BN_CLICKED(IDC_CMD_ZOOM_OUT, &CAppRendererDlg::OnBnClickedCmdZoomOut)
+    ON_BN_CLICKED(IDC_CMD_ZOOM_IN, &CAppRendererDlg::OnBnClickedCmdZoomIn)
+    ON_BN_CLICKED(IDC_CMD_ANGLE_MINUS, &CAppRendererDlg::OnBnClickedCmdAngleMinus)
+    ON_BN_CLICKED(IDC_CMD_ANGLE_PLUS, &CAppRendererDlg::OnBnClickedCmdAnglePlus)
 END_MESSAGE_MAP()
 
 CAppRendererDlg::CAppRendererDlg ( CWnd* pParent /*=nullptr*/ ) : CDialogEx(IDD_APP_REMDERER_DIALOG, pParent) {
@@ -189,4 +193,83 @@ LRESULT CAppRendererDlg::OnMapUpdate ( WPARAM wParam, LPARAM lParam ) {
     UpdateText(lat, m_EditLat);
 
     return 0;
+}
+
+
+void CAppRendererDlg::OnBnClickedCmdZoomOut() {
+
+    CString val;
+    double scale = 0;
+
+    m_EditScale.GetWindowText(val);
+    scale = atof(val);
+
+    if ( scale > 0.1 ) {
+        scale *= 0.99;
+    }
+
+    val.Format("%f", scale);
+    m_EditScale.SetWindowText(val);
+
+    OnBnClickedCmdMap();
+}
+
+
+void CAppRendererDlg::OnBnClickedCmdZoomIn() {
+
+    CString val;
+    double scale = 0;
+
+    m_EditScale.GetWindowText(val);
+    scale = atof(val);
+
+    if (scale < 10) {
+        scale *= 1.01;
+    }
+
+    val.Format("%f", scale);
+    m_EditScale.SetWindowText(val);
+
+    OnBnClickedCmdMap();
+}
+
+
+void CAppRendererDlg::OnBnClickedCmdAngleMinus() {
+
+    CString val;
+    double angle = 0;
+
+    m_EditAngle.GetWindowText(val);
+    angle = atof(val);
+
+    angle -= 1;
+
+    if (angle < 0) {
+        angle = 359;
+    }
+
+    val.Format("%f", angle);
+    m_EditAngle.SetWindowText(val);
+
+    OnBnClickedCmdMap();
+}
+
+void CAppRendererDlg::OnBnClickedCmdAnglePlus() {
+
+    CString val;
+    double angle = 0;
+
+    m_EditAngle.GetWindowText(val);
+    angle = atof(val);
+
+    angle += 1;
+
+    if (angle >= 360) {
+        angle = 0;
+    }
+
+    val.Format("%f", angle);
+    m_EditAngle.SetWindowText(val);
+
+    OnBnClickedCmdMap();
 }
