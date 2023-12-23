@@ -317,6 +317,7 @@ class geo_processor_t {
         void _intersection ( const segment_t& s1, const segment_t& s2, map_pos_t& result );
         void _commit_intersection ( const map_pos_t& base, size_t y, const geo_pixel_t& clr );
         void _add_intersection ( const map_pos_t& base, const map_pos_t& pos, intersection_type_t type );
+        void _draw_center ( const geo_coord_t& center );
 
         void _prepare_rects ( const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect );
 

@@ -50,9 +50,6 @@ void geo_processor_t::set_names ( const char* const idx_file_name, const char* c
 void geo_processor_t::load_idx ( void ) {
 
     _load_idx ( m_idx_list );
-
-    // geo_rect_t  map_rect;
-    // _find_idx_rect ( m_idx_list, map_rect, m_x_step, m_y_step );
 }
 
 void geo_processor_t::process_map ( geo_coord_t center, const double scale, const double angle ) {
@@ -99,18 +96,17 @@ void geo_processor_t::process_map ( geo_coord_t center, const double scale, cons
     }
 
     if ( angle_update ) {
-        _set_angle(angle);
-        _rotate_map_by_angle(center, scale);
-        _trim_rotated_map_by_rect();
+        _set_angle ( angle );
+        _rotate_map_by_angle ( center, scale );
+        _trim_rotated_map_by_rect ();
     }
 
-    // m_geo_angle  =  angle;
-
     if ( map_update ) {
-        _clr_screen();
-        // _draw_area();
+        _clr_screen ();
+        _draw_area  ();
         _draw_building();
-        // _draw_roads();
+        _draw_roads();
+        _draw_center(center);
     }
 
     return;
@@ -261,6 +257,30 @@ void geo_processor_t::pack ( uint8_t r, uint8_t g, uint8_t b, uint16_t& packed_c
 }
 
 //---------------------------------------------------------------------------//
+
+void geo_processor_t::_draw_center ( const geo_coord_t& center ) {
+
+    geo_pixel_t paint_clr;
+
+    geo_coord_t left   = center;
+    geo_coord_t right  = center;
+    geo_coord_t top    = center;
+    geo_coord_t bottom = center;
+
+    paint_clr.setR(255);
+    paint_clr.setG(0);
+    paint_clr.setB(0);
+
+    left.ang.x    -=  4;
+    right.ang.x   +=  4;
+    bottom.ang.y  -=  4;
+    top.ang.y     +=  4;
+
+    _line ( left, right, 1, paint_clr );
+    _line ( top, bottom, 1, paint_clr );
+
+    return;
+}
 
 void geo_processor_t::_clr_screen ( void ) {
 
@@ -915,8 +935,8 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
 
 void geo_processor_t::_set_angle ( const double angle ) {
 
-    constexpr double pi_rad_scale = 0.01745329251994329576923690768489;
-
+    constexpr double pi_rad_scale = 3.14159265358979323846 / 180;
+        
     m_geo_angle     = angle;
     m_geo_angle_sin = sin ( angle * pi_rad_scale );
     m_geo_angle_cos = cos ( angle * pi_rad_scale );
@@ -1075,7 +1095,7 @@ void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_ent
 
 void geo_processor_t::_rotate_geo_line ( const geo_coord_t& center, const double scale, v_geo_coord_t& coords ) const {
 
-    for (auto it_coord = coords.begin(); it_coord != coords.end(); it_coord++) {
+    for ( auto it_coord = coords.begin(); it_coord != coords.end(); it_coord++ ) {
         _rotate_coord ( center, scale, *it_coord );
     }
 }
@@ -1085,18 +1105,17 @@ void geo_processor_t::_rotate_coord (const geo_coord_t& center, const double sca
     double x = coord.map.x - center.map.x;
     double y = coord.map.y - center.map.y;
 
-    x = (x * m_geo_angle_cos)  -  (y * m_geo_angle_sin);
-    y = (x * m_geo_angle_sin)  +  (y * m_geo_angle_cos);
+    double next_x = (x * m_geo_angle_cos)  -  (y * m_geo_angle_sin);
+    double next_y = (x * m_geo_angle_sin)  +  (y * m_geo_angle_cos);
 
-    x *= scale;
-    y *= scale;
+    next_x *= scale;
+    next_y *= scale;
 
-    x += center.map.x;
-    y += center.map.y;
+    next_x += center.map.x;
+    next_y += center.map.y;
 
-
-    coord.ang.x = static_cast<int32_t> ( x + 0.5 );
-    coord.ang.y = static_cast<int32_t> ( y + 0.5 );
+    coord.ang.x = static_cast<int32_t> ( next_x + 0.5 );
+    coord.ang.y = static_cast<int32_t> ( next_y + 0.5 );
 }
 
 void geo_processor_t::_trim_record ( const geo_rect_t& rect_path, const geo_entry_t& in_path, const bool is_area, geo_entry_t& out_path ) const {
