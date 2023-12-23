@@ -260,7 +260,7 @@ class geo_processor_t {
         void get_pix ( const map_pos_t& pos, geo_pixel_t& px ) const;
         void set_pix ( const map_pos_t& pos, const geo_pixel_t& px );
         void load_idx ( void );
-        void process_map ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, const double angle );
+        void process_map ( const geo_coord_t& center, const double scale, const double angle );
         void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
         void get_shifts ( const double lat, const double lon, double& shift_x, double shift_y );
         void video_alloc ( int32_t x, int32_t y );
@@ -279,15 +279,15 @@ class geo_processor_t {
         void _alloc_img_buffer ( const geo_rect_t& geo_rect );
         void _fill_solid ( const geo_pixel_t clr );
         void _set_angle ( const double angle );
-        void _rotate_map_by_angle ( void );
+        void _rotate_map_by_angle ( const geo_coord_t& center, const double scale );
         void _trim_rotated_map_by_rect ( void );
         void _draw_area ( void );
         void _draw_building ( void );
         void _draw_roads ( void );
         bool _is_overlapped ( const geo_rect_t& window, const pos_type_t pos_type, const geo_rect_t& slice ) const;
         void _load_map_entry ( const uint32_t map_entry, geo_entry_t& map_record );
-        void _rotate_geo_line ( v_geo_coord_t& coords ) const;
-        void _rotate_coord ( geo_coord_t& coord ) const;
+        void _rotate_geo_line ( const geo_coord_t& center, const double scale, v_geo_coord_t& coords ) const;
+        void _rotate_coord ( const geo_coord_t& center, const double scale, geo_coord_t& coord ) const;
         void _trim_record ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, const bool is_area, geo_entry_t& out_record ) const;
         void _process_area ( geo_entry_t& geo_line );
         void _map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const;
@@ -296,8 +296,8 @@ class geo_processor_t {
         void _fill_poly ( geo_line_t& region, const geo_pixel_t border_clr, const geo_pixel_t fill_clr );
         void _fill_poly ( const geo_coord_t& pos, const geo_pixel_t br_clr, const geo_pixel_t fill_clr, const bool ignore_bk );
         void _find_scale_pixel ( const geo_coord_t& center, const double scale );
-        void _calc_geo_rect ( const geo_coord_t& center, const geo_rect_t& wnd );
-        void _process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const;
+        void _calc_view_rect ( void );
+        void _clr_screen ( void );
         bool _pt_in_rect ( const map_pos_t pt, const geo_rect_t& wnd ) const;
         void _get_view_rect ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale, geo_rect_t& view_wnd ) const;
         bool _is_view_rect_valid ( const geo_coord_t& pos ) const;
@@ -318,7 +318,7 @@ class geo_processor_t {
         void _commit_intersection ( const map_pos_t& base, size_t y, const geo_pixel_t& clr );
         void _add_intersection ( const map_pos_t& base, const map_pos_t& pos, intersection_type_t type );
 
-        void _prepare_rects ( const geo_coord_t& center, const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect );
+        void _prepare_rects ( const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect );
 
         void _line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t color );
         void drawLineOverlap ( unsigned int aXStart, unsigned int aYStart, unsigned int aXEnd, unsigned int aYEnd, uint8_t aOverlap, geo_pixel_t aColor );

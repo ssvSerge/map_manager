@@ -55,7 +55,7 @@ void geo_processor_t::load_idx ( void ) {
     // _find_idx_rect ( m_idx_list, map_rect, m_x_step, m_y_step );
 }
 
-void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord_t& center, const double scale, const double angle ) {
+void geo_processor_t::process_map ( const geo_coord_t& center, const double scale, const double angle ) {
 
     bool angle_update  = false;
     bool map_update    = false;
@@ -64,12 +64,14 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
     m_center.geo_to_map();
     m_center.reset_angle();
 
+    _calc_view_rect ();
+
     if (  !_is_scale_valid(scale)  ||  !_is_view_rect_valid(center)  ) {
 
         geo_rect_t  view_rect_ext;
         geo_rect_t  cache_rect;
 
-        _prepare_rects ( center, scale, view_rect_ext, cache_rect );
+        _prepare_rects ( scale, view_rect_ext, cache_rect );
 
         m_view_rect_ext  =  view_rect_ext;
         m_cache_rect     =  cache_rect;
@@ -90,12 +92,16 @@ void geo_processor_t::process_map ( const geo_rect_t& paint_wnd, const geo_coord
     }
 
     if ( angle_update ) {
-        // _set_angle ( angle );
-        // _rotate_map_by_angle ();
-        // _trim_rotated_map_by_rect ();
+        _set_angle ( angle );
+        _rotate_map_by_angle ( center, scale );
+        _trim_rotated_map_by_rect ();
     }
 
     if ( map_update ) {
+        _clr_screen();
+        _draw_area();
+        _draw_building();
+        _draw_roads();
     }
 
     return;
@@ -177,7 +183,7 @@ void geo_processor_t::close ( void ) {
     m_screen_rect.clear();
     m_view_rect.clear();
     m_view_rect_ext.clear();
-    m_view_load.clear();
+    m_cache_rect.clear();
 }
 
 void geo_processor_t::get_shifts ( const double x, const double y, double& shift_x, double shift_y ) {
@@ -207,8 +213,11 @@ void geo_processor_t::video_alloc ( int32_t x, int32_t y ) {
 
     m_screen_rect.min.map.x = 0;
     m_screen_rect.min.map.y = 0;
+    m_screen_rect.min.reset_angle();
+
     m_screen_rect.max.map.x = x;
     m_screen_rect.max.map.y = y;
+    m_screen_rect.max.reset_angle();
 
     m_video_buffer.clear();
     m_video_buffer.resize( alloc_size );
@@ -238,11 +247,27 @@ void geo_processor_t::pack ( uint8_t r, uint8_t g, uint8_t b, uint16_t& packed_c
 
     packed_clr   = 0;
     packed_clr  |=  (r & 0xf8) <<  8;
-    packed_clr  |=  (g & 0xfc) << 11;
-    packed_clr  |=  (b >> 3) & 0x1F;
+    packed_clr  |=  (g & 0xfc) <<  3;
+    packed_clr  |=  (b & 0xf8) >>  3;
 }
 
 //---------------------------------------------------------------------------//
+
+void geo_processor_t::_clr_screen ( void ) {
+
+    uint8_t r = 240;
+    uint8_t g = 240;
+    uint8_t b = 240;
+
+    uint16_t packed_clr = 0;
+
+    pack ( r, g, b, packed_clr );
+    unpack ( packed_clr, r, g, b );
+
+    for ( size_t i = 0; i < m_video_buffer.size(); i++ ) {
+        m_video_buffer[i] = packed_clr;
+    }
+}
 
 void geo_processor_t::_extend_rect ( const geo_coord_t& center, const geo_rect_t& src_rect, geo_rect_t& dst_rect ) const {
 
@@ -259,39 +284,6 @@ void geo_processor_t::_extend_rect ( const geo_coord_t& center, const geo_rect_t
     dst_rect.max.map.x = center.map.x + shift_hor;
     dst_rect.max.map.y = center.map.y + shift_ver;
     dst_rect.max.reset_angle();
-}
-
-void geo_processor_t::_process_rects ( const geo_coord_t& center, const double scale, const geo_rect_t& paint_wnd, geo_rect_t& map_rect, geo_rect_t& map_rect_ext ) const {
-
-    // static const auto sqrt_scale = std::sqrt(2) / 2;
-    // 
-    // double step_x = 1 / scale;
-    // double step_y = 1 / scale;
-    // 
-    // double shift_x = paint_wnd.max.map.x * step_x / 2;
-    // double shift_y = paint_wnd.max.map.y * step_y / 2;
-    // 
-    // double dist_x = paint_wnd.max.map.x;
-    // double dist_y = paint_wnd.max.map.y;
-    // 
-    // map_rect.min.map.x = static_cast<int32_t> ( center.map.x - shift_x + 0.5 );
-    // map_rect.min.map.y = static_cast<int32_t> ( center.map.y - shift_y + 0.5 );
-    // map_rect.min.reset_angle();
-    // 
-    // map_rect.max.map.x = static_cast<int32_t> ( center.map.x + shift_x + 0.5 );
-    // map_rect.max.map.y = static_cast<int32_t> ( center.map.y + shift_y + 0.5 );
-    // map_rect.max.reset_angle();
-    // 
-    // double  radius      = std::sqrt ( dist_x*dist_x + dist_y*dist_y );
-    // auto    rect_offset = static_cast<int32_t> ( (radius * sqrt_scale) + 0.5 );
-    // 
-    // map_rect_ext.min.map.x = center.map.x - rect_offset;
-    // map_rect_ext.min.map.y = center.map.y - rect_offset;
-    // map_rect_ext.min.reset_angle();
-    // 
-    // map_rect_ext.max.map.x = center.map.x + rect_offset;
-    // map_rect_ext.max.map.y = center.map.y + rect_offset;
-    // map_rect_ext.max.reset_angle();
 }
 
 void geo_processor_t::_find_scale_pixel ( const geo_coord_t& center, const double scale ) {
@@ -329,7 +321,27 @@ void geo_processor_t::_find_scale_pixel ( const geo_coord_t& center, const doubl
     return;
 }
 
-void geo_processor_t::_prepare_rects ( const geo_coord_t& center, const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect ) {
+void geo_processor_t::_calc_view_rect ( void ) {
+
+    uint32_t screen_width    =  m_screen_rect.max.map.x - m_screen_rect.min.map.x;
+    uint32_t screen_height   =  m_screen_rect.max.map.y - m_screen_rect.min.map.y;
+    uint32_t shift_x_left    =  screen_width / 2;
+    uint32_t shift_x_right   =  screen_width - shift_x_left;
+    uint32_t shift_y_bottom  =  screen_height / 10;
+    uint32_t shift_y_top     =  screen_height - shift_y_bottom;
+
+    m_view_rect.min.map.x  =  m_center.map.x  -  shift_x_left;
+    m_view_rect.max.map.x  =  m_center.map.x  +  shift_x_right;
+    m_view_rect.min.map.y  =  m_center.map.y  -  shift_y_bottom;
+    m_view_rect.max.map.y  =  m_center.map.y  +  shift_y_top;
+
+    m_view_rect.min.reset_angle();
+    m_view_rect.max.reset_angle();
+
+    return;                                             
+}
+
+void geo_processor_t::_prepare_rects ( const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect ) {
 
     static const auto sqrt_scale = std::sqrt(2) / 2;
     static const uint32_t zoom_a = 2;
@@ -341,56 +353,24 @@ void geo_processor_t::_prepare_rects ( const geo_coord_t& center, const double s
     screen_width   /=  scale;
     screen_height  /=  scale;
 
-    uint32_t side   =  std::max ( screen_width, screen_height );
+    double side     =  std::max ( screen_width, screen_height );
     uint32_t radius =  static_cast<uint32_t> ( 0.5 + side * sqrt_scale );
 
-    view_rect_ext.min.map.x = center.map.x - ( radius * zoom_a );
-    view_rect_ext.max.map.x = center.map.x + ( radius * zoom_a );
-    view_rect_ext.min.map.y = center.map.y - ( radius * zoom_a );
-    view_rect_ext.max.map.y = center.map.y + ( radius * zoom_a );
+    view_rect_ext.min.map.x = m_center.map.x - ( radius * zoom_a );
+    view_rect_ext.max.map.x = m_center.map.x + ( radius * zoom_a );
+    view_rect_ext.min.map.y = m_center.map.y - ( radius * zoom_a );
+    view_rect_ext.max.map.y = m_center.map.y + ( radius * zoom_a );
+    view_rect_ext.min.reset_angle();
+    view_rect_ext.max.reset_angle();
 
-    cache_rect.min.map.x = center.map.x - (radius * zoom_b);
-    cache_rect.max.map.x = center.map.x + (radius * zoom_b);
-    cache_rect.min.map.y = center.map.y - (radius * zoom_b);
-    cache_rect.max.map.y = center.map.y + (radius * zoom_b);
+    cache_rect.min.map.x = m_center.map.x - (radius * zoom_b);
+    cache_rect.max.map.x = m_center.map.x + (radius * zoom_b);
+    cache_rect.min.map.y = m_center.map.y - (radius * zoom_b);
+    cache_rect.max.map.y = m_center.map.y + (radius * zoom_b);
+    cache_rect.min.reset_angle();
+    cache_rect.max.reset_angle();
 
     return;
-}
-
-
-void geo_processor_t::_calc_geo_rect ( const geo_coord_t& center, const geo_rect_t& wnd ) {
-
-    // double x_max_id = wnd.max.map.x - 1;
-    // double y_max_id = wnd.max.map.y - 1;
-    // 
-    // double x_shift  = (x_max_id/2) * m_geo_step_x;
-    // double y_shift  = (y_max_id/2) * m_geo_step_y;
-    // 
-    // m_view_geo.min.geo.x = center.geo.x - x_shift;
-    // m_view_geo.min.geo.y = center.geo.y - y_shift;
-    // m_view_geo.max.geo.x = center.geo.x + x_shift;
-    // m_view_geo.max.geo.y = center.geo.y + y_shift;
-    // 
-    // m_view_geo.min.reset_angle();
-    // m_view_geo.min.to_projection();
-    // m_view_geo.max.reset_angle();
-    // m_view_geo.max.to_projection();
-    // 
-    // m_prj_step_x = m_view_geo.max.map.x - m_view_geo.min.map.x;
-    // m_prj_step_y = m_view_geo.max.map.y - m_view_geo.min.map.y;
-
-    #if 0
-
-        x_shift = m_wnd_map.max.ang.x - m_wnd_map.min.ang.x;
-        y_shift = m_wnd_map.max.ang.y - m_wnd_map.min.ang.y;
-
-        auto x_cnt = static_cast<int32_t> ( x_shift / m_geo_step_x + 0.5 );
-        auto y_cnt = static_cast<int32_t> ( y_shift / m_geo_step_y + 0.5 );
-
-        assert ( x_cnt == (wnd.max.map.x-1) );
-        assert ( y_cnt == (wnd.max.map.y-1) );
-
-    #endif
 }
 
 bool geo_processor_t::_is_view_rect_valid ( const geo_coord_t& pos ) const {
@@ -563,40 +543,49 @@ void geo_processor_t::_filter_idx_by_rect ( const geo_rect_t& base_rect, const l
 
 void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache ) {
 
-    geo_entry_t     new_entry;
-    bool            already_known;
+    geo_entry_t             new_entry;
+    std::set<geo_offset_t>  map_set;
 
-    for ( auto map_entry_it = map_cache.begin(); map_entry_it != map_cache.end(); map_entry_it++ ) {
-        map_entry_it->m_to_display = false;
-        map_entry_it->m_miss_cnt++;
+    for (auto map_it = map_entries.cbegin(); map_it != map_entries.cend(); map_it++ ) {
+        map_set.insert ( * map_it );
     }
 
-    for ( auto id = map_entries.cbegin(); id != map_entries.cend(); id++ ) {
+    for ( auto cache_entry = map_cache.begin(); cache_entry != map_cache.end(); cache_entry++ ) {
 
-        already_known = false;
+        auto find_res = map_set.find(cache_entry->m_data_off );
 
-        for ( auto idx_it = map_cache.begin(); idx_it != map_cache.end(); idx_it++ ) {
-            if ( idx_it->m_data_off == *id ) {
-                already_known = true;
-                idx_it->m_to_display = true;
-                idx_it->m_miss_cnt = 0;
-                break;
-            }
+        if ( find_res == map_set.end() ) {
+
+            cache_entry->m_to_display = false;
+            cache_entry->m_miss_cnt++;
+
+        }  else  {
+
+            cache_entry->m_to_display = true;
+            cache_entry->m_miss_cnt = 0;
+
+            map_set.erase( find_res );
+
         }
 
-        if ( !already_known ) {
-            new_entry.clear();
-            _load_map_entry(*id, new_entry);
-            new_entry.m_to_display = true;
-            new_entry.m_miss_cnt   = 0;
-            map_cache.push_back(new_entry);
-        }
     }
+
+    for ( auto id = map_set.cbegin(); id != map_set.cend(); id++ ) {
+
+        new_entry.clear();
+        _load_map_entry( *id, new_entry );
+        new_entry.m_to_display = true;
+        new_entry.m_miss_cnt = 0;
+        map_cache.push_back(new_entry);
+
+    }
+
+    return;
 }
 
-void geo_processor_t::_rotate_map_by_angle ( void ) {
+void geo_processor_t::_rotate_map_by_angle ( const geo_coord_t& center, const double scale ) {
 
-    for ( auto it_geo_area = m_map_cache.begin(); it_geo_area != m_map_cache.end(); it_geo_area++ ) {
+    for ( auto it_geo_area = m_cache_map.begin(); it_geo_area != m_cache_map.end(); it_geo_area++ ) {
 
         if ( !it_geo_area->m_to_display ) {
             continue;
@@ -604,7 +593,7 @@ void geo_processor_t::_rotate_map_by_angle ( void ) {
 
         for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
             it_geo_line->m_fill_pos.clear();
-            _rotate_geo_line ( it_geo_line->m_coords );
+            _rotate_geo_line ( center, scale, it_geo_line->m_coords );
         }
 
     }
@@ -616,22 +605,22 @@ void geo_processor_t::_trim_rotated_map_by_rect ( void ) {
     geo_entry_t     out_record;
 
     m_paint_list.clear();
-    m_view_geo.reset_angle();
+    m_view_rect.reset_angle();
 
-    for (auto it_src = m_map_cache.cbegin(); it_src != m_map_cache.cend(); it_src++) {
+    for (auto it_src = m_cache_map.cbegin(); it_src != m_cache_map.cend(); it_src++) {
 
         if ( !it_src->m_to_display ) {
             continue;
         }
 
         if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
-            _trim_record ( m_view_geo, *it_src, true, out_record );
+            _trim_record ( m_view_rect, *it_src, true, out_record );
         } else
         if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
-            _trim_record ( m_view_geo, *it_src, true, out_record );
+            _trim_record ( m_view_rect, *it_src, true, out_record );
         } else
         if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
-            _trim_record ( m_view_geo, *it_src, false, out_record );
+            _trim_record ( m_view_rect, *it_src, false, out_record );
         }
 
         if (out_record.m_lines.size() > 0) {
@@ -943,7 +932,7 @@ void geo_processor_t::_alloc_img_buffer ( const geo_rect_t& geo_rect ) {
 
 void geo_processor_t::_fill_solid ( const geo_pixel_t clr ) {
 
-    uint32_t alloc_size = m_view_out.max.map.x * m_view_out.max.map.y;
+    uint32_t alloc_size = m_screen_rect.max.map.x * m_screen_rect.max.map.y;
 
     geo_pixel_int_t clr_int;
     _px_conv ( clr, clr_int );
@@ -1075,49 +1064,39 @@ void geo_processor_t::_load_map_entry ( const uint32_t map_entry_offset, geo_ent
     map_entry.m_data_off = map_entry_offset;
 }
 
-void geo_processor_t::_rotate_geo_line ( v_geo_coord_t& coords ) const {
+void geo_processor_t::_rotate_geo_line ( const geo_coord_t& center, const double scale, v_geo_coord_t& coords ) const {
 
     for (auto it_coord = coords.begin(); it_coord != coords.end(); it_coord++) {
-        _rotate_coord (*it_coord);
+        _rotate_coord ( center, scale, *it_coord );
     }
 }
 
-void geo_processor_t::_rotate_coord ( geo_coord_t& coord ) const {
+void geo_processor_t::_rotate_coord (const geo_coord_t& center, const double scale, geo_coord_t& coord ) const {
 
-    map_pos_t  pt;
-    map_pos_t  center;
+    double x = coord.map.x - center.map.x;
+    double y = coord.map.y - center.map.y;
 
-    double  translated_x = 0;
-    double  translated_y = 0;
-    double  rotated_x = 0;
-    double  rotated_y = 0;
+    x = (x * m_geo_angle_cos)  -  (y * m_geo_angle_sin);
+    y = (x * m_geo_angle_sin)  +  (y * m_geo_angle_cos);
 
-    pt = coord.map;
-    center = m_center.map;
+    x *= scale;
+    y *= scale;
 
-    translated_x = pt.x - center.x;
-    translated_y = pt.y - center.y;
-
-    rotated_x   =  translated_x * m_geo_angle_cos - translated_y * m_geo_angle_sin;
-    rotated_x  +=  center.x;
-                   
-    rotated_y   =  translated_x * m_geo_angle_sin + translated_y * m_geo_angle_cos;
-    rotated_y  +=  center.y;
-                   
-    coord.ang.x = static_cast<int32_t> (rotated_x + 0.5);
-    coord.ang.y = static_cast<int32_t> (rotated_y + 0.5);
+    coord.ang.x = static_cast<int32_t> ( x + 0.5 );
+    coord.ang.y = static_cast<int32_t> ( y + 0.5 );
 }
 
 void geo_processor_t::_trim_record ( const geo_rect_t& rect_path, const geo_entry_t& in_path, const bool is_area, geo_entry_t& out_path ) const {
 
     v_geo_line_t    res;
 
-    out_path.m_record_type  = in_path.m_record_type;
-    out_path.m_default_type = in_path.m_default_type;
-    out_path.m_osm_ref      = in_path.m_osm_ref;
-    out_path.m_data_off     = in_path.m_data_off;
-    out_path.m_to_display   = in_path.m_to_display;
-    out_path.m_miss_cnt     = in_path.m_miss_cnt;
+    out_path.m_record_type   =  in_path.m_record_type;
+    out_path.m_default_type  =  in_path.m_default_type;
+    out_path.m_osm_ref       =  in_path.m_osm_ref;
+    out_path.m_data_off      =  in_path.m_data_off;
+    out_path.m_to_display    =  in_path.m_to_display;
+    out_path.m_miss_cnt      =  in_path.m_miss_cnt;
+
     out_path.m_lines.clear();
 
     for ( auto it_in_line = in_path.m_lines.cbegin(); it_in_line != in_path.m_lines.cend(); it_in_line++ ) {
@@ -1164,8 +1143,8 @@ void geo_processor_t::_poly_area ( const geo_line_t& poly_line, const geo_pixel_
 
 void geo_processor_t::_pt_geo_to_map ( const map_pos_t& src, map_pos_t& dst ) const {
 
-    dst.x = src.x - m_view_geo.min.ang.x;
-    dst.y = src.y - m_view_geo.min.ang.y;
+    dst.x = src.x - m_view_rect.min.ang.x;
+    dst.y = src.y - m_view_rect.min.ang.y;
 }
 
 void geo_processor_t::_fill_poly ( geo_line_t& poly_line, const geo_pixel_t border_clr, const geo_pixel_t fill_clr ) {
@@ -1395,8 +1374,8 @@ void geo_processor_t::_commit_intersection ( const map_pos_t& base, size_t y, co
             }
         }
 
-        px_pos.x = (int32_t)x + base.x - m_view_geo.min.ang.x;
-        px_pos.y = (int32_t)y - m_view_geo.min.ang.y;
+        px_pos.x = (int32_t)x + base.x - m_view_rect.min.ang.x;
+        px_pos.y = (int32_t)y - m_view_rect.min.ang.y;
 
         if (points_cnt % 2) {
             set_pix ( px_pos, clr );
@@ -1611,6 +1590,55 @@ bool geo_processor_t::_are_collinear ( const geo_coord_t& p1, const geo_coord_t&
 
     return (my_delta < min_delta);
 }
+
+void geo_processor_t::_line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t _color ) {
+
+    int x1 = from.ang.x  - m_view_rect.min.ang.x;
+    int y1 = from.ang.y  - m_view_rect.min.ang.y;
+    int x2 = to.ang.x    - m_view_rect.min.ang.x;
+    int y2 = to.ang.y    - m_view_rect.min.ang.y;
+
+    geo_pixel_t color = _color;
+
+    const int deltaX = std::abs(x2 - x1);
+    const int deltaY = std::abs(y2 - y1);
+    const int signX = x1 < x2 ? 1 : -1;
+    const int signY = y1 < y2 ? 1 : -1;
+
+    int error = deltaX - deltaY;
+
+    (void)width;
+    color.setR(0);
+    color.setG(0);
+    color.setB(0);
+
+    map_pos_t draw_pos;
+
+    draw_pos.x = x2;
+    draw_pos.y = y2;
+    set_pix(draw_pos, color);
+
+    while (x1 != x2 || y1 != y2) {
+
+        draw_pos.x = x1;
+        draw_pos.y = y1;
+        set_pix(draw_pos, color);
+
+        int error2 = error * 2;
+        if (error2 > -deltaY) {
+            error -= deltaY;
+            x1 += signX;
+        }
+
+        if (error2 < deltaX) {
+            error += deltaX;
+            y1 += signY;
+        }
+    }
+
+    return;
+}
+
 
 #if 0
 void geo_processor_t::_line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t color ) {
@@ -1883,55 +1911,6 @@ void geo_processor_t::fillRect ( int aXStart, int aYStart, int aXEnd, int aYEnd,
 }
 
 #endif
-
-void geo_processor_t::_line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t _color ) {
-
-    int x1 = from.ang.x  - m_view_geo.min.ang.x;
-    int y1 = from.ang.y  - m_view_geo.min.ang.y;
-    int x2 = to.ang.x    - m_view_geo.min.ang.x;
-    int y2 = to.ang.y    - m_view_geo.min.ang.y;
-
-    geo_pixel_t color = _color;
-
-    const int deltaX = std::abs(x2 - x1);
-    const int deltaY = std::abs(y2 - y1);
-    const int signX = x1 < x2 ? 1 : -1;
-    const int signY = y1 < y2 ? 1 : -1;
-
-    int error = deltaX - deltaY;
-
-    (void)width;
-    color.setR(0);
-    color.setG(0);
-    color.setB(0);
-
-    map_pos_t draw_pos;
-
-    draw_pos.x = x2;
-    draw_pos.y = y2;
-    set_pix(draw_pos, color);
-
-    while (x1 != x2 || y1 != y2) {
-
-        draw_pos.x = x1;
-        draw_pos.y = y1;
-        set_pix(draw_pos, color);
-
-        int error2 = error * 2;
-        if (error2 > -deltaY) {
-            error -= deltaY;
-            x1 += signX;
-        }
-
-        if (error2 < deltaX) {
-            error += deltaX;
-            y1 += signY;
-        }
-    }
-
-    return;
-}
-
 
 #if 0 
 
