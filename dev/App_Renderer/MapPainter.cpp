@@ -442,7 +442,7 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
     ang = angle;
 
     g_geo_processor.process_map ( center, scale, _ang );
-    _ang += 15;
+    _ang += 1;
 
     AfxGetApp()->DoWaitCursor(-1);
 
