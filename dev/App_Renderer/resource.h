@@ -19,8 +19,8 @@
 #define IDC_CMD_ZOOM_IN                 1008
 #define IDC_CMD_ANGLE_PLUS              1009
 #define IDC_CMD_ZOOM_OUT                1010
-#define IDC_CMD_ANGLE_MINUS2            1011
 #define IDC_CMD_ANGLE_MINUS             1011
+#define IDC_CMD_FIND_OBJECT             1012
 
 // Next default values for new objects
 // 

@@ -29,6 +29,7 @@ BEGIN_MESSAGE_MAP(CAppRendererDlg, CDialogEx)
     ON_MESSAGE(WM_USER_MOVE,            &CAppRendererDlg::OnUserMove)
     ON_MESSAGE(WM_USER_MOVE_LEAVE,      &CAppRendererDlg::OnUserMoveLeave)
 
+    ON_BN_CLICKED(IDC_CMD_FIND_OBJECT, &CAppRendererDlg::OnBnClickedCmdFindObject)
 END_MESSAGE_MAP()
 
 
@@ -226,7 +227,7 @@ void CAppRendererDlg::OnBnClickedCmdZoomIn() {
     m_EditScale.GetWindowText(val);
     scale = atof(val);
 
-    if (scale < 10) {
+    if (scale < 50) {
         scale *= 1.01;
     }
 
@@ -295,8 +296,8 @@ LRESULT CAppRendererDlg::OnUserMove ( WPARAM wParam, LPARAM lParam ) {
 
         g_geo_processor.get_shifts ( curr_lat, curr_lon, step_geo_x, step_geo_y );
 
-        shift_geo_x = m_MapRender.m_drag_x * step_geo_x / m_base_scale;
-        shift_geo_y = m_MapRender.m_drag_y * step_geo_y / m_base_scale;
+        shift_geo_x = m_MapRender.m_drag_x * step_geo_x / m_base_scale / 2;
+        shift_geo_y = m_MapRender.m_drag_y * step_geo_y / m_base_scale / 2;
 
         m_shift_lon = m_base_lon + shift_geo_x;
         m_shift_lat = m_base_lat + shift_geo_y;
@@ -348,4 +349,9 @@ LRESULT CAppRendererDlg::OnUserMoveLeave ( WPARAM wParam, LPARAM lParam ) {
 
     m_drag_active = false;
     return 0;
+}
+
+void CAppRendererDlg::OnBnClickedCmdFindObject() {
+
+    return;
 }

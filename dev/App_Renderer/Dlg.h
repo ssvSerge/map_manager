@@ -61,4 +61,5 @@ class CAppRendererDlg : public CDialogEx {
 		double          m_shift_lat;
 
 		bool            m_drag_active;
+		afx_msg void OnBnClickedCmdFindObject();
 };
