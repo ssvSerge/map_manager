@@ -8,6 +8,8 @@
 
 #include "MapPainter.h"
 
+#include "Dlg.h"
+
 #define NAME_IDX      "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_idx.txt"
 #define NAME_MAP      "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_map.txt"
 
@@ -27,7 +29,7 @@ BEGIN_MESSAGE_MAP ( CMapPainter, CStatic )
     ON_WM_SETCURSOR()
 END_MESSAGE_MAP()
 
-static geo_processor_t    g_geo_processor;
+geo_processor_t    g_geo_processor;
 
 class paint_ctx_t {
     public:
@@ -249,13 +251,11 @@ CMapPainter::CMapPainter () {
     m_delta_ver      = 0;
     m_paint_dc       = nullptr;
 
-    m_base_lon       = 14.339209;
-    m_base_lat       = 50.036852;
-    m_shift_lon      = 0;
-    m_shift_lat      = 0;
     m_scale		     = 1;
     m_angle          = 0;
     m_cursor_type    = 0;
+    m_drag_x         = 0;
+    m_drag_y         = 0;
 
     return;
 }
@@ -326,8 +326,10 @@ void CMapPainter::OnLButtonDown ( UINT nFlags, CPoint point ) {
         _TrackMouseEvent(&tme);
     }
 
+    m_DragBasePos = point;
+
+    GetParent()->PostMessage(WM_USER_MOVE_ENTER, 0, 0);
     m_DragActive = true;
-    m_PickPoint = point;
 
     return;
 }
@@ -353,18 +355,8 @@ void CMapPainter::OnLButtonUp ( UINT nFlags, CPoint point ) {
     }
 
     if ( m_DragActive ) {
-
         m_DragActive = false;
-
-        m_base_lon   += m_shift_lon;
-        m_shift_lon   = 0;
-
-        m_base_lat   += m_shift_lat;
-        m_shift_lat   = 0;
-
-        Invalidate(1);
-        UpdateWindow();
-        GetParent()->PostMessage(WM_MAP_UPDATE, 0, 0);
+        GetParent()->PostMessage(WM_USER_MOVE_LEAVE, 0, 0);
     }
 }
 
@@ -373,36 +365,9 @@ void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {
     CStatic::OnMouseMove ( nFlags, point );
 
     if ( m_DragActive ) {
-
-        double step_x  = 0;
-        double step_y  = 0;
-
-        m_DeltaX  =  point.x - m_PickPoint.x;
-        m_DeltaY  =  point.y - m_PickPoint.y;
-
-        g_geo_processor.get_shifts ( point.x + m_DeltaX, point.y + m_DeltaY, step_x, step_y );
-
-        m_shift_lon = (m_DeltaX / m_scale) * step_x;
-        m_shift_lat = (m_DeltaY / m_scale) * step_y;
-
-        SetBaseParams (m_shift_lon, m_shift_lat, m_scale, m_angle );
-
-        Invalidate(1);
-        UpdateWindow();
-        GetParent()->PostMessage(WM_MAP_UPDATE, 0, 0);
-
-    } else {
-
-        if ( m_shift_lon != 0 ) {
-            m_base_lon += m_shift_lon;
-            m_shift_lon = 0;
-        }
-
-        if ( m_shift_lat != 0 ) {
-            m_base_lat += m_shift_lat;
-            m_shift_lat = 0;
-        }
-
+        m_drag_x = (-1) * (point.x - m_DragBasePos.x);
+        m_drag_y = (+1) * (point.y - m_DragBasePos.y);
+        GetParent()->PostMessage( WM_USER_MOVE, 0, 0 );
     }
 }
 
@@ -442,13 +407,6 @@ void CMapPainter::SetBaseParams ( double lon, double lat, double scale, double a
     AfxGetApp()->DoWaitCursor(-1);
 
     return;
-}
-
-void CMapPainter::GetBaseParams ( double& lon, double& lat, double& scale ) const {
-
-    lon   = m_base_lon + m_shift_lon;
-    lat   = m_base_lat + m_shift_lat;
-    scale = m_scale;
 }
 
 BOOL CMapPainter::OnSetCursor ( CWnd* pWnd, UINT nHitTest, UINT message ) {

@@ -2,6 +2,11 @@
 
 #include "MapPainter.h"
 
+#define WM_USER_MOVE_ENTER      (WM_USER + 10)
+#define WM_USER_MOVE            (WM_USER + 11)
+#define WM_USER_MOVE_LEAVE      (WM_USER + 12)
+
+
 class CAppRendererDlg : public CDialogEx {
 
 	public:
@@ -20,11 +25,14 @@ class CAppRendererDlg : public CDialogEx {
 
 	private:
 		void   UpdateText    ( double val, CEdit& edit );
-		void   UpdateParams  ( void );
+		void   MapRedraw     ( void );
 
 	public:
 		DECLARE_MESSAGE_MAP()
 		afx_msg LRESULT OnMapUpdate(WPARAM wParam, LPARAM lParam);
+		afx_msg LRESULT OnUserMove(WPARAM wParam, LPARAM lParam);
+		afx_msg LRESULT OnUserMoveEnter(WPARAM wParam, LPARAM lParam);
+		afx_msg LRESULT OnUserMoveLeave(WPARAM wParam, LPARAM lParam);
 		afx_msg HCURSOR OnQueryDragIcon();
 		afx_msg void OnPaint();
 		afx_msg void OnBnClickedTest();
@@ -44,4 +52,13 @@ class CAppRendererDlg : public CDialogEx {
 		CEdit			m_EditScale;
 		CEdit			m_EditAngle;
 		CMapPainter		m_MapRender;
+		double          m_base_scale;
+		double          m_base_angle;
+		double          m_base_lon;
+		double          m_base_lat;
+
+		double          m_shift_lon;
+		double          m_shift_lat;
+
+		bool            m_drag_active;
 };

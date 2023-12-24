@@ -262,7 +262,7 @@ class geo_processor_t {
         void load_idx ( void );
         void process_map ( geo_coord_t center, const double scale, const double angle );
         void geo_intersect ( const pos_type_t coord_type, bool is_area, const geo_line_t& path, const geo_rect_t& in_rect, v_geo_line_t& clipped_path ) const;
-        void get_shifts ( const double lat, const double lon, double& shift_x, double shift_y );
+        void get_shifts ( const double lat, const double lon, double& shift_x, double& shift_y );
         void video_alloc ( int32_t x, int32_t y );
         void unpack ( uint16_t packed_clr, uint8_t& r, uint8_t& g, uint8_t& b );
         void pack ( uint8_t r, uint8_t g, uint8_t b, uint16_t& packed_clr );

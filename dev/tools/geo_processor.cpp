@@ -191,21 +191,19 @@ void geo_processor_t::close ( void ) {
     m_cache_rect.clear();
 }
 
-void geo_processor_t::get_shifts ( const double x, const double y, double& shift_x, double shift_y ) {
+void geo_processor_t::get_shifts ( const double x, const double y, double& shift_x, double& shift_y ) {
 
-    double dist_px_x = 1;
-    double step_x    = 0.0001;
-    double dist_x    = 0;
-
-    double dist_px_y = 1;
-    double step_y    = 0.0001;
-    double dist_y    = 0;
+    double step_x     =  0.0001;
+    double dist_x     =  0;
+                        
+    double step_y     =  0.0001;
+    double dist_y     =  0;
 
     dist_x = gps_distance (  x, y,  x + step_x, y  );
     dist_y = gps_distance (  x, y,  x, y + step_y  );
 
-    shift_x = dist_px_x / dist_x;
-    shift_y = dist_px_y / dist_y;
+    shift_x = (step_x / dist_x) * m_geo_scale;
+    shift_y = (step_y / dist_y) * m_geo_scale;
 
     return;
 }

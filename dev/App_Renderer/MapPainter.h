@@ -14,6 +14,10 @@
 #include <geo_types.h>
 #include <geo_processor.h>
 
+
+extern geo_processor_t    g_geo_processor;
+
+
 class CMapPainter : public CStatic {
 
     DECLARE_DYNAMIC(CMapPainter)
@@ -27,7 +31,6 @@ class CMapPainter : public CStatic {
 
     public:
         void  SetBaseParams  ( double lon, double lat, double scale, double angle );
-        void  GetBaseParams  ( double& lon, double& lat, double& scale ) const;
 
     public:
         afx_msg void OnPaint       ( void );
@@ -37,18 +40,17 @@ class CMapPainter : public CStatic {
         afx_msg BOOL OnSetCursor   ( CWnd* pWnd, UINT nHitTest, UINT message);
         afx_msg BOOL OnEraseBkgnd  ( CDC* pDC );
 
+    public:
+        int32_t         m_drag_x;
+        int32_t         m_drag_y;
+
     private:
         bool			m_bMouseTracking;
-        CPoint			m_PickPoint;
         bool			m_DragActive;
         CPoint			m_BasePosition;
         int				m_DeltaX;
         int				m_DeltaY;
 
-        double          m_base_lon;
-        double          m_base_lat;
-        double          m_shift_lon;
-        double          m_shift_lat;
         double          m_scale;
         double          m_angle;
 
@@ -57,6 +59,7 @@ class CMapPainter : public CStatic {
 
         CPaintDC*       m_paint_dc;
         CRect           m_client_rect;
+        CPoint          m_DragBasePos;
 
         int             m_cursor_type;
 

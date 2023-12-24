@@ -13,21 +13,35 @@
 BEGIN_MESSAGE_MAP(CAppRendererDlg, CDialogEx)
     ON_WM_PAINT()
     ON_WM_QUERYDRAGICON()
-    ON_BN_CLICKED(ID_TEST,       &CAppRendererDlg::OnBnClickedTest)
-    ON_BN_CLICKED(IDC_ZOOM_IN,   &CAppRendererDlg::OnBnClickedZoomIn)
-    ON_BN_CLICKED(IDC_ZOOM_OUT,  &CAppRendererDlg::OnBnClickedZoomOut)
-    ON_EN_UPDATE(IDC_EDIT_LON,   &CAppRendererDlg::OnEnUpdateEditLon)
-    ON_EN_UPDATE(IDC_EDIT_LAT,   &CAppRendererDlg::OnEnUpdateEditLat)
-    ON_EN_UPDATE(IDC_EDIT_SCALE, &CAppRendererDlg::OnEnUpdateEditScale)
-    ON_BN_CLICKED(IDC_CMD_MAP,   &CAppRendererDlg::OnBnClickedCmdMap)
-    ON_MESSAGE(WM_MAP_UPDATE,    &CAppRendererDlg::OnMapUpdate)
-    ON_BN_CLICKED(IDC_CMD_ZOOM_OUT, &CAppRendererDlg::OnBnClickedCmdZoomOut)
-    ON_BN_CLICKED(IDC_CMD_ZOOM_IN, &CAppRendererDlg::OnBnClickedCmdZoomIn)
-    ON_BN_CLICKED(IDC_CMD_ANGLE_MINUS, &CAppRendererDlg::OnBnClickedCmdAngleMinus)
-    ON_BN_CLICKED(IDC_CMD_ANGLE_PLUS, &CAppRendererDlg::OnBnClickedCmdAnglePlus)
+    ON_BN_CLICKED(ID_TEST,              &CAppRendererDlg::OnBnClickedTest)
+    ON_BN_CLICKED(IDC_ZOOM_IN,          &CAppRendererDlg::OnBnClickedZoomIn)
+    ON_BN_CLICKED(IDC_ZOOM_OUT,         &CAppRendererDlg::OnBnClickedZoomOut)
+    ON_EN_UPDATE(IDC_EDIT_LON,          &CAppRendererDlg::OnEnUpdateEditLon)
+    ON_EN_UPDATE(IDC_EDIT_LAT,          &CAppRendererDlg::OnEnUpdateEditLat)
+    ON_EN_UPDATE(IDC_EDIT_SCALE,        &CAppRendererDlg::OnEnUpdateEditScale)
+    ON_BN_CLICKED(IDC_CMD_MAP,          &CAppRendererDlg::OnBnClickedCmdMap)
+    ON_MESSAGE(WM_MAP_UPDATE,           &CAppRendererDlg::OnMapUpdate)
+    ON_BN_CLICKED(IDC_CMD_ZOOM_OUT,     &CAppRendererDlg::OnBnClickedCmdZoomOut)
+    ON_BN_CLICKED(IDC_CMD_ZOOM_IN,      &CAppRendererDlg::OnBnClickedCmdZoomIn)
+    ON_BN_CLICKED(IDC_CMD_ANGLE_MINUS,  &CAppRendererDlg::OnBnClickedCmdAngleMinus)
+    ON_BN_CLICKED(IDC_CMD_ANGLE_PLUS,   &CAppRendererDlg::OnBnClickedCmdAnglePlus)
+    ON_MESSAGE(WM_USER_MOVE_ENTER,      &CAppRendererDlg::OnUserMoveEnter)
+    ON_MESSAGE(WM_USER_MOVE,            &CAppRendererDlg::OnUserMove)
+    ON_MESSAGE(WM_USER_MOVE_LEAVE,      &CAppRendererDlg::OnUserMoveLeave)
+
 END_MESSAGE_MAP()
 
+
 CAppRendererDlg::CAppRendererDlg ( CWnd* pParent /*=nullptr*/ ) : CDialogEx(IDD_APP_REMDERER_DIALOG, pParent) {
+
+    m_base_scale  = 1;
+    m_base_lon    = 0;
+    m_base_lat    = 0;
+    m_shift_lon   = 0;
+    m_shift_lat   = 0;
+    m_base_angle  = 0;
+    m_drag_active = false;
+
     m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
@@ -59,7 +73,7 @@ BOOL CAppRendererDlg::OnInitDialog () {
     return TRUE;
 }
 
-void CAppRendererDlg::UpdateParams ( void ) {
+void CAppRendererDlg::MapRedraw ( void ) {
 
     CString val;
 
@@ -163,7 +177,7 @@ void CAppRendererDlg::OnBnClickedCmdMap () {
     m_EditLon.GetWindowText ( val );
     lon = atof(val);
 
-    m_EditLat.GetWindowText   ( val );
+    m_EditLat.GetWindowText ( val );
     lat = atof(val);
 
     m_EditScale.GetWindowText ( val );
@@ -180,21 +194,11 @@ void CAppRendererDlg::OnBnClickedCmdMap () {
 
 LRESULT CAppRendererDlg::OnMapUpdate ( WPARAM wParam, LPARAM lParam ) {
 
-    double lon;
-    double lat;
-    double scale;
-
     UNREFERENCED_PARAMETER(wParam);
     UNREFERENCED_PARAMETER(lParam);
 
-    m_MapRender.GetBaseParams ( lon, lat, scale );
-
-    UpdateText(lon, m_EditLon);
-    UpdateText(lat, m_EditLat);
-
     return 0;
 }
-
 
 void CAppRendererDlg::OnBnClickedCmdZoomOut() {
 
@@ -214,7 +218,6 @@ void CAppRendererDlg::OnBnClickedCmdZoomOut() {
     OnBnClickedCmdMap();
 }
 
-
 void CAppRendererDlg::OnBnClickedCmdZoomIn() {
 
     CString val;
@@ -232,7 +235,6 @@ void CAppRendererDlg::OnBnClickedCmdZoomIn() {
 
     OnBnClickedCmdMap();
 }
-
 
 void CAppRendererDlg::OnBnClickedCmdAngleMinus() {
 
@@ -272,4 +274,78 @@ void CAppRendererDlg::OnBnClickedCmdAnglePlus() {
     m_EditAngle.SetWindowText(val);
 
     OnBnClickedCmdMap();
+}
+
+LRESULT CAppRendererDlg::OnUserMove ( WPARAM wParam, LPARAM lParam ) {
+
+    (void) (wParam);
+    (void) (lParam);
+
+    if ( m_drag_active ) {
+
+        CString  str_lon;
+        CString  str_lat;
+
+        double  curr_lon    = m_base_lon;
+        double  curr_lat    = m_base_lat;
+        double  step_geo_x  = 0;
+        double  step_geo_y  = 0;
+        double  shift_geo_x = 0;
+        double  shift_geo_y = 0;
+
+        g_geo_processor.get_shifts ( curr_lat, curr_lon, step_geo_x, step_geo_y );
+
+        shift_geo_x = m_MapRender.m_drag_x * step_geo_x / m_base_scale;
+        shift_geo_y = m_MapRender.m_drag_y * step_geo_y / m_base_scale;
+
+        m_shift_lon = m_base_lon + shift_geo_x;
+        m_shift_lat = m_base_lat + shift_geo_y;
+
+        str_lon.Format ( "%.7f", m_shift_lon );
+        str_lat.Format ( "%.7f", m_shift_lat );
+        
+        m_EditLon.SetWindowText ( str_lon );
+        m_EditLat.SetWindowText ( str_lat );
+
+        m_MapRender.SetBaseParams ( m_shift_lon, m_shift_lat, m_base_scale, m_base_angle );
+
+        m_MapRender.Invalidate();
+        m_MapRender.UpdateWindow();
+
+    }
+
+    return 0;
+}
+
+LRESULT CAppRendererDlg::OnUserMoveEnter ( WPARAM wParam, LPARAM lParam ) {
+
+    CString val;
+
+    (void)(wParam);
+    (void)(lParam);
+
+    m_drag_active = true;
+
+    m_EditLon.GetWindowText(val);
+    m_base_lon = atof(val);
+
+    m_EditLat.GetWindowText(val);
+    m_base_lat = atof(val);
+
+    m_EditScale.GetWindowText(val);
+    m_base_scale = atof(val);
+
+    m_EditAngle.GetWindowText(val);
+    m_base_angle = atof(val);
+
+    return 0;
+}
+
+LRESULT CAppRendererDlg::OnUserMoveLeave ( WPARAM wParam, LPARAM lParam ) {
+
+    (void)(wParam);
+    (void)(lParam);
+
+    m_drag_active = false;
+    return 0;
 }
