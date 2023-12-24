@@ -265,11 +265,38 @@ CMapPainter::~CMapPainter () {
     g_geo_processor.close();
 }
 
+void CMapPainter::DrawMarker ( CPaintDC& dc, CPoint center ) {
+
+    uint32_t  delta = 3;
+
+    CPoint l1, l2;
+    CPoint l3, l4;
+
+    l1.x = center.x - delta;
+    l1.y = center.y - delta;
+    l2.x = center.x + delta + 1;
+    l2.y = center.y + delta + 1;
+
+    l3.x = center.x - delta;
+    l3.y = center.y + delta;
+    l4.x = center.x + delta + 1;
+    l4.y = center.y - delta - 1;
+
+    HPEN hpen = ::CreatePen(PS_DASH, 1, RGB(255, 0, 0));
+    dc.SelectObject(hpen);
+
+    dc.MoveTo(l1);
+    dc.LineTo(l2);
+    dc.MoveTo(l3);
+    dc.LineTo(l4);
+}
+
 void CMapPainter::OnPaint ( void ) {
 
     static bool is_init = false;
 
     CRect clientRect;
+
     CPaintDC dc(this);
 
     GetClientRect ( &clientRect );
@@ -303,6 +330,10 @@ void CMapPainter::OnPaint ( void ) {
 
     _draw ( dc.m_hDC );
 
+    for ( size_t i = 0; i < m_HighlightsList.size(); i++ ) {
+        DrawMarker ( dc, m_HighlightsList[i] );
+    }
+
     return;
 }
 
@@ -326,7 +357,7 @@ void CMapPainter::OnLButtonDown ( UINT nFlags, CPoint point ) {
         _TrackMouseEvent(&tme);
     }
 
-    m_DragBasePos = point;
+    m_ClickPos = point;
 
     GetParent()->PostMessage(WM_USER_MOVE_ENTER, 0, 0);
     m_DragActive = true;
@@ -365,8 +396,8 @@ void CMapPainter::OnMouseMove ( UINT nFlags, CPoint point ) {
     CStatic::OnMouseMove ( nFlags, point );
 
     if ( m_DragActive ) {
-        m_drag_x = (-1) * (point.x - m_DragBasePos.x);
-        m_drag_y = (+1) * (point.y - m_DragBasePos.y);
+        m_drag_x = (-1) * (point.x - m_ClickPos.x );
+        m_drag_y = (+1) * (point.y - m_ClickPos.y );
         GetParent()->PostMessage( WM_USER_MOVE, 0, 0 );
     }
 }

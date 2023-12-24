@@ -25,11 +25,10 @@ BEGIN_MESSAGE_MAP(CAppRendererDlg, CDialogEx)
     ON_BN_CLICKED(IDC_CMD_ZOOM_IN,      &CAppRendererDlg::OnBnClickedCmdZoomIn)
     ON_BN_CLICKED(IDC_CMD_ANGLE_MINUS,  &CAppRendererDlg::OnBnClickedCmdAngleMinus)
     ON_BN_CLICKED(IDC_CMD_ANGLE_PLUS,   &CAppRendererDlg::OnBnClickedCmdAnglePlus)
-    ON_MESSAGE(WM_USER_MOVE_ENTER,      &CAppRendererDlg::OnUserMoveEnter)
+    ON_MESSAGE(WM_USER_MOVE_ENTER,      &CAppRendererDlg::OnMouseClickDown)
     ON_MESSAGE(WM_USER_MOVE,            &CAppRendererDlg::OnUserMove)
-    ON_MESSAGE(WM_USER_MOVE_LEAVE,      &CAppRendererDlg::OnUserMoveLeave)
-
-    ON_BN_CLICKED(IDC_CMD_FIND_OBJECT, &CAppRendererDlg::OnBnClickedCmdFindObject)
+    ON_MESSAGE(WM_USER_MOVE_LEAVE,      &CAppRendererDlg::OnMouseClickUp)
+    ON_BN_CLICKED(IDC_CMD_FIND_OBJECT,  &CAppRendererDlg::OnBnClickedCmdFindObject)
 END_MESSAGE_MAP()
 
 
@@ -41,7 +40,8 @@ CAppRendererDlg::CAppRendererDlg ( CWnd* pParent /*=nullptr*/ ) : CDialogEx(IDD_
     m_shift_lon   = 0;
     m_shift_lat   = 0;
     m_base_angle  = 0;
-    m_drag_active = false;
+    m_mouse_down  = false;
+    m_mouse_drag  = true;
 
     m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -245,10 +245,10 @@ void CAppRendererDlg::OnBnClickedCmdAngleMinus() {
     m_EditAngle.GetWindowText(val);
     angle = atof(val);
 
-    angle -= 1;
+    angle += 1;
 
-    if (angle < 0) {
-        angle = 359;
+    if (angle >= 360) {
+        angle = 0;
     }
 
     val.Format("%f", angle);
@@ -265,10 +265,10 @@ void CAppRendererDlg::OnBnClickedCmdAnglePlus() {
     m_EditAngle.GetWindowText(val);
     angle = atof(val);
 
-    angle += 1;
+    angle -= 1;
 
-    if (angle >= 360) {
-        angle = 0;
+    if (angle < 0) {
+        angle = 359;
     }
 
     val.Format("%f", angle);
@@ -282,7 +282,7 @@ LRESULT CAppRendererDlg::OnUserMove ( WPARAM wParam, LPARAM lParam ) {
     (void) (wParam);
     (void) (lParam);
 
-    if ( m_drag_active ) {
+    if ( m_mouse_down ) {
 
         CString  str_lon;
         CString  str_lat;
@@ -293,6 +293,8 @@ LRESULT CAppRendererDlg::OnUserMove ( WPARAM wParam, LPARAM lParam ) {
         double  step_geo_y  = 0;
         double  shift_geo_x = 0;
         double  shift_geo_y = 0;
+
+        m_mouse_drag = true;
 
         g_geo_processor.get_shifts ( curr_lat, curr_lon, step_geo_x, step_geo_y );
 
@@ -318,14 +320,15 @@ LRESULT CAppRendererDlg::OnUserMove ( WPARAM wParam, LPARAM lParam ) {
     return 0;
 }
 
-LRESULT CAppRendererDlg::OnUserMoveEnter ( WPARAM wParam, LPARAM lParam ) {
+LRESULT CAppRendererDlg::OnMouseClickDown ( WPARAM wParam, LPARAM lParam ) {
 
     CString val;
 
     (void)(wParam);
     (void)(lParam);
 
-    m_drag_active = true;
+    m_mouse_down = true;
+    m_mouse_drag = false;
 
     m_EditLon.GetWindowText(val);
     m_base_lon = atof(val);
@@ -342,16 +345,52 @@ LRESULT CAppRendererDlg::OnUserMoveEnter ( WPARAM wParam, LPARAM lParam ) {
     return 0;
 }
 
-LRESULT CAppRendererDlg::OnUserMoveLeave ( WPARAM wParam, LPARAM lParam ) {
+LRESULT CAppRendererDlg::OnMouseClickUp ( WPARAM wParam, LPARAM lParam ) {
 
     (void)(wParam);
     (void)(lParam);
 
-    m_drag_active = false;
+    if ( !m_mouse_drag ) {
+        FindObject();
+    }
+
+    m_mouse_down = false;
+    m_mouse_drag = false;
+
     return 0;
 }
 
 void CAppRendererDlg::OnBnClickedCmdFindObject() {
+
+    m_MapRender.m_HighlightsList.clear();
+
+    m_MapRender.Invalidate(true);
+    m_MapRender.UpdateWindow();
+
+    return;
+}
+
+void CAppRendererDlg::FindObject ( void ) {
+
+    CRect      mapDrawRect;
+    CPoint     basePoint;
+    CPoint     clickPoint;
+    uint32_t   w;
+    uint32_t   h;
+
+    m_MapRender.GetClientRect(mapDrawRect);
+
+    w = mapDrawRect.Width();
+    h = mapDrawRect.Height();
+
+    basePoint.y = h - (h / 10);
+    basePoint.x = w /  2;
+
+    m_MapRender.m_HighlightsList.push_back(basePoint);
+    m_MapRender.m_HighlightsList.push_back(m_MapRender.m_ClickPos);
+
+    m_MapRender.Invalidate(true);
+    m_MapRender.UpdateWindow();
 
     return;
 }

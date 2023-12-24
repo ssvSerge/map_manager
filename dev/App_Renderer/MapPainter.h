@@ -8,6 +8,7 @@
 #include <cmath>
 #include <stack>
 #include <list>
+#include <vector>
 #include <set>
 #include <algorithm>
 
@@ -15,7 +16,9 @@
 #include <geo_processor.h>
 
 
-extern geo_processor_t    g_geo_processor;
+extern geo_processor_t          g_geo_processor;
+
+typedef std::vector<CPoint>     points_list_t;
 
 
 class CMapPainter : public CStatic {
@@ -40,9 +43,14 @@ class CMapPainter : public CStatic {
         afx_msg BOOL OnSetCursor   ( CWnd* pWnd, UINT nHitTest, UINT message);
         afx_msg BOOL OnEraseBkgnd  ( CDC* pDC );
 
+    private:
+        void    DrawMarker ( CPaintDC& dc, CPoint center );
+
     public:
         int32_t         m_drag_x;
         int32_t         m_drag_y;
+        CPoint          m_ClickPos;
+        points_list_t   m_HighlightsList;
 
     private:
         bool			m_bMouseTracking;
@@ -59,7 +67,6 @@ class CMapPainter : public CStatic {
 
         CPaintDC*       m_paint_dc;
         CRect           m_client_rect;
-        CPoint          m_DragBasePos;
 
         int             m_cursor_type;
 

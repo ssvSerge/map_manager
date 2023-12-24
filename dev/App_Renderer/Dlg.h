@@ -26,13 +26,14 @@ class CAppRendererDlg : public CDialogEx {
 	private:
 		void   UpdateText    ( double val, CEdit& edit );
 		void   MapRedraw     ( void );
+		void   FindObject    ( void );
 
 	public:
 		DECLARE_MESSAGE_MAP()
 		afx_msg LRESULT OnMapUpdate(WPARAM wParam, LPARAM lParam);
 		afx_msg LRESULT OnUserMove(WPARAM wParam, LPARAM lParam);
-		afx_msg LRESULT OnUserMoveEnter(WPARAM wParam, LPARAM lParam);
-		afx_msg LRESULT OnUserMoveLeave(WPARAM wParam, LPARAM lParam);
+		afx_msg LRESULT OnMouseClickDown(WPARAM wParam, LPARAM lParam);
+		afx_msg LRESULT OnMouseClickUp(WPARAM wParam, LPARAM lParam);
 		afx_msg HCURSOR OnQueryDragIcon();
 		afx_msg void OnPaint();
 		afx_msg void OnBnClickedTest();
@@ -60,6 +61,8 @@ class CAppRendererDlg : public CDialogEx {
 		double          m_shift_lon;
 		double          m_shift_lat;
 
-		bool            m_drag_active;
+		bool            m_mouse_down;
+		bool            m_mouse_drag;
+
 		afx_msg void OnBnClickedCmdFindObject();
 };
