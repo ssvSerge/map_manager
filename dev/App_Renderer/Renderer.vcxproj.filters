@@ -53,9 +53,6 @@
     <ClCompile Include="MapPainter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\tools\geo_processor.cpp">
-      <Filter>lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\tools\geo_processor_ex.cpp">
       <Filter>lib</Filter>
     </ClCompile>
@@ -63,6 +60,12 @@
       <Filter>lib</Filter>
     </ClCompile>
     <ClCompile Include="..\tools\geo_projection.cpp">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tools\geodesic.c">
+      <Filter>lib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\tools\geo_processor.cpp">
       <Filter>lib</Filter>
     </ClCompile>
   </ItemGroup>

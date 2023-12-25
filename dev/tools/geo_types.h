@@ -530,15 +530,11 @@ class paint_line_t {
         void clear() {
             m_role = OBJID_ERROR;
             m_type = OBJID_ERROR;
-            m_paint.clear();
         }
 
     public:
         obj_type_t              m_role;      // ROLE:OUTER;ROLE:INNER
         obj_type_t              m_type;      // TYPE:ASPHALT
-        vv_geo_coord_t          m_paint;     // paint coords
-     // v_paint_coord_t         m_fill;      // fill-in coords
-     // v_paint_coord_t         m_paint;     // paint coords
 };
 
 typedef std::vector<paint_line_t>       v_paint_line_t;

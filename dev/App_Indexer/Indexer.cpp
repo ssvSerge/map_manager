@@ -308,9 +308,7 @@ static void _log_relation ( const char* name, const storerels_t& rel, const list
 
 static void _log_road ( const storeway_t& way ) {
 
-    size_t cnt = 0;
-
-    cnt += way.refs.size();
+    size_t cnt = 1;
 
     _log_header ( KEYNAME_HIGHWAY, way.type, cnt, way.id );
     _log_key ( KEYNAME_ROLE, KEYPARAM_COORDS );
@@ -507,7 +505,6 @@ int main ( int argc, char* argv[] ) {
     processor.enum_rels  ( store_rel_area );
     processor.enum_ways  ( store_building );
     processor.enum_rels  ( store_rel_building );
-
     processor.enum_ways  ( store_roads );
 
     return 0;

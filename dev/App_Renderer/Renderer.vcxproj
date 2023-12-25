@@ -122,6 +122,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\tools\geodesic.c" />
     <ClCompile Include="..\tools\geo_processor.cpp" />
     <ClCompile Include="..\tools\geo_processor_ex.cpp" />
     <ClCompile Include="..\tools\geo_projection.cpp" />

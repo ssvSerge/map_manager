@@ -183,7 +183,7 @@ void geo_processor_t::set_pix ( const map_pos_t& pos, const geo_pixel_t& px ) {
 void geo_processor_t::close ( void ) {
 
     m_view_angle_step   = 0.5; 
-    m_scale_step        = 0.1;
+    m_scale_step        = 0.01;
     m_geo_scale         = 1;
     m_x_step            = 0;
     m_y_step            = 0;    
@@ -267,6 +267,7 @@ void geo_processor_t::add_marker ( double lon, double lat ) {
     new_coord.geo.x = lon;
     new_coord.geo.y = lat;
     new_coord.geo_to_map();
+    new_coord.reset_angle();
 
     m_markers_list.push_back(new_coord);
 
@@ -598,6 +599,7 @@ void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_en
     geo_entry_t             new_entry;
     std::set<geo_offset_t>  map_set;
 
+
     for (auto map_it = map_entries.cbegin(); map_it != map_entries.cend(); map_it++ ) {
         map_set.insert ( * map_it );
     }
@@ -637,15 +639,15 @@ void geo_processor_t::_load_map_by_idx ( const v_uint32_t& map_entries, l_geo_en
 
 void geo_processor_t::_rotate_map_by_angle ( const geo_coord_t& center, const double scale ) {
 
-    for ( auto it_geo_area = m_cache_map.begin(); it_geo_area != m_cache_map.end(); it_geo_area++ ) {
+    for ( auto it = m_cache_map.begin(); it != m_cache_map.end(); it++ ) {
 
-        if ( !it_geo_area->m_to_display ) {
+        if ( !it->m_to_display ) {
             continue;
         }
 
-        for ( auto it_geo_line = it_geo_area->m_lines.begin(); it_geo_line != it_geo_area->m_lines.end(); it_geo_line++ ) {
-            it_geo_line->m_fill_pos.clear();
-            _rotate_geo_line ( center, scale, it_geo_line->m_coords );
+        for ( auto line_it = it->m_lines.begin(); line_it != it->m_lines.end(); line_it++ ) {
+            line_it->m_fill_pos.clear();
+            _rotate_geo_line ( center, scale, line_it->m_coords );
         }
 
     }
@@ -659,20 +661,20 @@ void geo_processor_t::_trim_rotated_map_by_rect ( void ) {
     m_paint_list.clear();
     m_view_rect.reset_angle();
 
-    for (auto it_src = m_cache_map.cbegin(); it_src != m_cache_map.cend(); it_src++) {
+    for (auto it = m_cache_map.cbegin(); it != m_cache_map.cend(); it++) {
 
-        if ( !it_src->m_to_display ) {
+        if ( !it->m_to_display ) {
             continue;
         }
 
-        if ( it_src->m_record_type == OBJID_RECORD_AREA ) {
-            _trim_record ( m_view_rect, *it_src, true, out_record );
+        if ( it->m_record_type == OBJID_RECORD_AREA ) {
+            _trim_record ( m_view_rect, *it, true, out_record );
         } else
-        if ( it_src->m_record_type == OBJID_RECORD_BUILDING ) {
-            _trim_record ( m_view_rect, *it_src, true, out_record );
+        if ( it->m_record_type == OBJID_RECORD_BUILDING ) {
+            _trim_record ( m_view_rect, *it, true, out_record );
         } else
-        if ( it_src->m_record_type == OBJID_RECORD_HIGHWAY ) {
-            _trim_record ( m_view_rect, *it_src, false, out_record );
+        if ( it->m_record_type == OBJID_RECORD_HIGHWAY ) {
+            _trim_record ( m_view_rect, *it, false, out_record );
         }
 
         if (out_record.m_lines.size() > 0) {
@@ -1129,9 +1131,165 @@ void geo_processor_t::_rotate_coord (const geo_coord_t& center, const double sca
     coord.ang.y = static_cast<int32_t> ( next_y + 0.5 );
 }
 
-void geo_processor_t::_trim_record ( const geo_rect_t& rect_path, const geo_entry_t& in_path, const bool is_area, geo_entry_t& out_path ) const {
+void geo_processor_t::_get_vcode ( const geo_rect_t& rect_path, const geo_coord_t& p2, uint32_t& res ) const {
 
-    v_geo_line_t    res;
+    uint32_t c = GEO_INSIDE;
+
+    if (p2.ang.x < rect_path.min.ang.x) {
+        c |= GEO_LEFT;
+    }
+    if (p2.ang.x > rect_path.max.ang.x) {
+        c |= GEO_RIGHT;
+    }
+    if (p2.ang.y < rect_path.min.ang.y) {
+        c |= GEO_BOTTOM;
+    }
+    if (p2.ang.y > rect_path.max.ang.y) {
+        c |= GEO_TOP;
+    }
+
+    res = c;
+}
+
+bool geo_processor_t::_cohen_sutherland ( const geo_rect_t& r, geo_coord_t& a, geo_coord_t& b ) const {
+
+    uint32_t code_a, code_b, code;
+    geo_coord_t* c;
+
+    _get_vcode ( r, a, code_a );
+    _get_vcode ( r, b, code_b );
+
+    while (code_a | code_b) {
+
+        if ( code_a & code_b ) {
+            // both points are at the same side. Exit with "no intersection".
+            return false;
+        }
+
+        if (code_a) {
+            code = code_a;
+            c = &a;
+        } else {
+            code = code_b;
+            c = &b;
+        }
+
+        if ( code & GEO_LEFT ) {
+            c->ang.y += (a.ang.y - b.ang.y) * (r.min.ang.x - c->ang.x) / (a.ang.x - b.ang.x);
+            c->ang.x  = r.min.ang.x;
+        } else 
+        if ( code & GEO_RIGHT ) {
+            c->ang.y += (a.ang.y - b.ang.y) * (r.max.ang.x - c->ang.x) / (a.ang.x - b.ang.x);
+            c->ang.x  = r.max.ang.x;
+        } else 
+        if ( code & GEO_BOTTOM ) {
+            c->ang.x += (a.ang.x - b.ang.x) * (r.min.ang.y - c->ang.y) / (a.ang.y - b.ang.y);
+            c->ang.y  = r.min.ang.y;
+        } else 
+        if ( code & GEO_TOP ) {
+            c->ang.x += (a.ang.x - b.ang.x) * (r.max.ang.y - c->ang.y) / (a.ang.y - b.ang.y);
+            c->ang.y  = r.max.ang.y;
+        }
+
+        if (code == code_a) {
+            _get_vcode( r, a, code_a );
+        } else {
+            _get_vcode( r, b, code_b );
+        }
+    }
+
+    return true;
+}
+
+void geo_processor_t::_trim_record_area ( const geo_rect_t& rect_path, const geo_entry_t& in_path, geo_entry_t& out_path ) const {
+
+    v_geo_line_t res;
+
+    for (auto it = in_path.m_lines.cbegin(); it != in_path.m_lines.cend(); it++ ) {
+        geo_intersect ( POS_TYPE_ANGLE, true, *it, rect_path, res );
+        for (size_t i = 0; i < res.size(); i++) {
+            out_path.m_lines.push_back(std::move(res[i]));
+        }
+    }
+
+    return;
+}
+
+void geo_processor_t::_trim_record_path ( const geo_rect_t& rect_path, const geo_entry_t& in_path, geo_entry_t& out_path ) const {
+
+    geo_line_t      next_line;
+    uint32_t        curr_pos;
+    uint32_t        next_pos;
+    bool            find_res;
+
+    for ( auto line_it = in_path.m_lines.cbegin(); line_it != in_path.m_lines.cend(); line_it++ ) {
+
+        if ( line_it->m_coords.size() < 2) {
+            continue;
+        }
+
+        next_line.m_role = line_it->m_role;
+        next_line.m_type = line_it->m_type;
+        next_line.m_area = 0;
+
+        next_line.clear();
+
+        _get_vcode ( rect_path, line_it->m_coords[0], curr_pos );
+
+        if ( curr_pos == GEO_INSIDE ) {
+            next_line.m_coords.push_back ( line_it->m_coords[0] );
+        }
+
+        for ( size_t i = 1; i < line_it->m_coords.size(); i++ ) {
+
+            _get_vcode ( rect_path, line_it->m_coords[i], next_pos );
+
+            if ( (curr_pos == GEO_INSIDE)  &&  (next_pos == GEO_INSIDE) ) {
+                next_line.m_coords.push_back( line_it->m_coords[i] );
+            } else
+            if ( (curr_pos == GEO_INSIDE)  &&  (next_pos != GEO_INSIDE) ) {
+                geo_coord_t a = line_it->m_coords[i - 1];
+                geo_coord_t b = line_it->m_coords[i - 0];
+                find_res = _cohen_sutherland ( rect_path, a, b );
+                assert ( find_res == true );
+                next_line.m_coords.push_back(b);
+                out_path.m_lines.push_back ( std::move(next_line) );
+                next_line.clear();
+            } else
+            if ( (curr_pos != GEO_INSIDE)  &&  (next_pos == GEO_INSIDE) ) {
+                assert ( next_line.m_coords.size() == 0 );
+                geo_coord_t a = line_it->m_coords[i - 1];
+                geo_coord_t b = line_it->m_coords[i - 0];
+                find_res = _cohen_sutherland ( rect_path, a, b );
+                assert ( find_res == true );
+                next_line.m_coords.push_back(a);
+                next_line.m_coords.push_back(b);
+            } else {
+                assert ( next_line.m_coords.size() == 0 );
+                geo_coord_t a = line_it->m_coords[i - 1];
+                geo_coord_t b = line_it->m_coords[i - 0];
+                find_res = _cohen_sutherland(rect_path, a, b);
+                if ( find_res ) {
+                    next_line.m_coords.push_back(a);
+                    next_line.m_coords.push_back(b);
+                    out_path.m_lines.push_back ( std::move(next_line) );
+                    next_line.clear();
+                }
+            }
+
+            curr_pos = next_pos;
+        }
+
+        if ( next_line.m_coords.size() > 0 ) {
+            out_path.m_lines.push_back(std::move(next_line));
+        }
+
+    }
+
+    return;
+}
+
+void geo_processor_t::_trim_record ( const geo_rect_t& rect_path, const geo_entry_t& in_path, const bool is_area, geo_entry_t& out_path ) const {
 
     out_path.m_record_type   =  in_path.m_record_type;
     out_path.m_default_type  =  in_path.m_default_type;
@@ -1142,11 +1300,10 @@ void geo_processor_t::_trim_record ( const geo_rect_t& rect_path, const geo_entr
 
     out_path.m_lines.clear();
 
-    for ( auto it_in_line = in_path.m_lines.cbegin(); it_in_line != in_path.m_lines.cend(); it_in_line++ ) {
-        geo_intersect ( POS_TYPE_ANGLE, is_area, *it_in_line, rect_path, res );
-        for ( size_t i = 0; i < res.size(); i++ ) {
-            out_path.m_lines.push_back( std::move(res[i]) );
-        }
+    if ( is_area ) {
+        _trim_record_area ( rect_path, in_path, out_path );
+    } else {
+        _trim_record_path ( rect_path, in_path, out_path );
     }
 
     return;
@@ -1688,28 +1845,83 @@ void geo_processor_t::_draw_markers ( void ) {
     geo_coord_t     from;
     geo_coord_t     to;
     geo_pixel_t     clr;
+    int64_t         dx1;
+    int64_t         dy1;
+    int64_t         dx2;
+    int64_t         dy2;
+    double          min_dist;
+    double          cur_dist;
+    bool            first_calc;
+    bool            update_pos;
+
+    l_geo_entry_t::const_iterator  best_object_it;
+    v_geo_line_t::const_iterator   best_line_it;
+    v_geo_coord_t::const_iterator  best_coord_it;
 
     m_markers_changed = false;
+
     clr.setR(255);
     clr.setG(0);
     clr.setB(0);
 
-    for ( size_t i = 0; i < m_markers_list.size(); i++ ) {
+    for (auto marker_it = m_markers_list.cbegin(); marker_it != m_markers_list.cend(); marker_it++) {
 
-        from.ang.x = m_markers_list[i].map.x - 5;
-        from.ang.y = m_markers_list[i].map.y;
-        to.ang.x   = m_markers_list[i].map.x + 5;
-        to.ang.y   = m_markers_list[i].map.y;
+        first_calc = true;
+        min_dist   = 0;
+
+        for (auto object_it = m_paint_list.cbegin(); object_it != m_paint_list.cend(); object_it++ ) {
+            for (auto line_it = object_it->m_lines.cbegin(); line_it != object_it->m_lines.cend(); line_it++) {
+                for (auto coord_it = line_it->m_coords.cbegin(); coord_it != line_it->m_coords.cend(); coord_it++) {
+                    
+                    dx1  =  marker_it->ang.x  -  coord_it->ang.x;
+                    dy1  =  marker_it->ang.y  -  coord_it->ang.y;
+
+                    dx2  =  dx1 * dx1;
+                    dy2  =  dy1 * dy1;
+
+                    cur_dist = std::sqrt(  dx2  +  dy2  );
+
+                    update_pos = false;
+
+                    if ( first_calc ) {
+                        first_calc = false;
+                        update_pos = true;
+                    } else {
+                        if ( min_dist > cur_dist ) {
+                            update_pos = true;
+                        }
+                    }
+
+                    if ( update_pos ) {
+
+                        min_dist = cur_dist;
+
+                        best_object_it  = object_it;
+                        best_line_it    = line_it;
+                        best_coord_it   = coord_it;
+
+                    }
+
+                }
+            }
+        }
+
+        from.ang.x = best_coord_it->ang.x - 5;
+        from.ang.y = best_coord_it->ang.y;
+        to.ang.x   = best_coord_it->ang.x + 5;
+        to.ang.y   = best_coord_it->ang.y;
+        _line ( from, to, 1, clr );
+        
+        from.ang.x = best_coord_it->ang.x;
+        from.ang.y = best_coord_it->ang.y - 5;
+        to.ang.x   = best_coord_it->ang.x;
+        to.ang.y   = best_coord_it->ang.y + 5;
         _line ( from, to, 1, clr );
 
-        from.ang.x = m_markers_list[i].map.x;
-        from.ang.y = m_markers_list[i].map.y - 5;
-        to.ang.x   = m_markers_list[i].map.x;
-        to.ang.y   = m_markers_list[i].map.y + 5;
-
-        _line(from, to, 1, clr);
 
     }
+
+
 
     return;
 }

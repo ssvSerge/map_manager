@@ -290,6 +290,12 @@ class geo_processor_t {
         void _rotate_geo_line ( const geo_coord_t& center, const double scale, v_geo_coord_t& coords ) const;
         void _rotate_coord ( const geo_coord_t& center, const double scale, geo_coord_t& coord ) const;
         void _trim_record ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, const bool is_area, geo_entry_t& out_record ) const;
+
+        void _get_vcode ( const geo_rect_t& rect_path, const geo_coord_t& p2, uint32_t& res ) const;
+        bool _cohen_sutherland ( const geo_rect_t& r, geo_coord_t& a, geo_coord_t& b ) const;
+        void _trim_record_area ( const geo_rect_t& rect_path, const geo_entry_t& in_path, geo_entry_t& out_path ) const;
+        void _trim_record_path ( const geo_rect_t& rect_path, const geo_entry_t& geo_path, geo_entry_t& out_record ) const;
+
         void _process_area ( geo_entry_t& geo_line );
         void _map_color ( const obj_type_t& obj_type, geo_pixel_t& border_color, geo_pixel_t& fill_color ) const;
         void _poly_area ( const geo_line_t& region, const geo_pixel_t color );

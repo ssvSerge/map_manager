@@ -5,6 +5,7 @@
 #include "afxdialogex.h"
 
 #define  GEO_PRECISION          "%.7f"
+#define  GEO_SCALE_FIXUP        (2.43)
 
 #ifdef _DEBUG
     #define new DEBUG_NEW
@@ -32,7 +33,7 @@ BEGIN_MESSAGE_MAP(CAppRendererDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-CAppRendererDlg::CAppRendererDlg ( CWnd* pParent /*=nullptr*/ ) : CDialogEx(IDD_APP_REMDERER_DIALOG, pParent) {
+CAppRendererDlg::CAppRendererDlg ( CWnd* pParent ) : CDialogEx(IDD_APP_REMDERER_DIALOG, pParent) {
 
     m_base_scale  = 1;
     m_base_lon    = 0;
@@ -298,8 +299,8 @@ LRESULT CAppRendererDlg::OnUserMove ( WPARAM wParam, LPARAM lParam ) {
 
         g_geo_processor.get_shifts ( curr_lat, curr_lon, step_geo_x, step_geo_y );
 
-        shift_geo_x = m_MapRender.m_drag_x * step_geo_x / m_base_scale / 2;
-        shift_geo_y = m_MapRender.m_drag_y * step_geo_y / m_base_scale / 2;
+        shift_geo_x = m_MapRender.m_drag_x * step_geo_x / m_base_scale;
+        shift_geo_y = m_MapRender.m_drag_y * step_geo_y / m_base_scale / GEO_SCALE_FIXUP;
 
         m_shift_lon = m_base_lon + shift_geo_x;
         m_shift_lat = m_base_lat + shift_geo_y;
@@ -415,8 +416,8 @@ void CAppRendererDlg::FindObject ( void ) {
 
     dx /= base_scale;
     dy /= base_scale;
-    dy /= 2;
 
+    dy /= GEO_SCALE_FIXUP;
 
     g_geo_processor.get_shifts ( base_lat, base_lon, step_geo_x, step_geo_y );
 
@@ -424,31 +425,6 @@ void CAppRendererDlg::FindObject ( void ) {
     click_lat = base_lat + step_geo_y * dy;
 
     g_geo_processor.add_marker ( click_lon, click_lat );
-
-    // CRect      mapDrawRect;
-    // CPoint     basePoint;
-    // CPoint     clickPoint;
-    // uint32_t   w;
-    // uint32_t   h;
-    // double     dx;
-    // double     dy;
-    // 
-    // m_MapRender.GetClientRect(mapDrawRect);
-    // 
-    // w = mapDrawRect.Width();
-    // h = mapDrawRect.Height();
-    // 
-    // basePoint.y = h - (h / 10);
-    // basePoint.x = w / 2;
-    // 
-    // dx = m_MapRender.m_ClickPos.x - basePoint.x;
-    // dy = m_MapRender.m_ClickPos.y - basePoint.y;
-    // 
-    // m_MapRender.m_HighlightsList.push_back(basePoint);
-    // m_MapRender.m_HighlightsList.push_back(m_MapRender.m_ClickPos);
-    // 
-    // m_MapRender.Invalidate(true);
-    // m_MapRender.UpdateWindow();
 
     return;
 }
