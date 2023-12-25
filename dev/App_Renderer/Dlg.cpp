@@ -352,6 +352,9 @@ LRESULT CAppRendererDlg::OnMouseClickUp ( WPARAM wParam, LPARAM lParam ) {
 
     if ( !m_mouse_drag ) {
         FindObject();
+        MapRedraw();
+        m_MapRender.Invalidate(true);
+        m_MapRender.UpdateWindow();
     }
 
     m_mouse_down = false;
@@ -362,8 +365,8 @@ LRESULT CAppRendererDlg::OnMouseClickUp ( WPARAM wParam, LPARAM lParam ) {
 
 void CAppRendererDlg::OnBnClickedCmdFindObject() {
 
-    m_MapRender.m_HighlightsList.clear();
-
+    g_geo_processor.clear_markers();
+    MapRedraw();
     m_MapRender.Invalidate(true);
     m_MapRender.UpdateWindow();
 
@@ -372,25 +375,80 @@ void CAppRendererDlg::OnBnClickedCmdFindObject() {
 
 void CAppRendererDlg::FindObject ( void ) {
 
-    CRect      mapDrawRect;
-    CPoint     basePoint;
-    CPoint     clickPoint;
-    uint32_t   w;
-    uint32_t   h;
+    CString     str_lon;
+    CString     str_lat;
+    CString     str_scale;
+    double      base_lon   = 0;
+    double      base_lat   = 0;
+    double      base_scale = 0;
+    double      step_geo_x = 0;
+    double      step_geo_y = 0;
+    CRect       mapDrawRect;
+    CPoint      basePoint;
+    CPoint      clickPoint;
+    uint32_t    w;
+    uint32_t    h;
+    double      dx;
+    double      dy;
+    double      click_lon;
+    double      click_lat;
 
     m_MapRender.GetClientRect(mapDrawRect);
+    
+    m_EditLon.GetWindowText(str_lon);
+    base_lon = atof(str_lon);
+
+    m_EditLat.GetWindowText(str_lat);
+    base_lat = atof(str_lat);
+
+    m_EditScale.GetWindowText(str_scale);
+    base_scale = atof(str_scale);
 
     w = mapDrawRect.Width();
     h = mapDrawRect.Height();
-
+    
     basePoint.y = h - (h / 10);
-    basePoint.x = w /  2;
+    basePoint.x = w / 2;
 
-    m_MapRender.m_HighlightsList.push_back(basePoint);
-    m_MapRender.m_HighlightsList.push_back(m_MapRender.m_ClickPos);
+    dx = (+1) * (m_MapRender.m_ClickPos.x - basePoint.x);
+    dy = (-1) * (m_MapRender.m_ClickPos.y - basePoint.y);
 
-    m_MapRender.Invalidate(true);
-    m_MapRender.UpdateWindow();
+    dx /= base_scale;
+    dy /= base_scale;
+    dy /= 2;
+
+
+    g_geo_processor.get_shifts ( base_lat, base_lon, step_geo_x, step_geo_y );
+
+    click_lon = base_lon + step_geo_x * dx;
+    click_lat = base_lat + step_geo_y * dy;
+
+    g_geo_processor.add_marker ( click_lon, click_lat );
+
+    // CRect      mapDrawRect;
+    // CPoint     basePoint;
+    // CPoint     clickPoint;
+    // uint32_t   w;
+    // uint32_t   h;
+    // double     dx;
+    // double     dy;
+    // 
+    // m_MapRender.GetClientRect(mapDrawRect);
+    // 
+    // w = mapDrawRect.Width();
+    // h = mapDrawRect.Height();
+    // 
+    // basePoint.y = h - (h / 10);
+    // basePoint.x = w / 2;
+    // 
+    // dx = m_MapRender.m_ClickPos.x - basePoint.x;
+    // dy = m_MapRender.m_ClickPos.y - basePoint.y;
+    // 
+    // m_MapRender.m_HighlightsList.push_back(basePoint);
+    // m_MapRender.m_HighlightsList.push_back(m_MapRender.m_ClickPos);
+    // 
+    // m_MapRender.Invalidate(true);
+    // m_MapRender.UpdateWindow();
 
     return;
 }

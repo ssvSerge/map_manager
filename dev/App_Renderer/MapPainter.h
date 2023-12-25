@@ -50,7 +50,6 @@ class CMapPainter : public CStatic {
         int32_t         m_drag_x;
         int32_t         m_drag_y;
         CPoint          m_ClickPos;
-        points_list_t   m_HighlightsList;
 
     private:
         bool			m_bMouseTracking;

@@ -266,13 +266,14 @@ class geo_processor_t {
         void video_alloc ( int32_t x, int32_t y );
         void unpack ( uint16_t packed_clr, uint8_t& r, uint8_t& g, uint8_t& b );
         void pack ( uint8_t r, uint8_t g, uint8_t b, uint16_t& packed_clr );
+        void add_marker ( double lon, double lat );
+        void clear_markers ( void );
 
     private:
         void _load_idx ( l_geo_idx_rec_t& idx_list );
         void _filter_idx_by_rect ( const geo_rect_t& base_rect, const l_geo_idx_rec_t& rect_list, v_geo_offset_t& out_list ) const;
         void _load_map_by_idx ( const v_uint32_t& map_entries, l_geo_entry_t& map_cache );
         void _extend_rect ( const geo_coord_t& center, const geo_rect_t& src_rect, geo_rect_t& dst_rect ) const;
-
         void _find_idx_rect ( const l_geo_idx_rec_t& map_idx, geo_rect_t& map_rect, double& x_step, double& y_step ) const;
         void _px_conv ( const geo_pixel_t& from, geo_pixel_int_t& to ) const;
         void _px_conv ( const geo_pixel_int_t& from, geo_pixel_t& to ) const;
@@ -307,42 +308,17 @@ class geo_processor_t {
         void _extend_view_rect ( const geo_coord_t& center, geo_rect_t& view_rect ) const;
         bool _is_pt_on_segment ( const geo_coord_t& begin, const geo_coord_t& end, const geo_coord_t& pt ) const;
         bool _pt_in_poly ( const v_geo_coord_t& polygon, const geo_coord_t& point ) const;
-        void _logged_line ( int x1, int y1, const int x2, const int y2, const geo_pixel_t& clr );
-        void _log_pos ( const map_pos_t& dot_pos, bool is_marked );
         void _process_pt_list ( const geo_coord_t& base, const v_paint_offset_t& shift_list, const geo_pixel_t color );
         void _pt_geo_to_map ( const map_pos_t& src, map_pos_t& dst ) const;
         bool _are_collinear ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3 ) const;
-
         void _clear_intersection ( void );
         void _intersection ( const segment_t& s1, const segment_t& s2, map_pos_t& result );
         void _commit_intersection ( const map_pos_t& base, size_t y, const geo_pixel_t& clr );
         void _add_intersection ( const map_pos_t& base, const map_pos_t& pos, intersection_type_t type );
         void _draw_center ( const geo_coord_t& center );
-
+        void _draw_markers ( void );
         void _prepare_rects ( const double scale, geo_rect_t& view_rect_ext, geo_rect_t& cache_rect );
-
         void _line ( const geo_coord_t& from, const geo_coord_t& to, int width, const geo_pixel_t color );
-        void drawLineOverlap ( unsigned int aXStart, unsigned int aYStart, unsigned int aXEnd, unsigned int aYEnd, uint8_t aOverlap, geo_pixel_t aColor );
-        void drawLine (int aXStart, int aYStart, int aXEnd, int aYEnd, geo_pixel_t color );
-        void fillRect (int aXStart, int aYStart, int aXEnd, int aYEnd, geo_pixel_t aColor );
-
-        // void _generate_paint_pos(geo_line_t& poly_line) const;
-        // bool _find_pt_in_poly ( const map_pos_t& p1, const map_pos_t& p2, const map_pos_t& p3, map_pos_t& inside ) const;
-        // double _calc_dist ( const map_pos_t& p1, const map_pos_t& p2, const map_pos_t& p3 ) const;
-        // void _map_idx ( const geo_rect_t rect,  const double& x_step, const double& y_step, l_geo_idx_rec_t& map_idx );
-        // void _calc_map_rect ( const geo_coord_t center, const double scale, const paint_rect_t wnd );
-        // void _merge_idx ( const v_geo_idx_rec_t& rect_list, const v_uint32_t& in_list, v_uint32_t& map_entries );
-        // void _reset_map ( void );
-        // void _map_coords ( const v_geo_coord_t& geo_path, v_paint_coord_t& win_path );
-        // void _win_coord ( const geo_coord_t& geo_pos, paint_coord_t& win_pos ) const;
-        // bool _is_wnd_invalid ( const geo_rect_t& wnd, const geo_coord_t& center, const double scale ) const;
-        // void _geo_rect_to_view ( const geo_coord_t& center, const geo_rect_t& screen_wnd, geo_rect_t& paint_wnd );
-        // void _map_pt_pos ( const geo_coord_t& point, const geo_rect_t& square, const pos_type_t src, pt_code_pos_t& code ) const;
-        // bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const geo_coord_t& p3, const geo_coord_t& p4, const pos_type_t src, geo_coord_t& point) const;
-        // bool _get_intersection_pt ( const geo_coord_t& p1, const geo_coord_t& p2, const pt_code_pos_t border, const geo_rect_t& rect, const pos_type_t src, geo_coord_t& point ) const;
-        // void _clip_poly_line ( const v_geo_coord_t& line, const geo_rect_t& rect, vv_geo_coord_t& clippedLine ) const;
-        // void _close_segment ( const bool is_area, const pos_type_t coord_type, v_geo_coord_t& segment ) const;
-
 
     public:
         video_buff_t            m_video_buffer;
@@ -376,6 +352,8 @@ class geo_processor_t {
         l_geo_entry_t           m_paint_list;
         l_geo_idx_rec_t         m_idx_list;
         v_intersection_info     m_intersection_map;
+        v_geo_coord_t           m_markers_list;
+        bool                    m_markers_changed;
 
         // geo_rect_t              m_view_out1;            // Окно вывода с координатами "0, 0".
         // geo_rect_t              m_view_geo1;            // Окно, приведённое к GPS координатам.

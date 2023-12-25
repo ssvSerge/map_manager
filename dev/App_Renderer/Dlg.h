@@ -35,6 +35,7 @@ class CAppRendererDlg : public CDialogEx {
 		afx_msg LRESULT OnMouseClickDown(WPARAM wParam, LPARAM lParam);
 		afx_msg LRESULT OnMouseClickUp(WPARAM wParam, LPARAM lParam);
 		afx_msg HCURSOR OnQueryDragIcon();
+		afx_msg void OnBnClickedCmdFindObject();
 		afx_msg void OnPaint();
 		afx_msg void OnBnClickedTest();
 		afx_msg void OnBnClickedZoomIn();
@@ -64,5 +65,4 @@ class CAppRendererDlg : public CDialogEx {
 		bool            m_mouse_down;
 		bool            m_mouse_drag;
 
-		afx_msg void OnBnClickedCmdFindObject();
 };

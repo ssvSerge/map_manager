@@ -330,10 +330,6 @@ void CMapPainter::OnPaint ( void ) {
 
     _draw ( dc.m_hDC );
 
-    for ( size_t i = 0; i < m_HighlightsList.size(); i++ ) {
-        DrawMarker ( dc, m_HighlightsList[i] );
-    }
-
     return;
 }
 
