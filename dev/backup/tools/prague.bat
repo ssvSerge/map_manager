@@ -1,1 +1,0 @@
-osmconvert64-0.8.8p.exe czech-republic-latest.osm -b=14.2197,49.9402,14.7107,50.1810 -o=prague.osm
