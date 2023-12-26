@@ -88,6 +88,7 @@ void geo_processor_t::process_map ( geo_coord_t center, const double scale, cons
     }
 
     if ( angle_update ) {
+        map_update = true;
         _set_angle ( angle );
         _rotate_map_by_angle ( center, scale );
         _trim_rotated_map_by_rect ();
@@ -629,19 +630,43 @@ void geo_processor_t::_draw_roads ( void ) {
             continue;
         }
 
+
+        // "motorway",      DRAW_PATH_MOTORWAY               Автомагистрали 
+        // "trunk",         DRAW_PATH_TRUNK                  Важные дороги
+        // "primary",       DRAW_PATH_PRIMARY                Дороги регионального значения
+        // "secondary",     DRAW_PATH_SECONDARY              Дороги областного значения
+        // "tertiary",      DRAW_PATH_TERTIARY               Автомобильных дорог местного значения
+        // "unclassified",  DRAW_PATH_UNCLIASSIFIED          Автомобильные дороги местного значения
+        // "residential",   DRAW_PATH_RESIDENTIAL            Дороги внутри жилых зон.
+        // "living_street", DRAW_PATH_STREET                 Улицы такого же класса как residential.
+        // "service",       DRAW_PATH_SERVICE                Служебные проезды
+        // "road",          DRAW_PATH_ROAD                   Возможно дороги.
+        // "pedestrian",    DRAW_PATH_PEDISTRAN              Улицы, выделенных для пешеходов.
+        // "track",         DRAW_PATH_TRACK                  Дороги сельскохозяйственного назначения
+        // "footway",       DRAW_PATH_FOOTWAY                Пешеходные дорожки, тротуары
+        // "steps",         DRAW_PATH_STEPS                  Лестницы, лестничные пролёты.
+        // "path",          DRAW_PATH_PATH                   стихийная тропа
+        // "bus_guideway",  DRAW_SKIP                        Дороги предназначенные только для автобусов.
+        // "escape",        DRAW_SKIP                        Аварийная полоса
+        // "raceway",       DRAW_SKIP                        Гоночная трасса
+        // "bridleway",     DRAW_SKIP                        Дорожки для верховой езды.
+        // "via_ferrata",   DRAW_SKIP                        горные тропы
+        // "cycleway",      DRAW_SKIP                        велодорожки
+        // "services",      DRAW_SKIP                        СТО, Кафе, ...
+
         switch ( it->m_default_type ) {
 
             case OBJID_TYPE_STREET:         // асфальтированные жилый улицы. оставляем.
             case OBJID_TYPE_SERVICE:        // асфальтовая дорога. сотавляем.           
             case OBJID_TYPE_RESIDENTIAL:    // асфальтовая дорога. сотавляем.     
                 _map_color ( it->m_default_type, clr1, clr2 );
-                road_width_m = 3;
+                road_width_m = 5;
                 break;
 
             // асфальтовая дорожка. оставляем.
             case OBJID_TYPE_TRACK:              
                 _map_color ( it->m_default_type, clr1, clr2 );
-                road_width_m = 1;
+                road_width_m = 2;
                 break;
 
             case OBJID_TYPE_PATH:           // тропинки. пропускаем
@@ -652,8 +677,6 @@ void geo_processor_t::_draw_roads ( void ) {
                 continue;
 
         }
-
-        road_width_m *= 2;
 
         for ( auto road_it = it->m_lines.cbegin(); road_it != it->m_lines.cend(); road_it++ ) {
             _poly_line ( road_it->m_coords, road_width_m, clr2 );
