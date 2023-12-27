@@ -25,28 +25,33 @@ typedef std::list<size_t>           l_list_t;
 
 typedef struct tag_scan_rect {
     v_list_t            obj;
-    l_list_t            res;
     geo_rect_t          rect;
+    l_list_t            res;
 }   scan_rect_t;
 
 typedef std::vector<scan_rect_t>    v_scan_rect_t;
+typedef std::vector<v_scan_rect_t>  vv_scan_rect_t;
 typedef std::list<scan_rect_t>      l_scan_rect_t;
 
-geo_parser_t            g_geo_parser;
-v_geo_entry_t           g_geo_record_list;
-int                     g_geo_scale     = 500;
-int32_t                 g_step_ver      =   0;
-int32_t                 g_step_hor      =   0;
-geo_offset_t            g_file_offset   =   0;
-geo_processor_t         g_geo_processor;
 
-std::mutex              g_pages_mutex;
-l_scan_rect_t           g_slicer_rects;
+geo_parser_t    g_geo_parser;
+vv_scan_rect_t  g_slicer_rects;
+ 
+v_geo_entry_t   g_obj_list;
+v_geo_rect_t    g_obj_rect_list;
+int32_t         g_step_ver      =   0;
+int32_t         g_step_hor      =   0;
+geo_offset_t    g_file_offset   =   0;
+geo_processor_t g_geo_processor;
+geo_pos_t       g_gps_min;
+geo_pos_t       g_gps_max;
+map_pos_t       g_map_min;
+map_pos_t       g_map_max;
 
-geo_pos_t               g_gps_min;
-geo_pos_t               g_gps_max;
-map_pos_t               g_map_min;
-map_pos_t               g_map_max;
+// int          g_geo_scale;
+// std::mutex   g_pages_mutex;
+// uint32_t     g_x_pages;
+// uint32_t     g_y_pages;
 
 
 static std::string _to_str_d ( double val ) {
@@ -134,7 +139,7 @@ static void _scan_rect ( scan_rect_t* const in_rect ) {
         
         obj_id = in_rect->obj[pos];
 
-        auto record = &g_geo_record_list [obj_id];
+        auto record = &g_obj_list[obj_id];
 
         switch (record->m_record_type) {
             case OBJID_RECORD_AREA:
@@ -170,6 +175,254 @@ static void _scan_rect ( scan_rect_t* const in_rect ) {
 
 }
 
+static bool _is_overlapped ( const geo_rect_t& rect_scan, const geo_rect_t& rect_obj ) {
+
+    if ( rect_scan.min.map.x > rect_obj.max.map.x ) {
+        return false;
+    }
+    if ( rect_scan.max.map.x < rect_obj.min.map.x ) {
+        return false;
+    }
+
+    if ( rect_scan.min.map.y > rect_obj.max.map.y ) {
+        return false;
+    }
+    if ( rect_scan.max.map.y < rect_obj.min.map.y ) {
+        return false;
+    }
+
+    return true;
+}
+
+static void _attach_objects () {
+
+    int32_t     x_size;
+    int32_t     y_size;
+    int32_t     x_pos;
+    int32_t     y_pos;
+    int32_t     x_idx_min;
+    int32_t     x_idx_max;
+    int32_t     y_idx_min;
+    int32_t     y_idx_max;
+    bool        overlap;
+    uint32_t    added_cnt;
+    geo_rect_t  obj_rect;
+    uint32_t    delta;
+
+    static int  stop_cnt = 0;
+
+    std::cerr << "Preprocessing... \r";
+
+    added_cnt = 0;
+
+    for ( size_t i=0; i< g_obj_rect_list.size(); i++ ) {
+
+        obj_rect = g_obj_rect_list[i];
+
+        x_pos  = obj_rect.min.map.x - g_map_min.x;
+        y_pos  = obj_rect.min.map.y - g_map_min.y;
+        x_size = obj_rect.max.map.x - obj_rect.min.map.x;
+        y_size = obj_rect.max.map.y - obj_rect.min.map.y;
+
+        delta      =  ( obj_rect.min.map.x - g_map_min.x );
+        x_idx_min  =  delta / g_step_hor;
+        if ( (delta % g_step_hor) == 0) {
+            if (x_idx_min > 0) {
+                x_idx_min--;
+            }
+        }
+
+        delta      =  obj_rect.max.map.x - g_map_min.x;
+        x_idx_max  =  delta / g_step_hor;
+
+
+        delta      =  obj_rect.min.map.y - g_map_min.y;
+        y_idx_min  =  delta / g_step_ver;
+        if ((delta % g_step_ver) == 0) {
+            if (y_idx_min > 0) {
+                y_idx_min--;
+            }
+        }
+
+        delta      =  obj_rect.max.map.y - g_map_min.y;
+        y_idx_max  =  delta / g_step_ver;
+
+        int32_t x;
+        int32_t y;
+
+        y = y_idx_min - 1;
+        if ( y >= 0 ) {
+            for ( x = x_idx_min; x <= x_idx_max; x++ ) {
+                overlap = _is_overlapped(g_slicer_rects[y][x].rect, obj_rect);
+                assert(overlap == false);
+            }
+        }
+
+        for ( y = y_idx_min; y <= y_idx_max; y++ ) {
+
+            x = x_idx_min - 1;
+            if ( x  >=  0 ) {
+                overlap = _is_overlapped(g_slicer_rects[y][x].rect, obj_rect);
+                assert (overlap == false);
+            }
+
+            for ( x = x_idx_min; x <= x_idx_max; x++ ) {
+
+                overlap = _is_overlapped ( g_slicer_rects[y][x].rect, obj_rect);
+                assert(overlap);
+
+                added_cnt++;
+                g_slicer_rects[y][x].obj.push_back(i);
+            }
+
+            x++;
+            if ( x  <  g_slicer_rects[y].size() ) {
+                overlap = _is_overlapped(g_slicer_rects[y][x].rect, obj_rect);
+                assert(overlap == false);
+            }
+        }
+
+        if ( y < g_slicer_rects.size() ) {
+            for (x = x_idx_min; x <= x_idx_max; x++) {
+                overlap = _is_overlapped(g_slicer_rects[y][x].rect, obj_rect);
+                assert(overlap == false);
+            }
+        }
+
+    }
+
+    std::cerr << "Preprocessing: Done.    \n";
+    return;
+}
+
+static void _create_rects () {
+
+    bool       is_first;
+    geo_rect_t obj_rect;
+
+    size_t obj_cnt = g_obj_list.size();
+
+    std::cerr << "Obj Rects... \r";
+
+    g_obj_rect_list.resize(obj_cnt);
+
+    for ( size_t i = 0; i < g_obj_list.size(); i++ ) {
+
+        is_first = true;
+
+        for (auto line_it = g_obj_list[i].m_lines.cbegin(); line_it != g_obj_list[i].m_lines.cend(); line_it++) {
+            for (auto coord_it = line_it->m_coords.cbegin(); coord_it != line_it->m_coords.cend(); coord_it++) {
+                if (is_first) {
+                    is_first = false;
+                    obj_rect.min.map.x = obj_rect.max.map.x = coord_it->map.x;
+                    obj_rect.min.map.y = obj_rect.max.map.y = coord_it->map.y;
+                } else {
+                    obj_rect.min.map.x = std::min(obj_rect.min.map.x, coord_it->map.x);
+                    obj_rect.max.map.x = std::max(obj_rect.max.map.x, coord_it->map.x);
+                    obj_rect.min.map.y = std::min(obj_rect.min.map.y, coord_it->map.y);
+                    obj_rect.max.map.y = std::max(obj_rect.max.map.y, coord_it->map.y);
+                }
+
+            }
+        }
+
+        obj_rect.reset_angle();
+
+        g_obj_rect_list[i] = obj_rect;
+    }
+
+    std::cerr << "Obj Rects: Done.   \n";
+
+}
+
+static void _slicing_rects(void) {
+
+    size_t y_cnt;
+    size_t x_cnt;
+    size_t cnt;
+
+    y_cnt = g_slicer_rects.size();
+    x_cnt = g_slicer_rects[0].size();
+
+    cnt = 0;
+
+    for (size_t y = 0; y < y_cnt; y++) {
+        for (size_t x = 0; x < x_cnt; x++) {
+
+            cnt++;
+
+            if (g_slicer_rects[y][x].obj.size() == 0) {
+                continue;
+            }
+
+            if ( (cnt % 20) == 0 ) {
+                std::cerr << "Slicing: " << (x_cnt*y_cnt) - cnt << "   \r";
+            }
+
+            _scan_rect ( &g_slicer_rects[y][x] );
+
+        }
+    }
+
+    std::cerr << "Slicing: Done                      \n";
+}
+
+static void _logging_res ( void ) {
+
+    size_t y_cnt;
+    size_t x_cnt;
+
+    y_cnt = g_slicer_rects.size();
+    x_cnt = g_slicer_rects[0].size();
+
+    for (size_t y = 0; y < y_cnt; y++) {
+        for (size_t x = 0; x < x_cnt; x++) {
+
+            if (g_slicer_rects[y][x].res.size() == 0) {
+                continue;
+            }
+
+            _log_index ( g_slicer_rects[y][x] );
+
+        }
+    }
+
+    return;
+}
+
+static void _load_file ( const char* const file_name ) {
+
+    file_mapper_t   file;
+    uint64_t        file_size;
+    geo_entry_t     geo_record;
+
+    char            ch = 0;
+    bool            eor = false;
+    bool            eoc = false;
+
+    std::cerr << "Loading... \r";
+
+    file.Init( file_name );
+    file_size = file.GetSize();
+
+    for (g_file_offset = 0; g_file_offset < file_size; g_file_offset++) {
+
+        ch = file[g_file_offset];
+
+        g_geo_parser.load_param(ch, eoc, g_file_offset);
+
+        if (eoc) {
+            g_geo_parser.process_map(geo_record, eor);
+            if (eor) {
+                g_obj_list.push_back(geo_record);
+            }
+        }
+
+    }
+
+    std::cerr << "Loading: Done.       \n";
+}
+
 static void _find_box ( void ) {
 
     geo_pos_t  next_gps;
@@ -177,7 +430,7 @@ static void _find_box ( void ) {
 
     bool first_entry = true;
 
-    for ( auto record = g_geo_record_list.cbegin(); record != g_geo_record_list.cend(); record++ ) {
+    for ( auto record = g_obj_list.cbegin(); record != g_obj_list.cend(); record++ ) {
         for ( auto line = record->m_lines.cbegin(); line != record->m_lines.cend(); line++ ) {
             for ( auto coord = line->m_coords.cbegin(); coord != line->m_coords.cend(); coord++ ) {
 
@@ -221,35 +474,20 @@ static void _find_scale ( void ) {
     g_step_hor = scale * 240;
 }
 
-static bool _is_overlapped ( const geo_rect_t& rect_scan, const geo_rect_t& rect_obj ) {
-
-    if ( rect_scan.min.map.x > rect_obj.max.map.x ) {
-        return false;
-    }
-    if ( rect_scan.max.map.x < rect_obj.min.map.x ) {
-        return false;
-    }
-
-    if ( rect_scan.min.map.y > rect_obj.max.map.y ) {
-        return false;
-    }
-    if ( rect_scan.max.map.y < rect_obj.min.map.y ) {
-        return false;
-    }
-
-    return true;
-}
-
 static void _create_slicer_rects() {
 
     scan_rect_t     map_rect;
-    int             x_pages = 0;
-    int             y_pages = 0;
+    v_scan_rect_t   rect_line;
+    size_t          y_idx;
+
+    std::cerr << "Map Rects... \r";
 
     for (int32_t y = g_map_min.y; y <= g_map_max.y; y += g_step_ver) {
 
-        y_pages++;
-        x_pages = 0;
+        rect_line.clear();
+        g_slicer_rects.push_back(rect_line);
+
+        y_idx = g_slicer_rects.size() - 1;
 
         for (int32_t x = g_map_min.x; x <= g_map_max.x; x += g_step_hor) {
 
@@ -264,129 +502,30 @@ static void _create_slicer_rects() {
             map_rect.rect.max.map_to_geo();
             map_rect.rect.max.reset_angle();
 
-            g_slicer_rects.push_back(map_rect);
-
-            x_pages++;
-        }
-    }
-}
-
-static void _attach_objects () {
-
-    geo_rect_t obj_rect;
-    bool       is_first;
-
-    for ( size_t i = 0; i < g_geo_record_list.size(); i++ ) {
-
-        is_first = true;
-
-        for (auto line_it = g_geo_record_list[i].m_lines.cbegin(); line_it != g_geo_record_list[i].m_lines.cend(); line_it++) {
-            for (auto coord_it = line_it->m_coords.cbegin(); coord_it != line_it->m_coords.cend(); coord_it++) {
-
-                if ( is_first ) {
-                    is_first = false;
-                    obj_rect.min.map.x = obj_rect.max.map.x = coord_it->map.x;
-                    obj_rect.min.map.y = obj_rect.max.map.x = coord_it->map.y;
-                } else {
-                    obj_rect.min.map.x = std::min ( obj_rect.min.map.x, coord_it->map.x );
-                    obj_rect.max.map.x = std::max ( obj_rect.min.map.x, coord_it->map.x );
-                    obj_rect.min.map.y = std::min ( obj_rect.min.map.y, coord_it->map.y );
-                    obj_rect.max.map.y = std::max ( obj_rect.min.map.y, coord_it->map.y );
-                }
-
-            }
+            g_slicer_rects[y_idx].push_back(map_rect);
+                
         }
 
-        for ( auto it = g_slicer_rects.begin(); it != g_slicer_rects.end(); it++ ) {
-            if ( _is_overlapped( it->rect, obj_rect ) ) {
-                it->obj.push_back(i);
-            }
-        }
     }
 
-    return;
-}
-
-static void _remove_unused () {
-
-    auto it = g_slicer_rects.begin();
-
-    while ( it != g_slicer_rects.end() ) {
-        if ( it->obj.size() == 0 ) {
-            it = g_slicer_rects.erase(it);
-        } else {
-            it++;
-        }
-    }
-}
-
-static void _remove_missed() {
-
-    auto it = g_slicer_rects.begin();
-
-    while (it != g_slicer_rects.end()) {
-        if (it->res.size() == 0) {
-            it = g_slicer_rects.erase(it);
-        } else {
-            it++;
-        }
-    }
-}
-
-static void _slicing ( void ) {
-
-    _create_slicer_rects();
-    _attach_objects();
-    _remove_unused();
-
-    for ( auto it = g_slicer_rects.begin(); it != g_slicer_rects.end(); it++ ) {
-        _scan_rect( & (*it) );
-    }
-
-    _remove_missed();
-
-    for (auto it = g_slicer_rects.begin(); it != g_slicer_rects.end(); it++) {
-        _log_index ( *it );
-    }
+    std::cerr << "Maps Rects: " << g_slicer_rects.size() << "       \n";
 
 }
 
 int main ( int argc, char* argv[] ) {
 
-    file_mapper_t   file;
-    uint64_t        file_size;
-
-    char            ch  = 0;
-    bool            eor = false;
-    bool            eoc = false;
-
-    geo_entry_t     geo_record;
-
     if ( argc != 2 ) {
         return (-1);
     }
 
-    file.Init ( argv[1] );
-    file_size = file.GetSize();
-
-    for ( g_file_offset = 0; g_file_offset < file_size; g_file_offset++ ) {
-
-        ch = file [ g_file_offset ];
-
-        g_geo_parser.load_param ( ch, eoc, g_file_offset );
-
-        if ( eoc ) {
-            g_geo_parser.process_map ( geo_record, eor );
-            if (eor) {
-                g_geo_record_list.push_back ( geo_record );
-            }
-        }
-
-    }
-
-    _find_box();
-    _find_scale();
-    _slicing();
+    _load_file( argv[1] );       // 
+    _find_box();                 // 
+    _find_scale();               // 
+    _create_slicer_rects();      // 
+    _create_rects();             // 
+    _attach_objects();           // 
+    _slicing_rects();            // 
+    _logging_res();              // 
 
     return 0;
 }
