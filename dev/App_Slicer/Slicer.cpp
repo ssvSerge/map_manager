@@ -48,12 +48,6 @@ geo_pos_t       g_gps_max;
 map_pos_t       g_map_min;
 map_pos_t       g_map_max;
 
-// int          g_geo_scale;
-// std::mutex   g_pages_mutex;
-// uint32_t     g_x_pages;
-// uint32_t     g_y_pages;
-
-
 static std::string _to_str_d ( double val ) {
 
     std::string ret_val;
@@ -194,7 +188,7 @@ static bool _is_overlapped ( const geo_rect_t& rect_scan, const geo_rect_t& rect
     return true;
 }
 
-static void _attach_objects () {
+static void _attach_objects ( void ) {
 
     int32_t     x_size;
     int32_t     y_size;
@@ -295,7 +289,7 @@ static void _attach_objects () {
     return;
 }
 
-static void _create_rects () {
+static void _create_rects ( void ) {
 
     bool       is_first;
     geo_rect_t obj_rect;
@@ -335,7 +329,7 @@ static void _create_rects () {
 
 }
 
-static void _slicing_rects(void) {
+static void _slicing_rects( void ) {
 
     size_t y_cnt;
     size_t x_cnt;
@@ -355,8 +349,8 @@ static void _slicing_rects(void) {
                 continue;
             }
 
-            if ( (cnt % 20) == 0 ) {
-                std::cerr << "Slicing: " << (x_cnt*y_cnt) - cnt << "   \r";
+            if ( (cnt % 100) == 0 ) {
+                std::cerr << "Geometry: " << (x_cnt*y_cnt) - cnt << "   \r";
             }
 
             _scan_rect ( &g_slicer_rects[y][x] );
@@ -364,7 +358,7 @@ static void _slicing_rects(void) {
         }
     }
 
-    std::cerr << "Slicing: Done                      \n";
+    std::cerr << "Geometry: Done     \n";
 }
 
 static void _logging_res ( void ) {
@@ -470,11 +464,11 @@ static void _find_scale ( void ) {
 
     const int scale = 1;
 
-    g_step_ver = scale * 320;
-    g_step_hor = scale * 240;
+    g_step_ver = scale * 500;
+    g_step_hor = scale * 500;
 }
 
-static void _create_slicer_rects() {
+static void _create_slicer_rects( void ) {
 
     scan_rect_t     map_rect;
     v_scan_rect_t   rect_line;
@@ -518,7 +512,7 @@ int main ( int argc, char* argv[] ) {
         return (-1);
     }
 
-    _load_file( argv[1] );       // 
+    _load_file( argv[1] );       //
     _find_box();                 // 
     _find_scale();               // 
     _create_slicer_rects();      // 
