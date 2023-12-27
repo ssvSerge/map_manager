@@ -10,8 +10,8 @@
 
 #include "Dlg.h"
 
-#define NAME_IDX      "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_idx.txt"
-#define NAME_MAP      "C:\\GitHub\\map_manager\\dev\\_bin\\ohrada_map.txt"
+#define NAME_IDX      "C:\\GitHub\\map_manager\\dev\\_bin\\prague_idx.txt"
+#define NAME_MAP      "C:\\GitHub\\map_manager\\dev\\_bin\\prague_map.txt"
 
 #define CURSOR_MOVE   (1)
 #define CURSOR_WAIT   (2)

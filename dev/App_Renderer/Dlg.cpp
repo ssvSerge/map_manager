@@ -65,12 +65,10 @@ BOOL CAppRendererDlg::OnInitDialog () {
     SetIcon ( m_hIcon, TRUE );
     SetIcon ( m_hIcon, FALSE );
 
-    UpdateText ( 14.3385, m_EditLon   );
-    UpdateText ( 50.0368, m_EditLat   );
-    UpdateText ( 1.00000, m_EditScale );
-    UpdateText ( 0,       m_EditAngle );
-
-    // UpdateParams();
+    UpdateText ( 14.3342599, m_EditLon   );  // 
+    UpdateText ( 50.0404603, m_EditLat   );  // 
+    UpdateText (  3.0000000, m_EditScale );  // 
+    UpdateText (          0, m_EditAngle );  // 
 
     return TRUE;
 }

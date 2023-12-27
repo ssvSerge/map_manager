@@ -16,6 +16,7 @@
 #define KEYNAME_INDEX          "IDX"
 #define KEYNAME_POSITION       "POSITION"
 #define KEYNAME_OSM_REF        "REF"
+#define KEYNAME_OSM_REM        "REM"
 
 #define KEYNAME_MAP            "MAP"
 #define KEYNAME_MAP_MAX        "MAX"

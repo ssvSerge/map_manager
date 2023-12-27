@@ -644,8 +644,16 @@ void geo_processor_t::_draw_roads ( void ) {
                 road_width_m = 1;
                 break;
 
-            case OBJID_TYPE_PATH:           // тропинки. пропускаем
             case OBJID_TYPE_FOOTWAY:        // просто возможность пройти. пропускаем.
+                _map_color(it->m_default_type, clr1, clr2);
+                road_width_m = 1;
+                break;
+
+            case OBJID_TYPE_PATH:           // тропинки. пропускаем
+                _map_color(it->m_default_type, clr1, clr2);
+                road_width_m = 1;
+                break;
+
             case OBJID_TYPE_ROAD:           // таких нет. пропускаем.
             case OBJID_TYPE_STEPS:          // таких нет. пропускаем.
             default:                        // 

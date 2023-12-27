@@ -714,6 +714,9 @@ void osm_processor_t::map_role ( const hpx_attr_t* attr, ref_role_t& role ) {
         role = ROLE_ACROSS;
     } else
 
+    if ( bs_cmp(attr->value, "street") == 0 ) {
+        role = ROLE_STREET;
+    } else
     if ( bs_cmp(attr->value, "tributary") == 0 ) {
         role = ROLE_MAINSTREAM;
     } else
@@ -1995,16 +1998,11 @@ bool osm_processor_t::enum_nodes ( const node_info_callback_t callback ) {
 
 bool osm_processor_t::enum_ways ( const way_info_callback_t callback ) {
 
-    int stop_cnt = 0;
-
     auto way_ptr = ways_list.begin();
 
     assert ( callback != nullptr );
 
     while ( way_ptr != ways_list.end() ) {
-        if ( way_ptr->first == 177921365 ) {
-            stop_cnt++;
-        }
         callback ( way_ptr->second );
         way_ptr++;
     }

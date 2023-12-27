@@ -50,6 +50,7 @@ typedef enum tag_ref_role {
     ROLE_MAINSTREAM     = 10,
     ROLE_SIDESTREAM     = 11,
     ROLE_ACROSS         = 12,
+    ROLE_STREET         = 13,
     ROLE_LAST
 }   ref_role_t;
 

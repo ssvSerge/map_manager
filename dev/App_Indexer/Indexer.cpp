@@ -166,16 +166,15 @@ static void _log_position ( osm_lat_t lat, osm_lon_t lon ) {
     _log_key ( KEYNAME_COORDINATES, position );
 }
 
-static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt, uint64_t osm_ref ) {
+static void _log_header ( const char* const name, draw_type_t draw_type, size_t cnt, uint64_t osm_ref1 ) {
 
-    if (cnt != 1) {
-        cnt = cnt;
-    }
+    static uint64_t map_record = 0;
+    map_record++;
 
     _log_key(KEYNAME_RECORD, name);
     _log_key(KEYNAME_XTYPE, _type_to_str(draw_type));
     _log_key(KEYNAME_CONTER, cnt);
-    _log_key(KEYNAME_OSM_REF, osm_ref, true);
+    _log_key(KEYNAME_OSM_REF, osm_ref1, true );
 }
 
 static void _log_footer() {
@@ -325,6 +324,24 @@ static void _log_road ( const storeway_t& way ) {
     std::cout << std::endl;
 }
 
+static void _log_road ( const osm_id_t id, const list_obj_way_t& ways ) {
+
+    size_t cnt = 1;
+
+    for (auto it = ways.cbegin(); it != ways.cend(); it++) {
+
+        _log_header ( KEYNAME_HIGHWAY, it->type, cnt, id );
+        _log_key ( KEYNAME_ROLE, KEYPARAM_COORDS );
+        for ( auto coord_it = it->refs.cbegin(); coord_it != it->refs.cend(); coord_it++ ) {
+            _log_position (coord_it->lat, coord_it->lon );
+
+        }
+        _log_key(KEYNAME_ROLE, KEYPARAM_END, true);
+        _log_footer();
+        std::cout << std::endl;
+    }
+}
+
 //-----------------------------------------------------------------//
 
 static void scan_child ( const storerels_t& rel ) {
@@ -336,15 +353,15 @@ static void scan_child ( const storerels_t& rel ) {
     for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
 
         switch (it->ref) {
-        case REF_NODE:
-            processor.mark_nodes(it->id);
-            break;
-        case REF_WAY:
-            processor.mark_way(it->id);
-            break;
-        case REF_RELATION:
-            processor.mark_relation(it->id);
-            break;
+            case REF_NODE:
+                processor.mark_nodes(it->id);
+                break;
+            case REF_WAY:
+                processor.mark_way(it->id);
+                break;
+            case REF_RELATION:
+                processor.mark_relation(it->id);
+                break;
         }
     }
 }
@@ -471,7 +488,7 @@ static void store_roads ( const storeway_t& way ) {
 
     static int stop_cnt = 0;
 
-    if (way.id == 177921365) {
+    if (way.id == 47586041) {
         stop_cnt++;
     }
 
@@ -490,6 +507,47 @@ static void store_roads ( const storeway_t& way ) {
     _log_road(way);
 }
 
+static void store_rel_roads ( const storerels_t& rel ) {
+
+    static int stop_cnt = 0;
+
+    if (rel.level != 0) {
+        return;
+    }
+
+    if (rel.id == 7822459) {
+        stop_cnt++;
+    }
+
+    if ( (rel.type <= DRAW_REL_BEGIN) || (rel.type >= DRAW_REL_END)) {
+        return;
+    }
+
+    list_rel_refs_t way_segments;
+
+    for (auto it = rel.refs.begin(); it != rel.refs.end(); it++) {
+
+        if (it->ref == REF_NODE) {
+            continue;
+        }
+
+        switch (it->role) {
+            case ROLE_STREET:
+                way_segments.push_back(*it);
+                break;
+            default:
+                break;
+        }
+    }
+
+    list_obj_way_t  way;
+
+    processor.reconstruct_way(way_segments, way);
+
+    _log_road ( rel.id, way );
+}
+
+
 //-----------------------------------------------------------------//
 
 int main ( int argc, char* argv[] ) {
@@ -499,13 +557,14 @@ int main ( int argc, char* argv[] ) {
     }
 
     processor.process_file ( argv[1] );
-
+    
     processor.enum_rels  ( scan_child );
     processor.enum_ways  ( store_area );
     processor.enum_rels  ( store_rel_area );
     processor.enum_ways  ( store_building );
     processor.enum_rels  ( store_rel_building );
     processor.enum_ways  ( store_roads );
+    processor.enum_rels  ( store_rel_roads );
 
     return 0;
 }
