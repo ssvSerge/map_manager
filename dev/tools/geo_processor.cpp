@@ -622,6 +622,7 @@ void geo_processor_t::_draw_roads ( void ) {
     geo_pixel_t clr1 (255, 0, 0);
     geo_pixel_t clr2 (255, 0, 0);
     int         road_width_m;
+    uint32_t    known_cnt = 0;
 
     for ( auto it = m_paint_list.begin(); it != m_paint_list.end(); it++ ) {;
 
@@ -634,6 +635,16 @@ void geo_processor_t::_draw_roads ( void ) {
             case OBJID_TYPE_STREET:         // асфальтированные жилый улицы. оставляем.
             case OBJID_TYPE_SERVICE:        // асфальтовая дорога. сотавляем.           
             case OBJID_TYPE_RESIDENTIAL:    // асфальтовая дорога. сотавляем.     
+                _map_color(it->m_default_type, clr1, clr2);
+                road_width_m = 3;
+                break;
+
+            case OBJID_TYPE_PRIMARY:
+                _map_color(it->m_default_type, clr1, clr2);
+                road_width_m = 5;
+                break;
+
+            case OBJID_TYPE_SECONDARY:      // широкая дорога в 4 полосы.
                 _map_color ( it->m_default_type, clr1, clr2 );
                 road_width_m = 3;
                 break;
@@ -654,8 +665,23 @@ void geo_processor_t::_draw_roads ( void ) {
                 road_width_m = 1;
                 break;
 
+            case OBJID_TYPE_RIVER:
+                _map_color(it->m_default_type, clr1, clr2);
+                road_width_m = 10;
+                break;
+
             case OBJID_TYPE_ROAD:           // таких нет. пропускаем.
             case OBJID_TYPE_STEPS:          // таких нет. пропускаем.
+            case OBJID_TYPE_TREEROW:        // 
+            case OBJID_TYPE_PEDISTRAN:      // 
+            case OBJID_TYPE_TERTIARY:       // 
+            case OBJID_TYPE_BRIDGE:         // 
+            case OBJID_TYPE_UNCLIASSIFIED:  // 
+            case OBJID_TYPE_TRUNK:          // 
+            case OBJID_TYPE_RAILWAY:        //
+                known_cnt++;
+                continue;
+
             default:                        // 
                 continue;
 
@@ -740,7 +766,7 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
             break;
 
         case OBJID_TYPE_SECONDARY:    
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( fill_color, 255, 200, 100,  50 )
             GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
@@ -755,7 +781,7 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
             break;
 
         case OBJID_TYPE_PRIMARY:      
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( fill_color, 255, 255, 255,  10 )
             GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
@@ -770,7 +796,7 @@ void geo_processor_t::_map_color ( const obj_type_t& obj_type, geo_pixel_t& bord
             break;
 
         case OBJID_TYPE_RIVER:        
-            GEO_RGB ( fill_color, 255, 255, 255, 255 )
+            GEO_RGB ( fill_color, 255,  20,  35, 255 ) 
             GEO_RGB ( border_color, 0,   0,   0,   0 )
             break;
 
